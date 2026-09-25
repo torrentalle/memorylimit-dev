@@ -1,0 +1,30 @@
+# Cloudflare Pages response headers, read natively at deploy time.
+
+# Content-Security-Policy — every page's scripts are external files, so
+# script-src needs no 'unsafe-inline'. Third parties, and why each host is here:
+#   media.ethicalads.io        EthicalAds client script, ad images, ad-block probe pixel
+#   server.ethicalads.io       EthicalAds ad decisions (JSONP <script>), view pixels
+#   static.cloudflareinsights.com  Cloudflare Web Analytics beacon script
+#   cloudflareinsights.com     beacon reports (connect-src)
+# style-src needs 'unsafe-inline' only because the EthicalAds client injects a
+# <style> element without a configurable nonce; our own CSS is all in /css/.
+# Both third parties stay dormant until configured (js/monetization.js,
+# js/analytics.js), but the policy already allows them so switching them on
+# needs no header change. e2e/csp.spec.js enforces this policy in the browser.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://media.ethicalads.io https://server.ethicalads.io https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://media.ethicalads.io https://server.ethicalads.io; font-src 'self'; connect-src 'self' https://cloudflareinsights.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+
+# JS and CSS under /js/ and /css/ deliberately get no long-lived cache rule:
+# their filenames aren't content-hashed, so a long max-age would keep
+# returning visitors on stale scripts after a deploy while the HTML moved on.
+# Pages' default (max-age=0, must-revalidate + ETag) keeps them correct and
+# still serves a 304 when nothing changed.
+
+/favicon.ico
+  Cache-Control: public, max-age=86400
+
+/og-image.png
+  Cache-Control: public, max-age=86400
