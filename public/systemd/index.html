@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Systemd Memory Limits Calculator — MemoryHigh & MemoryMax | MemoryLimit</title>
+<meta name="description" content="Right-size memory for services running directly on a VM or bare-metal Linux host under systemd, without a container runtime. Generates a MemoryHigh / MemoryMax drop-in from real usage data." />
+<link rel="canonical" href="https://memorylimit.dev/systemd/" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/favicon.ico" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="MemoryLimit" />
+<meta property="og:title" content="Systemd Memory Limits Calculator — MemoryHigh & MemoryMax" />
+<meta property="og:description" content="Right-size memory for services running directly on a VM or bare-metal Linux host under systemd, without a container runtime. Generates a MemoryHigh / MemoryMax drop-in from real usage data." />
+<meta property="og:url" content="https://memorylimit.dev/systemd/" />
+<meta property="og:image" content="https://memorylimit.dev/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Systemd Memory Limits Calculator — MemoryHigh & MemoryMax" />
+<meta name="twitter:description" content="Right-size memory for services running directly on a VM or bare-metal Linux host under systemd, without a container runtime. Generates a MemoryHigh / MemoryMax drop-in from real usage data." />
+<meta name="twitter:image" content="https://memorylimit.dev/og-image.png" />
+<link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/css/styles.css" />
+<link rel="modulepreload" href="/js/formatters/systemd.js" />
+<script src="/js/theme-init.js"></script>
+</head>
+<body data-platform="systemd">
+
+<div class="skyline" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="brand" href="/" aria-label="MemoryLimit home">
+      <span class="brand__mark" aria-hidden="true">▮▯▯</span>
+      <div><p class="brand__name">MemoryLimit</p><p class="brand__tagline">Memory request/limit sizing</p></div>
+    </a>
+    <!-- platform-nav:start -->
+    <nav class="site-nav" aria-label="Calculators">
+      <details class="site-nav__menu">
+        <summary class="site-nav__toggle"><span class="site-nav__hint">Calculator</span> Systemd / Bare Metal / VM</summary>
+        <ul class="site-nav__list">
+          <li><a class="site-nav__link" href="/kubernetes/" data-platform-link="kubernetes">Kubernetes</a></li>
+          <li><a class="site-nav__link" href="/docker-compose/" data-platform-link="dockerCompose">Docker Compose</a></li>
+          <li><a class="site-nav__link" href="/lambda/" data-platform-link="lambda">AWS Lambda</a></li>
+          <li><a class="site-nav__link" href="/systemd/" data-platform-link="systemd" aria-current="page">Systemd / Bare Metal / VM</a></li>
+          <li><a class="site-nav__link" href="/vmware/" data-platform-link="vmware">VMware vSphere</a></li>
+          <li><a class="site-nav__link" href="/nomad/" data-platform-link="nomad">HashiCorp Nomad</a></li>
+          <li><a class="site-nav__link" href="/cloud-run/" data-platform-link="cloudRun">Google Cloud Run</a></li>
+          <li><a class="site-nav__link" href="/redis/" data-platform-link="redis">Redis maxmemory</a></li>
+          <li><a class="site-nav__link" href="/proxmox/" data-platform-link="proxmox">Proxmox VE</a></li>
+        </ul>
+      </details>
+    </nav>
+    <!-- platform-nav:end -->
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Dark theme">
+      <span class="theme-toggle__icon" aria-hidden="true">◐</span><span class="theme-toggle__label">theme</span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <div class="wrap intro-section">
+    <h1 class="intro-title">Systemd Memory Limits Calculator</h1>
+    <p class="intro-text">
+      Services that run directly on a VM or bare-metal host have no scheduler reserving memory for them, but systemd
+      can still fence them in with two cgroup settings. <code>MemoryHigh</code> is a soft ceiling: above it the
+      service is slowed down and its memory reclaimed aggressively. <code>MemoryMax</code> is the hard one: cross it
+      and the kernel OOM-kills the service. This calculator sizes both from real usage and gives you a drop-in file
+      to install.
+    </p>
+  </div>
+
+  <div class="wrap layout">
+
+    <section class="panel inputs" aria-labelledby="inputs-heading">
+      <h2 id="inputs-heading" class="panel__title"><span class="panel__index">01</span> Usage data</h2>
+
+      <div class="mode-toggle" role="group" aria-label="Input mode">
+        <button class="mode-toggle__btn" id="mode-paste-btn" type="button" aria-pressed="true" aria-controls="mode-paste">Paste samples</button>
+        <button class="mode-toggle__btn" id="mode-manual-btn" type="button" aria-pressed="false" aria-controls="mode-manual">Manual values</button>
+      </div>
+
+      <div id="mode-paste">
+        <label class="field-label" for="prom-input">Raw query output / samples</label>
+        <textarea
+          id="prom-input"
+          class="prom-textarea"
+          rows="7"
+          spellcheck="false"
+          placeholder="container_memory_working_set_bytes{id=&quot;/system.slice/myapp.service&quot;} 187245312&#10;container_memory_working_set_bytes{id=&quot;/system.slice/myapp.service&quot;} 2.014e+08&#10;container_memory_working_set_bytes{id=&quot;/system.slice/myapp.service&quot;} 199512064"
+        ></textarea>
+        <div class="prom-feedback" id="prom-feedback" aria-live="polite">Paste raw samples above — every numeric value is parsed automatically.</div>
+        <details class="query-hint">
+          <summary>Where do I get these numbers?</summary>
+          <p>If cAdvisor runs on the host, use a <strong>range</strong> query over a representative period (a week is a good default) for the service's cgroup:</p>
+          <pre>container_memory_working_set_bytes{id="/system.slice/myapp.service"}</pre>
+          <p>Without Prometheus, sample systemd directly and paste the numbers (bytes). <code>MemoryCurrent</code> includes page cache, so it reads a little higher than the working set:</p>
+          <pre>while sleep 60; do systemctl show -P MemoryCurrent myapp.service; done</pre>
+        </details>
+      </div>
+
+      <div id="mode-manual" class="is-hidden">
+        <p class="field-hint">Enter observed usage directly, in MiB.</p>
+      </div>
+
+      <div class="field-grid">
+        <div class="field">
+          <label class="field-label" for="avg-input">Average usage <span class="field-unit">MiB</span></label>
+          <input id="avg-input" class="field-input" type="number" min="0" step="any" inputmode="decimal" placeholder="e.g. 410" />
+        </div>
+        <div class="field">
+          <label class="field-label" for="peak-input">Peak usage <span class="field-unit">MiB</span></label>
+          <input id="peak-input" class="field-input" type="number" min="0" step="any" inputmode="decimal" placeholder="e.g. 630" />
+        </div>
+      </div>
+
+      <h2 class="panel__title panel__title--tight"><span class="panel__index">02</span> Workload profile</h2>
+
+      <div class="field-grid">
+        <div class="field">
+          <label class="field-label" for="workload-select">Workload type</label>
+          <select id="workload-select" class="field-input">
+            <option value="api">API service</option>
+            <option value="worker">Worker / batch</option>
+            <option value="cache">Cache</option>
+            <option value="jvm">JVM</option>
+            <option value="node">Node.js</option>
+            <option value="python">Python</option>
+            <option value="generic" selected>Generic</option>
+          </select>
+        </div>
+        <!-- One unit is one service; templated multi-instance units are a different model, so replicas stay hidden. -->
+        <div class="field is-hidden" id="replicas-field">
+          <label class="field-label" for="replicas-input">Replica count</label>
+          <input id="replicas-input" class="field-input" type="number" min="1" max="1000" step="1" inputmode="numeric" value="1" />
+        </div>
+        <div class="field">
+          <label class="field-label" for="sensitivity-select">OOMKill sensitivity</label>
+          <select id="sensitivity-select" class="field-input">
+            <option value="low">Low — tolerate occasional OOMKills</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High — avoid OOMKills at all cost</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label" for="environment-select">Environment</label>
+          <select id="environment-select" class="field-input">
+            <option value="development">Development</option>
+            <option value="staging">Staging</option>
+            <option value="production" selected>Production</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <section class="results" aria-labelledby="results-heading">
+
+      <div id="disabled-state" class="panel empty-state is-hidden">
+        <p class="empty-state__message">The systemd calculator is currently turned off. See <a href="/">the other calculators</a>.</p>
+      </div>
+
+      <div id="output-panels" class="output-panels">
+
+        <div class="panel gauge-panel">
+          <h2 id="results-heading" class="panel__title"><span class="panel__index">03</span> Sizing gauge</h2>
+          <div class="gauge">
+            <div class="gauge__track" id="gauge-track" role="img" aria-label="No usage data yet">
+              <div class="gauge__fill" id="gauge-fill"></div>
+              <div id="gauge-markers"></div>
+            </div>
+            <div class="gauge__scale">
+              <span>0</span>
+              <span id="gauge-scale-max">—</span>
+            </div>
+          </div>
+          <p class="gauge__legend" id="gauge-legend"></p>
+        </div>
+
+        <div class="stat-row" id="stat-row"></div>
+
+        <div id="warnings" class="warnings" aria-live="polite"></div>
+
+        <div class="panel">
+          <div class="panel__header-row">
+            <h2 class="panel__title"><span class="panel__index">04</span> <span id="snippet-title">systemd drop-in (override.conf)</span></h2>
+            <button id="copy-snippet" class="copy-btn" type="button">Copy snippet</button>
+          </div>
+          <pre class="yaml-block"><code id="snippet-code">—</code></pre>
+          <p class="snippet-secondary-note is-hidden" id="snippet-secondary-note"></p>
+        </div>
+
+        <div class="panel explanation-panel">
+          <h2 class="panel__title panel__title--tight"><span class="panel__index">05</span> How this was derived</h2>
+          <p class="explanation" id="explanation">Enter usage data to see the calculation.</p>
+          <p class="explanation-note is-hidden" id="explanation-note"></p>
+        </div>
+
+      </div>
+
+    </section>
+
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div id="ethical-ads-slot" class="ethical-ads-slot"></div>
+    <div class="footer-row">
+      <p class="footer-tagline">Your pasted metrics and results never leave the browser. <a href="/privacy/" class="footer-link">Privacy</a></p>
+      <div id="donation-slot" class="donation-slot"></div>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="/js/calculator-page.js"></script>
+</body>
+</html>
