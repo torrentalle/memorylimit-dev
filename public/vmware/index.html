@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VMware vSphere Memory Sizing Calculator — Reservation & Limit | MemoryLimit</title>
+<meta name="description" content="Right-size a vSphere VM's memory reservation and limit from real usage data — avoid ballooning and swapping without locking away host capacity the VM never uses. Outputs vSphere Client steps and a govc command." />
+<link rel="canonical" href="https://memorylimit.dev/vmware/" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/favicon.ico" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="MemoryLimit" />
+<meta property="og:title" content="VMware vSphere Memory Sizing Calculator — Reservation & Limit" />
+<meta property="og:description" content="Right-size a vSphere VM's memory reservation and limit from real usage data — avoid ballooning and swapping without locking away host capacity the VM never uses. Outputs vSphere Client steps and a govc command." />
+<meta property="og:url" content="https://memorylimit.dev/vmware/" />
+<meta property="og:image" content="https://memorylimit.dev/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="VMware vSphere Memory Sizing Calculator — Reservation & Limit" />
+<meta name="twitter:description" content="Right-size a vSphere VM's memory reservation and limit from real usage data — avoid ballooning and swapping without locking away host capacity the VM never uses. Outputs vSphere Client steps and a govc command." />
+<meta name="twitter:image" content="https://memorylimit.dev/og-image.png" />
+<link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/css/styles.css" />
+<link rel="modulepreload" href="/js/formatters/vmware.js" />
+<script src="/js/theme-init.js"></script>
+</head>
+<body data-platform="vmware">
+
+<div class="skyline" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="brand" href="/" aria-label="MemoryLimit home">
+      <span class="brand__mark" aria-hidden="true">▮▯▯</span>
+      <div><p class="brand__name">MemoryLimit</p><p class="brand__tagline">Memory request/limit sizing</p></div>
+    </a>
+    <!-- platform-nav:start -->
+    <nav class="site-nav" aria-label="Calculators">
+      <details class="site-nav__menu">
+        <summary class="site-nav__toggle"><span class="site-nav__hint">Calculator</span> VMware vSphere</summary>
+        <ul class="site-nav__list">
+          <li><a class="site-nav__link" href="/kubernetes/" data-platform-link="kubernetes">Kubernetes</a></li>
+          <li><a class="site-nav__link" href="/docker-compose/" data-platform-link="dockerCompose">Docker Compose</a></li>
+          <li><a class="site-nav__link" href="/lambda/" data-platform-link="lambda">AWS Lambda</a></li>
+          <li><a class="site-nav__link" href="/systemd/" data-platform-link="systemd">Systemd / Bare Metal / VM</a></li>
+          <li><a class="site-nav__link" href="/vmware/" data-platform-link="vmware" aria-current="page">VMware vSphere</a></li>
+          <li><a class="site-nav__link" href="/nomad/" data-platform-link="nomad">HashiCorp Nomad</a></li>
+          <li><a class="site-nav__link" href="/cloud-run/" data-platform-link="cloudRun">Google Cloud Run</a></li>
+          <li><a class="site-nav__link" href="/redis/" data-platform-link="redis">Redis maxmemory</a></li>
+          <li><a class="site-nav__link" href="/proxmox/" data-platform-link="proxmox">Proxmox VE</a></li>
+        </ul>
+      </details>
+    </nav>
+    <!-- platform-nav:end -->
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Dark theme">
+      <span class="theme-toggle__icon" aria-hidden="true">◐</span><span class="theme-toggle__label">theme</span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <div class="wrap intro-section">
+    <h1 class="intro-title">VMware vSphere Memory Sizing Calculator</h1>
+    <p class="intro-text">
+      vSphere gives each VM three memory controls. The <strong>reservation</strong> is memory the host guarantees and
+      never takes back; the <strong>limit</strong> is a ceiling the VM can't use more than; <strong>shares</strong> only
+      decide who wins when VMs compete for the same host's memory. Unlike a container runtime, hitting the limit
+      doesn't kill anything — the hypervisor starts ballooning and swapping the VM, so it slows down gradually instead
+      of failing fast. This calculator sizes the reservation and limit from real usage.
+    </p>
+  </div>
+
+  <div class="wrap layout">
+
+    <section class="panel inputs" aria-labelledby="inputs-heading">
+      <h2 id="inputs-heading" class="panel__title"><span class="panel__index">01</span> Usage data</h2>
+
+      <div class="mode-toggle" role="group" aria-label="Input mode">
+        <button class="mode-toggle__btn" id="mode-paste-btn" type="button" aria-pressed="true" aria-controls="mode-paste">Paste samples</button>
+        <button class="mode-toggle__btn" id="mode-manual-btn" type="button" aria-pressed="false" aria-controls="mode-manual">Manual values</button>
+      </div>
+
+      <div id="mode-paste">
+        <label class="field-label" for="prom-input">Raw query output / samples</label>
+        <textarea
+          id="prom-input"
+          class="prom-textarea"
+          rows="7"
+          spellcheck="false"
+          placeholder="{instance=&quot;vm1:9100&quot;, job=&quot;node&quot;}&#10;1073741824 @1727260000.123&#10;1181116006 @1727260015.123"
+        ></textarea>
+        <div class="prom-feedback" id="prom-feedback" aria-live="polite">Paste raw samples above — every numeric value is parsed automatically.</div>
+        <details class="query-hint">
+          <summary>Where do I get these numbers?</summary>
+          <p>Measure from inside the guest: vSphere's own "active" memory underestimates what the OS needs, and "consumed" never shrinks. With node_exporter, run a <strong>range</strong> query over a representative period (a week is a good default):</p>
+          <pre>node_memory_MemTotal_bytes{instance="vm1:9100"}
+  - node_memory_MemAvailable_bytes{instance="vm1:9100"}</pre>
+          <p>Paste the Prometheus UI table output, the HTTP API JSON, or a Grafana CSV export.</p>
+        </details>
+      </div>
+
+      <div id="mode-manual" class="is-hidden">
+        <p class="field-hint">Enter observed usage directly, in MiB (vSphere's "MB").</p>
+      </div>
+
+      <div class="field-grid">
+        <div class="field">
+          <label class="field-label" for="avg-input">Average usage <span class="field-unit">MiB</span></label>
+          <input id="avg-input" class="field-input" type="number" min="0" step="any" inputmode="decimal" placeholder="e.g. 410" />
+        </div>
+        <div class="field">
+          <label class="field-label" for="peak-input">Peak usage <span class="field-unit">MiB</span></label>
+          <input id="peak-input" class="field-input" type="number" min="0" step="any" inputmode="decimal" placeholder="e.g. 630" />
+        </div>
+      </div>
+
+      <h2 class="panel__title panel__title--tight"><span class="panel__index">02</span> Workload profile</h2>
+
+      <div class="field-grid">
+        <div class="field">
+          <label class="field-label" for="workload-select">Workload type</label>
+          <select id="workload-select" class="field-input">
+            <option value="api">API service</option>
+            <option value="worker">Worker / batch</option>
+            <option value="cache">Cache</option>
+            <option value="jvm">JVM</option>
+            <option value="node">Node.js</option>
+            <option value="python">Python</option>
+            <option value="generic" selected>Generic</option>
+          </select>
+        </div>
+        <!-- Reservation and limit are per VM, so replicas stay hidden. -->
+        <div class="field is-hidden" id="replicas-field">
+          <label class="field-label" for="replicas-input">Replica count</label>
+          <input id="replicas-input" class="field-input" type="number" min="1" max="1000" step="1" inputmode="numeric" value="1" />
+        </div>
+        <div class="field">
+          <label class="field-label" for="sensitivity-select">Memory-pressure sensitivity</label>
+          <select id="sensitivity-select" class="field-input">
+            <option value="low">Low — occasional ballooning is fine</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High — avoid ballooning at all cost</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label" for="environment-select">Environment</label>
+          <select id="environment-select" class="field-input">
+            <option value="development">Development</option>
+            <option value="staging">Staging</option>
+            <option value="production" selected>Production</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <section class="results" aria-labelledby="results-heading">
+
+      <div id="disabled-state" class="panel empty-state is-hidden">
+        <p class="empty-state__message">The VMware vSphere calculator is currently turned off. See <a href="/">the other calculators</a>.</p>
+      </div>
+
+      <div id="output-panels" class="output-panels">
+
+        <div class="panel gauge-panel">
+          <h2 id="results-heading" class="panel__title"><span class="panel__index">03</span> Sizing gauge</h2>
+          <div class="gauge">
+            <div class="gauge__track" id="gauge-track" role="img" aria-label="No usage data yet">
+              <div class="gauge__fill" id="gauge-fill"></div>
+              <div id="gauge-markers"></div>
+            </div>
+            <div class="gauge__scale">
+              <span>0</span>
+              <span id="gauge-scale-max">—</span>
+            </div>
+          </div>
+          <p class="gauge__legend" id="gauge-legend"></p>
+        </div>
+
+        <div class="stat-row" id="stat-row"></div>
+
+        <div id="warnings" class="warnings" aria-live="polite"></div>
+
+        <div class="panel">
+          <div class="panel__header-row">
+            <h2 class="panel__title"><span class="panel__index">04</span> <span id="snippet-title">govc command</span></h2>
+            <button id="copy-snippet" class="copy-btn" type="button">Copy snippet</button>
+          </div>
+          <pre class="yaml-block"><code id="snippet-code">—</code></pre>
+          <p class="snippet-secondary-note is-hidden" id="snippet-secondary-note"></p>
+        </div>
+
+        <div class="panel explanation-panel">
+          <h2 class="panel__title panel__title--tight"><span class="panel__index">05</span> How this was derived</h2>
+          <p class="explanation" id="explanation">Enter usage data to see the calculation.</p>
+          <p class="explanation-note is-hidden" id="explanation-note"></p>
+        </div>
+
+      </div>
+
+    </section>
+
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div id="ethical-ads-slot" class="ethical-ads-slot"></div>
+    <div class="footer-row">
+      <p class="footer-tagline">Your pasted metrics and results never leave the browser. <a href="/privacy/" class="footer-link">Privacy</a></p>
+      <div id="donation-slot" class="donation-slot"></div>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="/js/calculator-page.js"></script>
+</body>
+</html>
