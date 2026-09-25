@@ -8,10 +8,9 @@
   image). Reuses the exact dark-theme tokens from public/css/styles.css rather
   than a separate palette, so the share preview matches the site.
 
-  It lives outside public/ so it isn't deployed. Rendered to
-  public/og-image.png by scripts/generate-og-image.js — automatically by
-  .github/workflows/og-image.yml when this file changes on main, or
-  locally with `npm run generate-og-image`.
+  It lives outside public/ so it isn't deployed. After editing it, run
+  `npm run generate-og-image` and commit public/og-image.png together with
+  og-image.stamp.json; tests/og-image.test.js fails until you do.
 -->
 <style>
   @font-face { font-family: 'IBM Plex Sans'; font-weight: 500; src: url('public/fonts/ibm-plex-sans-500.woff2') format('woff2'); }

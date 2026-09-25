@@ -106,8 +106,9 @@ public/                     deployed as-is by Cloudflare Pages
 docs/adr/                   Architecture Decision Records
 tests/                      unit + page-structure tests (node:test)
 e2e/                        Playwright smoke tests + CSP enforcement
-scripts/                    sync-pages.js, generate-sitemap.js, generate-og-image.js
+scripts/                    sync-pages.js, generate-sitemap.js, generate-og-image.js (+ og-image-stamp.js)
 og-image-source.html        template rendered to public/og-image.png
+og-image.stamp.json         hashes of what og-image.png was rendered from (checked by tests)
 ```
 
 ### Design notes
@@ -181,9 +182,11 @@ Every push to `main` deploys; every pull request gets a preview deployment.
 - **Caching:** `public/_headers` gives the favicon and share image a one-day cache. JS and CSS keep the
   default revalidation because their filenames aren't content-hashed.
 - **Security headers:** see below.
-- **Share image:** `.github/workflows/og-image.yml` re-renders `public/og-image.png` whenever
-  `og-image-source.html` or the fonts change, and commits it. To render it locally, run
-  `npm run generate-og-image`.
+- **Share image:** `public/og-image.png` is rendered from `og-image-source.html` by hand and committed;
+  nothing regenerates or commits it automatically. After changing the source or its fonts, run
+  `npm run generate-og-image` and commit the PNG together with `og-image.stamp.json`.
+  `tests/og-image.test.js` compares that stamp with the current source, fonts and PNG, so CI fails on a
+  pull request that changes the source without re-rendering the image.
 
 ### Security headers
 
