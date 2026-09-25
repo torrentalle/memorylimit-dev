@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="629 171 662 496" role="img">
+<title>MemoryLimit</title>
+<defs><linearGradient id="ml-diagonal" gradientUnits="userSpaceOnUse" x1="0" y1="234" x2="0" y2="622"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c0c0c0"/></linearGradient></defs>
+<path fill="#ffffff" d="M 989 214 L 1035 214 L 1035 646.7 L 989 646.7 Z M 989 601.7 L 1248 601.7 L 1248 646.7 L 989 646.7 Z M 1248 581 C 1271.75 581 1291 600.25 1291 624 C 1291 647.75 1271.75 667 1248 667 C 1224.25 667 1205 647.75 1205 624 C 1205 600.25 1224.25 581 1248 581 Z"/>
+<path fill="url(#ml-diagonal)" d="M 989.6 214 L 1039.6 214 L 866.52 646.7 L 816.52 646.7 Z"/>
+<path fill="#c0c0c0" d="M 649 210.8 L 694.12 210.8 L 868.48 646.7 L 818.48 646.7 L 695 338 L 695 624 L 649 624 Z M 672 581 C 695.75 581 715 600.25 715 624 C 715 647.75 695.75 667 672 667 C 648.25 667 629 647.75 629 624 C 629 600.25 648.25 581 672 581 Z M 1012 171 C 1035.75 171 1055 190.25 1055 214 C 1055 237.75 1035.75 257 1012 257 C 988.25 257 969 237.75 969 214 C 969 190.25 988.25 171 1012 171 Z"/>
+<circle cx="1012" cy="214" r="28.85" fill="none" stroke="#ffffff" stroke-width="4.5"/>
+</svg>

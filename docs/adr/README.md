@@ -19,6 +19,7 @@ From here on, add an ADR when you make the decision.
 | [0008](0008-cookieless-analytics-and-non-tracking-ads.md) | Cookieless analytics and non-tracking ads, dormant until configured | Accepted |
 | [0009](0009-content-security-policy-without-inline-scripts.md) | Content-Security-Policy with no inline scripts | Accepted |
 | [0010](0010-testing-strategy.md) | Testing strategy | Accepted |
+| [0011](0011-logo-as-generated-svg.md) | The logo as SVG generated from measured geometry | Accepted |
 
 ## Adding an ADR
 

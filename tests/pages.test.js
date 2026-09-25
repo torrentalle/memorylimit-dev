@@ -59,6 +59,27 @@ test('no page has inline scripts or inline event handlers (the CSP forbids them)
   assert.deepEqual(offenders, []);
 });
 
+test('every page links the ICO, SVG and touch icons', () => {
+  const missing = [];
+  for (const dir of [...CONTENT_PAGES.map((p) => p.dir), 'k8s']) {
+    const head = read(dir).split('</head>')[0];
+    for (const link of [
+      '<link rel="icon" href="/favicon.ico" sizes="32x32" />',
+      '<link rel="icon" href="/favicon.svg" type="image/svg+xml" />',
+      '<link rel="apple-touch-icon" href="/apple-touch-icon.png" />'
+    ]) if (!head.includes(link)) missing.push(`${dir || '/'}: ${link}`);
+  }
+  assert.deepEqual(missing, []);
+});
+
+test('every page header shows the logo in both theme variants', () => {
+  for (const page of CONTENT_PAGES) {
+    const html = read(page.dir);
+    assert.match(html, /<img class="brand__mark brand__mark--light" src="\/brand\/memorylimit-mark\.svg" alt=""/, page.path);
+    assert.match(html, /<img class="brand__mark brand__mark--dark" src="\/brand\/memorylimit-mark-on-dark\.svg" alt=""/, page.path);
+  }
+});
+
 test('public/ contains only the expected pages', () => {
   const expected = new Set([...CONTENT_PAGES.map((p) => p.dir), 'k8s'].map((dir) => join(dir, 'index.html')));
   const actual = readdirSync(PUBLIC, { recursive: true })

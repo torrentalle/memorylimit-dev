@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="public/brand/memorylimit-logo-on-dark.svg">
+    <img src="public/brand/memorylimit-logo.svg" alt="MemoryLimit" width="360">
+  </picture>
+</p>
+
 # MemoryLimit
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -102,11 +109,14 @@ public/                     deployed as-is by Cloudflare Pages
     site.js                 shared chrome: theme toggle, nav, analytics beacon, footer slots
     theme-init.js           applies the saved theme before first paint (blocking, in <head>)
     theme.js nav.js landing.js monetization-ui.js
-  _redirects _headers robots.txt sitemap.xml og-image.png favicon.ico
+  brand/                    logo and monogram SVGs (generated)
+  _redirects _headers robots.txt sitemap.xml og-image.png
+  favicon.ico favicon.svg apple-touch-icon.png           (generated)
 docs/adr/                   Architecture Decision Records
 tests/                      unit + page-structure tests (node:test)
 e2e/                        Playwright smoke tests + CSP enforcement
-scripts/                    sync-pages.js, generate-sitemap.js, generate-og-image.js (+ og-image-stamp.js)
+scripts/                    sync-pages.js, generate-sitemap.js, generate-og-image.js (+ og-image-stamp.js),
+                            generate-brand.js (+ brand/logo.js, the logo's geometry)
 og-image-source.html        template rendered to public/og-image.png
 og-image.stamp.json         hashes of what og-image.png was rendered from (checked by tests)
 ```
@@ -183,10 +193,15 @@ Every push to `main` deploys; every pull request gets a preview deployment.
   default revalidation because their filenames aren't content-hashed.
 - **Security headers:** see below.
 - **Share image:** `public/og-image.png` is rendered from `og-image-source.html` by hand and committed;
-  nothing regenerates or commits it automatically. After changing the source or its fonts, run
+  nothing regenerates or commits it automatically. After changing the source, its fonts or the logo, run
   `npm run generate-og-image` and commit the PNG together with `og-image.stamp.json`.
-  `tests/og-image.test.js` compares that stamp with the current source, fonts and PNG, so CI fails on a
-  pull request that changes the source without re-rendering the image.
+  `tests/og-image.test.js` compares that stamp with the current source, the files it uses and the PNG, so
+  CI fails on a pull request that changes any of them without re-rendering the image.
+- **Logo and icons:** `scripts/brand/logo.js` holds the logo's geometry. `npm run generate:brand` writes the
+  SVGs in `public/brand/`, `favicon.svg`, `favicon.ico` and `apple-touch-icon.png` from it, and
+  `tests/brand.test.js` fails if the committed SVGs drift from the generator. The header shows the colour
+  monogram on light themes and the light-grey one on dark themes. See
+  [ADR 0011](docs/adr/0011-logo-as-generated-svg.md).
 
 ### Security headers
 

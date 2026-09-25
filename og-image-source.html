@@ -57,29 +57,9 @@
     gap: 36px;
   }
 
-  .wordmark-row {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-  }
-
-  .brand-mark {
-    font-family: var(--font-mono);
-    color: var(--accent);
-    font-size: 30px;
-    letter-spacing: 2px;
-    border: 2px solid var(--border-strong);
-    border-radius: 6px;
-    padding: 10px 14px;
-    background: var(--panel-bg);
-  }
-
-  .wordmark {
-    font-family: var(--font-mono);
-    font-weight: 600;
-    font-size: 64px;
-    color: var(--text-primary);
-    letter-spacing: -0.01em;
+  .logo {
+    display: block;
+    height: 190px;
   }
 
   .tagline {
@@ -141,10 +121,7 @@
 </head>
 <body>
   <div class="canvas">
-    <div class="wordmark-row">
-      <span class="brand-mark">▮▯▯</span>
-      <span class="wordmark">memorylimit</span>
-    </div>
+    <img class="logo" src="public/brand/memorylimit-logo-on-dark.svg" alt="MemoryLimit" />
     <p class="tagline">Right-size your infrastructure before it right-sizes you.</p>
     <div class="gauge">
       <div class="gauge-fill"></div>

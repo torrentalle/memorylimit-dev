@@ -41,7 +41,9 @@ test('sets the baseline security headers', () => {
 });
 
 test('keeps short cache lifetimes for unhashed assets', () => {
-  assert.equal(rules['/favicon.ico']['Cache-Control'], 'public, max-age=86400');
+  for (const path of ['/favicon.ico', '/favicon.svg', '/apple-touch-icon.png', '/brand/*', '/og-image.png']) {
+    assert.equal(rules[path]?.['Cache-Control'], 'public, max-age=86400', path);
+  }
   assert.equal(rules['/js/*'], undefined);
   assert.equal(rules['/css/*'], undefined);
 });
