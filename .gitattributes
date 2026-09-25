@@ -1,0 +1,6 @@
+# LF everywhere, regardless of the contributor's core.autocrlf.
+* text=auto eol=lf
+
+*.png binary
+*.ico binary
+*.woff2 binary

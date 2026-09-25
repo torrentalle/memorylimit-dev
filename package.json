@@ -1,0 +1,23 @@
+{
+  "name": "memorylimit",
+  "version": "1.0.0",
+  "description": "Memory sizing calculator for Kubernetes, Docker Compose, Nomad, Lambda, Cloud Run, systemd, vSphere, Proxmox and Redis — static, no build step.",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "serve public",
+    "test": "node --test",
+    "test:e2e": "playwright test",
+    "generate:sitemap": "node scripts/generate-sitemap.js",
+    "sync:pages": "node scripts/sync-pages.js",
+    "generate-og-image": "node scripts/generate-og-image.js"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "serve": "^14.2.6"
+  }
+}
