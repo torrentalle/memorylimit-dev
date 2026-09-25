@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://memorylimit.dev/</loc></url>
+  <url><loc>https://memorylimit.dev/privacy/</loc></url>
+  <url><loc>https://memorylimit.dev/kubernetes/</loc></url>
+  <url><loc>https://memorylimit.dev/docker-compose/</loc></url>
+  <url><loc>https://memorylimit.dev/lambda/</loc></url>
+  <url><loc>https://memorylimit.dev/systemd/</loc></url>
+  <url><loc>https://memorylimit.dev/vmware/</loc></url>
+  <url><loc>https://memorylimit.dev/nomad/</loc></url>
+  <url><loc>https://memorylimit.dev/cloud-run/</loc></url>
+  <url><loc>https://memorylimit.dev/redis/</loc></url>
+  <url><loc>https://memorylimit.dev/proxmox/</loc></url>
+</urlset>

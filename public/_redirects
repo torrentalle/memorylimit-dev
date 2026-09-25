@@ -1,0 +1,14 @@
+# Netlify-style redirect rules. Cloudflare Pages reads this file
+# natively at deploy time -- no build step, plugin, or extra config
+# needed, it just has to sit at the project root like this.
+#
+# Also see k8s/index.html, the meta-refresh fallback for any other
+# static host that doesn't honor this file.
+#
+# Add future path aliases following the same two-line pattern (with
+# and without the trailing wildcard), e.g. for /compose/ -> /docker-compose/:
+#   /compose/*  /docker-compose/  301
+#   /compose    /docker-compose/  301
+
+/k8s/*  /kubernetes/  301
+/k8s    /kubernetes/  301
