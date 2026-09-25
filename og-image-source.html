@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>og-image-source</title>
+<!--
+  Source template for og-image.png (1200x630 Open Graph / Twitter Card
+  image). Reuses the exact dark-theme tokens from public/css/styles.css rather
+  than a separate palette, so the share preview matches the site.
+
+  It lives outside public/ so it isn't deployed. Rendered to
+  public/og-image.png by scripts/generate-og-image.js — automatically by
+  .github/workflows/og-image.yml when this file changes on main, or
+  locally with `npm run generate-og-image`.
+-->
+<style>
+  @font-face { font-family: 'IBM Plex Sans'; font-weight: 500; src: url('public/fonts/ibm-plex-sans-500.woff2') format('woff2'); }
+  @font-face { font-family: 'IBM Plex Mono'; font-weight: 400; src: url('public/fonts/ibm-plex-mono-400.woff2') format('woff2'); }
+  @font-face { font-family: 'IBM Plex Mono'; font-weight: 600; src: url('public/fonts/ibm-plex-mono-600.woff2') format('woff2'); }
+
+  :root {
+    --bg: #10121a;
+    --panel-bg: #1a1e28;
+    --border-strong: #3c4252;
+    --text-primary: #e9eaf0;
+    --text-secondary: #9ba1b3;
+    --accent: #e6a23c;
+    --accent-strong: #f3b968;
+    --teal: #46b3a4;
+    --danger: #e2626a;
+    --grid-line: rgba(255, 255, 255, 0.05);
+    --font-ui: 'IBM Plex Sans', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 1200px;
+    height: 630px;
+    background: var(--bg);
+    overflow: hidden;
+  }
+
+  .canvas {
+    position: relative;
+    width: 1200px;
+    height: 630px;
+    background-image:
+      repeating-linear-gradient(90deg, var(--grid-line) 0, var(--grid-line) 1px, transparent 1px, transparent 80px),
+      repeating-linear-gradient(0deg, var(--grid-line) 0, var(--grid-line) 1px, transparent 1px, transparent 80px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 36px;
+  }
+
+  .wordmark-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+
+  .brand-mark {
+    font-family: var(--font-mono);
+    color: var(--accent);
+    font-size: 30px;
+    letter-spacing: 2px;
+    border: 2px solid var(--border-strong);
+    border-radius: 6px;
+    padding: 10px 14px;
+    background: var(--panel-bg);
+  }
+
+  .wordmark {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 64px;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+  }
+
+  .tagline {
+    font-family: var(--font-ui);
+    font-weight: 500;
+    font-size: 26px;
+    color: var(--text-secondary);
+    max-width: 760px;
+    text-align: center;
+    line-height: 1.4;
+  }
+
+  /* simplified, static version of the real sizing gauge */
+  .gauge {
+    position: relative;
+    width: 700px;
+    height: 64px;
+    background: var(--panel-bg);
+    border: 2px solid var(--border-strong);
+    border-radius: 6px;
+    margin-top: 8px;
+  }
+
+  .gauge-fill {
+    position: absolute;
+    top: 0; bottom: 0; left: 0;
+    width: 46%;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-strong) 100%);
+    border-radius: 4px 0 0 4px;
+  }
+
+  .gauge-marker {
+    position: absolute;
+    top: -10px;
+    bottom: -10px;
+    width: 0;
+    border-left: 3px solid var(--teal);
+  }
+  .gauge-marker.limit { border-left-color: var(--danger); }
+
+  .gauge-marker .flag {
+    position: absolute;
+    top: -34px;
+    left: 0;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: 15px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--teal);
+    background: var(--panel-bg);
+    border: 1px solid var(--border-strong);
+    border-radius: 3px;
+    padding: 3px 8px;
+  }
+  .gauge-marker.limit .flag { top: auto; bottom: -34px; color: var(--danger); }
+</style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="wordmark-row">
+      <span class="brand-mark">▮▯▯</span>
+      <span class="wordmark">memorylimit</span>
+    </div>
+    <p class="tagline">Right-size your infrastructure before it right-sizes you.</p>
+    <div class="gauge">
+      <div class="gauge-fill"></div>
+      <div class="gauge-marker" style="left: 62%;"><span class="flag">request</span></div>
+      <div class="gauge-marker limit" style="left: 85%;"><span class="flag">limit</span></div>
+    </div>
+  </div>
+</body>
+</html>
