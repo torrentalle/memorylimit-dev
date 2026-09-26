@@ -11,7 +11,7 @@ test('isProductionHost is true only for the exact production hostname', () => {
 });
 
 test('isProductionHost rejects previews, subdomains, localhost and lookalikes', () => {
-  for (const hostname of ['dev.memorylimit.dev', 'memorylimit.dev.evil.com', 'evilmemorylimit.dev', 'localhost', '', undefined]) {
+  for (const hostname of ['staging.example.com', 'memorylimit.dev.evil.com', 'evilmemorylimit.dev', 'localhost', '', undefined]) {
     assert.equal(isProductionHost(hostname), false, String(hostname));
   }
 });

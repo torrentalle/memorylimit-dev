@@ -37,7 +37,7 @@ test('getEthicalAdsConfig returns null when disabled, even when configured', () 
 
 test('getEthicalAdsConfig stays silent off the production host, even fully configured — no real ad or tracking pixel outside production', () => {
   withConfig(CONFIGURED, () => {
-    for (const hostname of ['dev.memorylimit.dev', 'localhost', 'some-branch.memorylimit-dev.pages.dev', undefined]) {
+    for (const hostname of ['staging.example.com', 'localhost', 'some-branch.example.pages.dev', undefined]) {
       assert.equal(Monetization.getEthicalAdsConfig(hostname), null, hostname);
     }
   });

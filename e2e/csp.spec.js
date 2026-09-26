@@ -71,8 +71,8 @@ async function configureThirdParties(page) {
     });
   await patch('**/js/monetization.js', 'REPLACE_WITH_ETHICALADS_PUBLISHER_ID', 'csp-test');
   await patch('**/js/analytics.js', 'cloudflareBeaconToken: PLACEHOLDER_TOKEN', "cloudflareBeaconToken: 'csp-test'");
-  // ./env.js keeps ads/analytics silent off the production host (see ADR 0012);
-  // the test server runs on localhost, so this test stands in for that host.
+  // ./env.js keeps ads/analytics silent off the production host; the test
+  // server runs on localhost, so this test stands in for that host.
   await patch('**/js/env.js', 'return hostname === PRODUCTION_HOST;', 'return true;');
 
   const js = (body) => (route) => route.fulfill({ contentType: 'text/javascript', body });
@@ -127,9 +127,9 @@ test('EthicalAds and Cloudflare Web Analytics, once configured, run under the CS
   expect(await violations(page)).toEqual([]);
 });
 
-// See ADR 0012: real ads/analytics only ever run on the production host, so
-// a dev/staging subdomain or a Cloudflare Pages PR preview never pollutes
-// real analytics or serves real ads, even once real IDs are configured.
+// Real ads/analytics only ever run on the production host, so any other
+// host the site might be served from never pollutes real analytics or
+// serves real ads, even once real IDs are configured.
 test('off the production host, EthicalAds and Cloudflare Analytics stay dormant even when configured', async ({ page }) => {
   const patch = (pattern, from, to) =>
     page.route(pattern, async (route) => {

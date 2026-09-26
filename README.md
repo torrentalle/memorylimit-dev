@@ -152,8 +152,8 @@ Three plain objects, each in its own module:
 
 Each element renders only when it is switched on **and** configured. The shipped placeholders
 (`REPLACE_WITH_…`) render nothing and load no third-party scripts. Configured or not, `public/js/env.js`
-also keeps both silent everywhere except `memorylimit.dev` itself — see
-[Development / staging environment](#development--staging-environment).
+also keeps both silent everywhere except the production host itself, so a preview or local run never
+pollutes real analytics or serves real ads.
 
 ## Adding a platform
 
@@ -227,28 +227,6 @@ Cloudflare Pages applies these headers at deploy time. `serve`, used locally and
 covers every page, plus a run with both third parties switched on and stubbed to behave like the real
 scripts. `tests/headers.test.js` pins the policy itself. If you add a third party, add its hosts to both
 files. To check the live site, run `curl -sI https://memorylimit.dev/ | grep -i content-security`.
-
-### Development / staging environment
-
-`memorylimit.dev` is the project's **only custom domain** — there is no `dev.` or `staging.` subdomain.
-`develop` (and every other non-`main` branch) is a plain git branch; Cloudflare Pages builds a preview
-deployment for it automatically, at `https://<branch>.<project>.pages.dev` (the project's own
-`.pages.dev` domain — Cloudflare's, not a custom one), with no per-branch dashboard setup. That domain is
-gated by Cloudflare Access (Zero Trust) for the *whole* project, not just one branch, so every preview —
-`develop`'s and any feature branch's — needs a login and none of them is ever publicly reachable or
-indexable. See [ADR 0014](docs/adr/0014-previews-stay-on-pages-dev-gated-project-wide.md). Setting it up:
-
-1. Push branches as normal; Cloudflare Pages builds each one's preview deployment automatically — no
-   per-branch dashboard step.
-2. In Cloudflare Zero Trust, add **one** Access application matching `*.<project>.pages.dev` (a wildcard
-   covering every preview, present and future), and add the people who should be able to open them.
-3. Find a specific branch's preview URL in the Cloudflare Pages project's *Deployments* list.
-
-`public/js/env.js` exports the one hostname (`memorylimit.dev`) real ads and analytics are allowed to run
-on. `getEthicalAdsConfig()` and `getCloudflareAnalyticsConfig()` both stay dormant everywhere else — every
-preview, `npm run dev` on localhost — even once real IDs are configured, so testing never pollutes real
-analytics or spends ad budget. See
-[ADR 0012](docs/adr/0012-development-subdomain-via-separate-pages-project.md).
 
 ## License
 

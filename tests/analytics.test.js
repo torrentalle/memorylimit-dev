@@ -30,9 +30,9 @@ test('returns null when disabled, even with a real token', () => {
   });
 });
 
-test('stays silent off the production host even when fully configured — previews, the dev subdomain and localhost never report real analytics', () => {
+test('stays silent off the production host even when fully configured — previews and localhost never report real analytics', () => {
   withConfig({ cloudflareBeaconToken: 'abc123realtoken' }, () => {
-    for (const hostname of ['dev.memorylimit.dev', 'localhost', 'some-branch.memorylimit-dev.pages.dev', undefined]) {
+    for (const hostname of ['staging.example.com', 'localhost', 'some-branch.example.pages.dev', undefined]) {
       assert.equal(Analytics.getCloudflareAnalyticsConfig(hostname), null, hostname);
     }
   });
