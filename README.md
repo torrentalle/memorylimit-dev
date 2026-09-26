@@ -119,6 +119,7 @@ scripts/                    sync-pages.js, generate-sitemap.js, generate-og-imag
                             generate-brand.js (+ brand/logo.js, the logo's geometry)
 og-image-source.html        template rendered to public/og-image.png
 og-image.stamp.json         hashes of what og-image.png was rendered from (checked by tests)
+wrangler.jsonc              empty `previews` block Cloudflare's build pipeline needs (see Deploying)
 ```
 
 ### Design notes
@@ -185,8 +186,11 @@ Connect the GitHub repo in Cloudflare Pages with:
 | Build command | *(none)* |
 | Build output directory | `public` |
 
-Every push to `main` deploys; every pull request gets a preview deployment.
+Every push to `main` deploys; every other branch gets a preview deployment.
 
+- **`wrangler.jsonc`:** an empty `{ "previews": {} }` block. Cloudflare's build pipeline needs it to build a
+  branch preview deployment; the site itself has no Workers code and is still a plain static build
+  (see [ADR 0002](docs/adr/0002-static-client-side-site-without-build-step.md)).
 - **Custom domain:** with the domain already in the same Cloudflare account, add it under the Pages project's
   *Custom domains*. The certificate is provisioned automatically.
 - **Redirects:** `public/_redirects` issues a 301 from `/k8s/` to `/kubernetes/`. `public/k8s/index.html` is a
