@@ -3,6 +3,7 @@
  * ./site.js. It's cookieless and collects no personal data, so there is
  * intentionally no consent gating.
  */
+import { isProductionHost } from './env.js';
 
 export const PLACEHOLDER_TOKEN = 'REPLACE_WITH_ACTUAL_TOKEN';
 
@@ -15,8 +16,9 @@ export const ANALYTICS = {
   cloudflareBeaconToken: PLACEHOLDER_TOKEN
 };
 
-export function getCloudflareAnalyticsConfig() {
+/** @param {string} [hostname] - see ./env.js; the beacon only ever reports from the production host. */
+export function getCloudflareAnalyticsConfig(hostname) {
   const { cloudflareWebAnalytics, cloudflareBeaconToken } = ANALYTICS;
-  if (!cloudflareWebAnalytics || !cloudflareBeaconToken || cloudflareBeaconToken === PLACEHOLDER_TOKEN) return null;
+  if (!cloudflareWebAnalytics || !cloudflareBeaconToken || cloudflareBeaconToken === PLACEHOLDER_TOKEN || !isProductionHost(hostname)) return null;
   return { token: cloudflareBeaconToken };
 }

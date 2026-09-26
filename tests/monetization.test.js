@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as Monetization from '../public/js/monetization.js';
+import { PRODUCTION_HOST } from '../public/js/env.js';
 
 function withConfig(overrides, fn) {
   const previous = { ...Monetization.MONETIZATION };
@@ -18,19 +19,27 @@ const CONFIGURED = {
 };
 
 test('nothing renders while the shipped placeholders are still in place', () => {
-  assert.equal(Monetization.getEthicalAdsConfig(), null);
+  assert.equal(Monetization.getEthicalAdsConfig(PRODUCTION_HOST), null);
   assert.equal(Monetization.getDonationConfig(), null);
 });
 
-test('getEthicalAdsConfig returns the publisher id once it is configured', () => {
+test('getEthicalAdsConfig returns the publisher id once it is configured, on the production host', () => {
   withConfig(CONFIGURED, () => {
-    assert.equal(Monetization.getEthicalAdsConfig().publisherId, 'memorylimit');
+    assert.equal(Monetization.getEthicalAdsConfig(PRODUCTION_HOST).publisherId, 'memorylimit');
   });
 });
 
 test('getEthicalAdsConfig returns null when disabled, even when configured', () => {
   withConfig({ ...CONFIGURED, ethicalAds: false }, () => {
-    assert.equal(Monetization.getEthicalAdsConfig(), null);
+    assert.equal(Monetization.getEthicalAdsConfig(PRODUCTION_HOST), null);
+  });
+});
+
+test('getEthicalAdsConfig stays silent off the production host, even fully configured — no real ad or tracking pixel outside production', () => {
+  withConfig(CONFIGURED, () => {
+    for (const hostname of ['dev.memorylimit.dev', 'localhost', 'some-branch.memorylimit-dev.pages.dev', undefined]) {
+      assert.equal(Monetization.getEthicalAdsConfig(hostname), null, hostname);
+    }
   });
 });
 

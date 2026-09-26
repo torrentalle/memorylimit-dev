@@ -151,7 +151,9 @@ Three plain objects, each in its own module:
 | `public/js/analytics.js` | `ANALYTICS` | Cloudflare Web Analytics beacon (needs a token from the Cloudflare dashboard). Cookieless, so there is no consent banner. |
 
 Each element renders only when it is switched on **and** configured. The shipped placeholders
-(`REPLACE_WITH_…`) render nothing and load no third-party scripts.
+(`REPLACE_WITH_…`) render nothing and load no third-party scripts. Configured or not, `public/js/env.js`
+also keeps both silent everywhere except `memorylimit.dev` itself — see
+[Development / staging environment](#development--staging-environment).
 
 ## Adding a platform
 
@@ -225,6 +227,26 @@ Cloudflare Pages applies these headers at deploy time. `serve`, used locally and
 covers every page, plus a run with both third parties switched on and stubbed to behave like the real
 scripts. `tests/headers.test.js` pins the policy itself. If you add a third party, add its hosts to both
 files. To check the live site, run `curl -sI https://memorylimit.dev/ | grep -i content-security`.
+
+### Development / staging environment
+
+`dev.memorylimit.dev` is a second Cloudflare Pages project connected to the same repository, with
+`develop` as its own production branch — a plain git branch, pushed and merged like any other. It is
+gated by Cloudflare Access (Zero Trust), so it needs a login and is never publicly reachable or
+indexable; nothing in the repo has to account for it otherwise. Setting it up:
+
+1. Create the `develop` branch from `main` and push it.
+2. In Cloudflare Pages, create a second project from the same GitHub repo. Set its production branch to
+   `develop` and its build output directory to `public`, same as the main project.
+3. Add `dev.memorylimit.dev` as that project's custom domain.
+4. In Cloudflare Zero Trust, add an Access application for `dev.memorylimit.dev` and add the people who
+   should be able to reach it.
+
+`public/js/env.js` exports the one hostname (`memorylimit.dev`) real ads and analytics are allowed to run
+on. `getEthicalAdsConfig()` and `getCloudflareAnalyticsConfig()` both stay dormant everywhere else — the
+dev subdomain, a PR preview, `npm run dev` on localhost — even once real IDs are configured, so testing
+never pollutes real analytics or spends ad budget. See
+[ADR 0012](docs/adr/0012-development-subdomain-via-separate-pages-project.md).
 
 ## License
 

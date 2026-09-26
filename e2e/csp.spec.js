@@ -71,6 +71,9 @@ async function configureThirdParties(page) {
     });
   await patch('**/js/monetization.js', 'REPLACE_WITH_ETHICALADS_PUBLISHER_ID', 'csp-test');
   await patch('**/js/analytics.js', 'cloudflareBeaconToken: PLACEHOLDER_TOKEN', "cloudflareBeaconToken: 'csp-test'");
+  // ./env.js keeps ads/analytics silent off the production host (see ADR 0012);
+  // the test server runs on localhost, so this test stands in for that host.
+  await patch('**/js/env.js', 'return hostname === PRODUCTION_HOST;', 'return true;');
 
   const js = (body) => (route) => route.fulfill({ contentType: 'text/javascript', body });
   await page.route('https://media.ethicalads.io/media/client/ethicalads.min.js', js(ETHICALADS_STUB));
@@ -122,4 +125,25 @@ test('EthicalAds and Cloudflare Web Analytics, once configured, run under the CS
     .poll(() => page.evaluate(() => (window.__thirdParty ?? []).toSorted()))
     .toEqual(['cloudflare-beacon', 'ethicalads-decision', 'ethicalads-probe', 'ethicalads-view']);
   expect(await violations(page)).toEqual([]);
+});
+
+// See ADR 0012: real ads/analytics only ever run on the production host, so
+// a dev/staging subdomain or a Cloudflare Pages PR preview never pollutes
+// real analytics or serves real ads, even once real IDs are configured.
+test('off the production host, EthicalAds and Cloudflare Analytics stay dormant even when configured', async ({ page }) => {
+  const patch = (pattern, from, to) =>
+    page.route(pattern, async (route) => {
+      const response = await route.fetch();
+      const body = (await response.text()).replace(from, to);
+      await route.fulfill({ response, body });
+    });
+  await patch('**/js/monetization.js', 'REPLACE_WITH_ETHICALADS_PUBLISHER_ID', 'csp-test');
+  await patch('**/js/analytics.js', 'cloudflareBeaconToken: PLACEHOLDER_TOKEN', "cloudflareBeaconToken: 'csp-test'");
+  const thirdPartyRequests = [];
+  page.on('request', (req) => {
+    if (/\.ethicalads\.io|cloudflareinsights\.com/.test(req.url())) thirdPartyRequests.push(req.url());
+  });
+  await page.goto('/kubernetes/'); // served from localhost in this test run — never the production host
+  await page.waitForTimeout(500);
+  expect(thirdPartyRequests).toEqual([]);
 });

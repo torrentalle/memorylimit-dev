@@ -20,6 +20,7 @@ From here on, add an ADR when you make the decision.
 | [0009](0009-content-security-policy-without-inline-scripts.md) | Content-Security-Policy with no inline scripts | Accepted |
 | [0010](0010-testing-strategy.md) | Testing strategy | Accepted |
 | [0011](0011-logo-as-generated-svg.md) | The logo as SVG generated from measured geometry | Accepted |
+| [0012](0012-development-subdomain-via-separate-pages-project.md) | Development subdomain: a second Cloudflare Pages project, gated by Access | Accepted |
 
 ## Adding an ADR
 

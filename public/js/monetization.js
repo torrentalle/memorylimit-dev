@@ -2,6 +2,7 @@
  * Config for the two passive monetization elements (an EthicalAds text ad
  * and a donation link). ./monetization-ui.js renders them.
  */
+import { isProductionHost } from './env.js';
 
 const PLACEHOLDER_PREFIX = 'REPLACE_WITH_';
 
@@ -27,8 +28,9 @@ function isConfigured(value) {
   return typeof value === 'string' && value.trim() !== '' && !value.startsWith(PLACEHOLDER_PREFIX);
 }
 
-export function getEthicalAdsConfig() {
-  if (!MONETIZATION.ethicalAds || !isConfigured(MONETIZATION.ethicalAdsPublisherId)) return null;
+/** @param {string} [hostname] - see ./env.js; the ad (and its tracking pixels) only ever loads on the production host. */
+export function getEthicalAdsConfig(hostname) {
+  if (!MONETIZATION.ethicalAds || !isConfigured(MONETIZATION.ethicalAdsPublisherId) || !isProductionHost(hostname)) return null;
   return { publisherId: MONETIZATION.ethicalAdsPublisherId };
 }
 
