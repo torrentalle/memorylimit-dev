@@ -1,10 +1,16 @@
 # 13. Development environment via Cloudflare Pages branch preview deployments
 
-- **Status:** Accepted
+- **Status:** Superseded by [0014](0014-previews-stay-on-pages-dev-gated-project-wide.md)
 - **Date:** 2026-09-26
 - **Supersedes:** [0012](0012-development-subdomain-via-separate-pages-project.md)'s deployment topology
   (only that part — the reasoning for Cloudflare Access and for `public/js/env.js`'s production-host
   allowlist is unchanged and carried forward below).
+
+> Superseded: the `dev.memorylimit.dev` custom domain below was dropped by
+> [ADR 0014](0014-previews-stay-on-pages-dev-gated-project-wide.md) — `memorylimit.dev` is the project's
+> only custom domain, and previews (every branch's, not only `develop`'s) stay on Cloudflare's own
+> `*.pages.dev` domain, gated by Access project-wide. Everything else here — one Cloudflare Pages
+> project rather than two, and `public/js/env.js`'s production-host allowlist — was **not** reversed.
 
 ## Context
 

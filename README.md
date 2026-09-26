@@ -230,23 +230,24 @@ files. To check the live site, run `curl -sI https://memorylimit.dev/ | grep -i 
 
 ### Development / staging environment
 
-`dev.memorylimit.dev` runs off Cloudflare Pages' own branch preview deployments, in the same project as
-production — not a second project. `develop` is a plain git branch, pushed and merged like any other;
-Cloudflare Pages builds a preview deployment for it (and for every other non-production branch)
-automatically, with no per-branch setup. It is gated by Cloudflare Access (Zero Trust), so it needs a
-login and is never publicly reachable or indexable; nothing in the repo has to account for it otherwise.
-See [ADR 0013](docs/adr/0013-development-environment-via-branch-preview-deployments.md). Setting it up:
+`memorylimit.dev` is the project's **only custom domain** — there is no `dev.` or `staging.` subdomain.
+`develop` (and every other non-`main` branch) is a plain git branch; Cloudflare Pages builds a preview
+deployment for it automatically, at `https://<branch>.<project>.pages.dev` (the project's own
+`.pages.dev` domain — Cloudflare's, not a custom one), with no per-branch dashboard setup. That domain is
+gated by Cloudflare Access (Zero Trust) for the *whole* project, not just one branch, so every preview —
+`develop`'s and any feature branch's — needs a login and none of them is ever publicly reachable or
+indexable. See [ADR 0014](docs/adr/0014-previews-stay-on-pages-dev-gated-project-wide.md). Setting it up:
 
-1. Push a `develop` branch (already created); Cloudflare Pages builds its preview deployment automatically.
-2. In the existing Cloudflare Pages project's *Custom domains* settings, add `dev.memorylimit.dev` scoped
-   to preview deployments of the `develop` branch — not the production deployment.
-3. In Cloudflare Zero Trust, add an Access application for `dev.memorylimit.dev` and add the people who
-   should be able to reach it.
+1. Push branches as normal; Cloudflare Pages builds each one's preview deployment automatically — no
+   per-branch dashboard step.
+2. In Cloudflare Zero Trust, add **one** Access application matching `*.<project>.pages.dev` (a wildcard
+   covering every preview, present and future), and add the people who should be able to open them.
+3. Find a specific branch's preview URL in the Cloudflare Pages project's *Deployments* list.
 
 `public/js/env.js` exports the one hostname (`memorylimit.dev`) real ads and analytics are allowed to run
-on. `getEthicalAdsConfig()` and `getCloudflareAnalyticsConfig()` both stay dormant everywhere else — the
-dev subdomain, a PR preview, `npm run dev` on localhost — even once real IDs are configured, so testing
-never pollutes real analytics or spends ad budget. See
+on. `getEthicalAdsConfig()` and `getCloudflareAnalyticsConfig()` both stay dormant everywhere else — every
+preview, `npm run dev` on localhost — even once real IDs are configured, so testing never pollutes real
+analytics or spends ad budget. See
 [ADR 0012](docs/adr/0012-development-subdomain-via-separate-pages-project.md).
 
 ## License

@@ -21,7 +21,8 @@ From here on, add an ADR when you make the decision.
 | [0010](0010-testing-strategy.md) | Testing strategy | Accepted |
 | [0011](0011-logo-as-generated-svg.md) | The logo as SVG generated from measured geometry | Accepted |
 | [0012](0012-development-subdomain-via-separate-pages-project.md) | Development subdomain: a second Cloudflare Pages project, gated by Access | Superseded by [0013](0013-development-environment-via-branch-preview-deployments.md) |
-| [0013](0013-development-environment-via-branch-preview-deployments.md) | Development environment via Cloudflare Pages branch preview deployments | Accepted |
+| [0013](0013-development-environment-via-branch-preview-deployments.md) | Development environment via Cloudflare Pages branch preview deployments | Superseded by [0014](0014-previews-stay-on-pages-dev-gated-project-wide.md) |
+| [0014](0014-previews-stay-on-pages-dev-gated-project-wide.md) | Previews stay on `*.pages.dev`, gated project-wide — `memorylimit.dev` is the only custom domain | Accepted |
 
 ## Adding an ADR
 
