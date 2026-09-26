@@ -230,16 +230,17 @@ files. To check the live site, run `curl -sI https://memorylimit.dev/ | grep -i 
 
 ### Development / staging environment
 
-`dev.memorylimit.dev` is a second Cloudflare Pages project connected to the same repository, with
-`develop` as its own production branch — a plain git branch, pushed and merged like any other. It is
-gated by Cloudflare Access (Zero Trust), so it needs a login and is never publicly reachable or
-indexable; nothing in the repo has to account for it otherwise. Setting it up:
+`dev.memorylimit.dev` runs off Cloudflare Pages' own branch preview deployments, in the same project as
+production — not a second project. `develop` is a plain git branch, pushed and merged like any other;
+Cloudflare Pages builds a preview deployment for it (and for every other non-production branch)
+automatically, with no per-branch setup. It is gated by Cloudflare Access (Zero Trust), so it needs a
+login and is never publicly reachable or indexable; nothing in the repo has to account for it otherwise.
+See [ADR 0013](docs/adr/0013-development-environment-via-branch-preview-deployments.md). Setting it up:
 
-1. Create the `develop` branch from `main` and push it.
-2. In Cloudflare Pages, create a second project from the same GitHub repo. Set its production branch to
-   `develop` and its build output directory to `public`, same as the main project.
-3. Add `dev.memorylimit.dev` as that project's custom domain.
-4. In Cloudflare Zero Trust, add an Access application for `dev.memorylimit.dev` and add the people who
+1. Push a `develop` branch (already created); Cloudflare Pages builds its preview deployment automatically.
+2. In the existing Cloudflare Pages project's *Custom domains* settings, add `dev.memorylimit.dev` scoped
+   to preview deployments of the `develop` branch — not the production deployment.
+3. In Cloudflare Zero Trust, add an Access application for `dev.memorylimit.dev` and add the people who
    should be able to reach it.
 
 `public/js/env.js` exports the one hostname (`memorylimit.dev`) real ads and analytics are allowed to run

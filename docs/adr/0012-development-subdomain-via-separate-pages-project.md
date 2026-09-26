@@ -1,7 +1,13 @@
 # 12. Development subdomain: a second Cloudflare Pages project, gated by Access
 
-- **Status:** Accepted
+- **Status:** Superseded by [0013](0013-development-environment-via-branch-preview-deployments.md)
 - **Date:** 2026-09-26
+
+> Superseded: the deployment topology below (a second Cloudflare Pages project) was replaced by
+> [ADR 0013](0013-development-environment-via-branch-preview-deployments.md), which uses Cloudflare
+> Pages' own branch preview deployments in the existing project instead. The reasoning for gating with
+> Cloudflare Access and for `public/js/env.js`'s production-host allowlist, both below, was **not**
+> reversed and is carried forward unchanged by ADR 0013.
 
 ## Context
 
