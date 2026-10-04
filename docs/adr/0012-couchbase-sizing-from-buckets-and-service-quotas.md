@@ -24,7 +24,11 @@ calculator page to contain every element id `app.js` reads.
 - **Model:** per bucket, quota = (resident metadata + working set) × (1 + headroom) ÷ 0.85 high-water mark,
   rounded up to 64 MiB, with a 100 MiB floor. Data quota per node = bucket total ÷ Data nodes. Index, Search,
   Eventing and Analytics quotas are entered by the user in MiB; estimating them from index definitions is left
-  for later. The result warns when the quotas pass 70% of the node's RAM, and is an error above 80%.
+  for later. The result warns when the quotas pass Couchbase's recommended share of node RAM (90%, or 80% on nodes
+  under 5 GiB, where its firm limit is 80% too) and is an error above the firm limit, max(RAM − 1 GiB, 80% × RAM).
+  It also warns when a bucket quota is under 10% of the bucket's dataset (Couchbase's Couchstore guidance).
+  The formula and its constants (56 bytes of metadata per document, 25% overhead, 85% high-water mark) are
+  Couchbase's; the 20% and 30% headroom options, 64 MiB rounding and the full-ejection adjustment are ours.
 - **Formatter:** `formatters/couchbase.js` keeps the pure math (`calculateSizing()`) and the output (`format()`)
   in one module and returns the same result shape as the other formatters, minus gauge markers. It takes the
   Couchbase input instead of `calculateRawSizing()`'s output, because the sizing core's average/peak model

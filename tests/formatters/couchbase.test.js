@@ -95,12 +95,32 @@ test('a service quota below its minimum is an error', () => {
   );
 });
 
-test('quotas above 80% of node RAM are an error, above 70% a warning, below that silent', () => {
-  // data 320 + index 512 = 832 MiB per node
-  const codes = (nodeRamMiB) => sizing({ nodeRamMiB }).warnings.map((w) => `${w.level}:${w.code}`);
-  assert.deepEqual(codes(1024), ['error:quotas-exceed-ram']);
-  assert.deepEqual(codes(1100), ['warning:quotas-high-share']);
-  assert.deepEqual(codes(16384), []);
+test('the firm limit is max(RAM − 1 GiB, 80% × RAM), as documented', () => {
+  assert.equal(couchbase.firmQuotaLimitMiB(16384), 15360);
+  assert.equal(couchbase.firmQuotaLimitMiB(4096), 3276.8);
+  assert.equal(couchbase.firmQuotaLimitMiB(5120), 4096);
+});
+
+test('the recommended share is 90%, or 80% on nodes under 5 GiB', () => {
+  assert.equal(couchbase.recommendedQuotaShare(16384), 0.9);
+  assert.equal(couchbase.recommendedQuotaShare(5120), 0.9);
+  assert.equal(couchbase.recommendedQuotaShare(4096), 0.8);
+});
+
+test('quotas above the firm limit are an error, above the recommended share a warning, below that silent', () => {
+  // data 320 MiB + index; 16 GiB node: 90% = 14745.6 MiB, firm limit 15360 MiB
+  const codes = (index, nodeRamMiB = 16384) => sizing({ nodeRamMiB, services: { index } }).warnings.map((w) => `${w.level}:${w.code}`);
+  assert.deepEqual(codes(512), []);
+  assert.deepEqual(codes(14800), ['warning:quotas-high-share']);
+  assert.deepEqual(codes(15100), ['error:quotas-exceed-limit']);
+  // 832 MiB on a 1 GiB node: firm limit 819.2 MiB
+  assert.deepEqual(codes(512, 1024), ['error:quotas-exceed-limit']);
+});
+
+test('a bucket quota under 10% of its dataset is flagged', () => {
+  const low = sizing({ buckets: [bucketWith({ workingSetPct: 1, eviction: 'full' })] });
+  assert.ok(low.warnings.some((w) => w.code === 'bucket-below-dataset-share'));
+  assert.ok(!sizing().warnings.some((w) => w.code === 'bucket-below-dataset-share'));
 });
 
 test('the figures list every quota and end with the per-node total', () => {

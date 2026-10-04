@@ -214,7 +214,7 @@ test('Couchbase: default bucket produces quotas and couchbase-cli commands, and 
 test('Couchbase: quotas above the node RAM raise an error warning', async ({ page }) => {
   await page.goto('/couchbase/');
   await page.getByLabel('RAM per node').fill('1');
-  await expect(page.locator('#warnings .is-error')).toContainText('crowd out the OS');
+  await expect(page.locator('#warnings .is-error')).toContainText('will refuse them');
 });
 
 test('Couchbase: pasted bucket API and cluster API output fill in the form', async ({ page }) => {

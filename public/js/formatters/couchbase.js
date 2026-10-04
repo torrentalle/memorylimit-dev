@@ -39,9 +39,25 @@ export const HEADROOM = { low: 0.2, medium: 0.25, high: 0.3 };
 export const MIN_QUOTA_MIB = { data: 256, index: 256, search: 256, eventing: 256, analytics: 1024 };
 export const MIN_BUCKET_MIB = 100;
 
-/** Share of node RAM the service quotas may use before the OS and the Query service are squeezed. */
-export const RECOMMENDED_QUOTA_SHARE = 0.7;
-export const MAX_QUOTA_SHARE = 0.8;
+/**
+ * Couchbase recommends giving the server and its services no more than 90% of a node's memory, 80% on nodes
+ * with little memory, and refuses quotas above max(RAM − 1 GiB, 80% × RAM). The docs don't define "little";
+ * below 5 GiB the firm limit itself is 80%, so that's where the stricter share applies here.
+ */
+export const RECOMMENDED_QUOTA_SHARE = 0.9;
+export const SMALL_NODE_QUOTA_SHARE = 0.8;
+export const SMALL_NODE_MIB = 5 * 1024;
+
+/** Couchbase's guidance: a bucket quota of at least 10% of the dataset (Couchstore; 1% for Magma). */
+export const MIN_DATASET_SHARE = 0.1;
+
+export function firmQuotaLimitMiB(nodeRamMiB) {
+  return Math.max(nodeRamMiB - 1024, 0.8 * nodeRamMiB);
+}
+
+export function recommendedQuotaShare(nodeRamMiB) {
+  return nodeRamMiB < SMALL_NODE_MIB ? SMALL_NODE_QUOTA_SHARE : RECOMMENDED_QUOTA_SHARE;
+}
 
 const MIB = 1024 * 1024;
 const SERVICE_LABELS = { data: 'Data', index: 'Index', search: 'Search', eventing: 'Eventing', analytics: 'Analytics' };
@@ -64,7 +80,8 @@ const NOTE =
   'Quotas are per node and apply on every node running the service; bucket quotas are cluster-wide and come out of ' +
   'the Data quota. The Query service has no quota and uses OS memory, so leave it room — and the OS, which Couchbase ' +
   'also relies on for the file cache. Index, Search, Eventing and Analytics quotas are the values you entered; size ' +
-  'them from the real index and service sizes. Minimums and defaults vary between Couchbase Server versions, so check ' +
+  'them from the real index and service sizes. Couchbase’s sizing formula has no separate case for full ejection; ' +
+  'here it counts only the working-set share of the metadata, an estimate. Minimums and defaults vary between Couchbase Server versions, so check ' +
   'yours before applying. The bucket commands use bucket-edit, which only changes buckets that already exist (create ' +
   'new ones with bucket-create), and a bucket quota can’t be lowered below what the bucket currently uses. The CLI ' +
   'reference describes --cluster-ramsize as the Data quota “for future nodes”; check on a running cluster that the ' +
@@ -157,21 +174,23 @@ export function calculateSizing({ buckets, dataNodes, nodeRamMiB, services = {},
 
   const quotaTotalMiB = Object.values(quotas).reduce((sum, value) => sum + value, 0);
   const quotaShare = quotaTotalMiB / nodeRamMiB;
-  if (quotaShare > MAX_QUOTA_SHARE) {
+  const firmLimitMiB = firmQuotaLimitMiB(nodeRamMiB);
+  const recommendedShare = recommendedQuotaShare(nodeRamMiB);
+  if (quotaTotalMiB > firmLimitMiB) {
     warnings.push({
       level: 'error',
-      code: 'quotas-exceed-ram',
+      code: 'quotas-exceed-limit',
       message:
-        `Service quotas total ${quotaTotalMiB} MiB, ${Math.round(quotaShare * 100)}% of the node's RAM — ` +
-        'Couchbase would crowd out the OS and the Query service. Add nodes or RAM, or lower the working set.'
+        `Service quotas total ${quotaTotalMiB} MiB, above the ${Math.floor(firmLimitMiB)} MiB Couchbase allows on a node with ` +
+        `${Math.round(nodeRamMiB)} MiB of RAM, so it will refuse them. Add nodes or RAM, or lower the working set.`
     });
-  } else if (quotaShare > RECOMMENDED_QUOTA_SHARE) {
+  } else if (quotaShare > recommendedShare) {
     warnings.push({
       level: 'warning',
       code: 'quotas-high-share',
       message:
-        `Service quotas use ${Math.round(quotaShare * 100)}% of the node's RAM; ` +
-        `keep them under ${Math.round(RECOMMENDED_QUOTA_SHARE * 100)}% to leave room for the OS and the Query service.`
+        `Service quotas use ${Math.round(quotaShare * 100)}% of the node's RAM; Couchbase recommends at most ` +
+        `${Math.round(recommendedShare * 100)}%, to leave room for the OS, its file cache and the Query service.`
     });
   }
 
@@ -181,6 +200,15 @@ export function calculateSizing({ buckets, dataNodes, nodeRamMiB, services = {},
         level: 'warning',
         code: 'bucket-at-minimum',
         message: `Bucket "${bucket.name}" needs less than Couchbase's ${MIN_BUCKET_MIB} MiB minimum, so it was raised to that.`
+      });
+    }
+    if (bucket.quotaMiB < bucket.datasetMiB * MIN_DATASET_SHARE) {
+      warnings.push({
+        level: 'warning',
+        code: 'bucket-below-dataset-share',
+        message:
+          `Bucket "${bucket.name}" gets ${bucket.quotaMiB} MiB for ${Math.round(bucket.datasetMiB)} MiB of data; Couchbase ` +
+          `recommends a quota of at least ${Math.round(MIN_DATASET_SHARE * 100)}% of the dataset for Couchstore (1% for Magma).`
       });
     }
   }
