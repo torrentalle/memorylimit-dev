@@ -270,8 +270,10 @@ test('Couchbase: each input that changes the result has a tooltip saying how', a
   await page.getByRole('button', { name: 'How Data nodes affects the result' }).focus();
   await expect(page.getByRole('tooltip').filter({ hasText: 'divided by this' })).toBeVisible();
 
-  // 6 per bucket + 6 cluster/service fields; the bucket name doesn't affect the numbers, so it has none.
-  await expect(page.locator('.hint-tip__btn')).toHaveCount(12);
+  // 6 per bucket + Data nodes + RAM per node. The bucket name doesn't affect the numbers, and the other
+  // services' quotas share one sentence in their section's hint.
+  await expect(page.locator('.hint-tip__btn')).toHaveCount(8);
+  await expect(page.getByText("These aren't calculated: each is added as entered")).toBeVisible();
   await expect(field(page, 'Bucket name')).not.toHaveAttribute('aria-describedby', /.+/);
 });
 

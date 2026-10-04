@@ -73,11 +73,8 @@ const BUCKET_TIPS = {
 };
 const FIELD_TIPS = {
   dataNodes: 'The bucket total is divided by this to give the Data quota per node: more nodes, a smaller quota on each.',
-  nodeRam: 'Doesn’t change any quota; the quotas are checked against it (at most 90% recommended, never above RAM − 1 GiB).',
-  indexQuota: 'Added as entered to each node’s total; it isn’t calculated. 0 means the service doesn’t run here.',
-  searchQuota: 'Added as entered to each node’s total; it isn’t calculated. 0 means the service doesn’t run here.',
-  eventingQuota: 'Added as entered to each node’s total; it isn’t calculated. 0 means the service doesn’t run here.',
-  analyticsQuota: 'Added as entered to each node’s total (at least 1024 MiB if it runs); it isn’t calculated. 0 means it doesn’t run here.'
+  nodeRam: 'Doesn’t change any quota; the quotas are checked against it (at most 90% recommended, never above RAM − 1 GiB).'
+  // The other services' quotas all work the same way, so one sentence in the section's hint covers them.
 };
 
 /**
