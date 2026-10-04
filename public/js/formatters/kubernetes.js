@@ -12,6 +12,11 @@
 import { roundUpToMultiple } from '../calculator.js';
 import { describeProfile, percent, pluralize } from './shared.js';
 
+// How the shared fields move this result (see ../field-tip-texts.js for the defaults).
+export const fieldTips = {
+  peak: 'The limit is this plus the limit margin, and at least 1.2× the request (Burstable).'
+};
+
 export const REQUEST_STEP_MIB = 32;
 export const LIMIT_STEP_MIB = 64;
 export const MIN_LIMIT_TO_REQUEST_RATIO = 1.2;

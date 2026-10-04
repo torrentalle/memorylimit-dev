@@ -7,7 +7,13 @@
  * limit margin as the dual-value platforms), not average-based.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { describeProfile, percent } from './shared.js';
+import { describeProfile, percent, PEAK_ONLY_FIELD_TIPS } from './shared.js';
+
+// How the shared fields move this result (see ../field-tip-texts.js for the defaults).
+export const fieldTips = {
+  ...PEAK_ONLY_FIELD_TIPS,
+  peak: 'MemorySize is this plus the limit margin.'
+};
 
 // Lambda accepts any whole number of MB in range. Some older deploy tools
 // still enforce 64 MB steps; round further up if you target one of those.

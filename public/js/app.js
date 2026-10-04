@@ -7,6 +7,9 @@ import { calculateRawSizing } from './calculator.js';
 import { parseAndAnalyze } from './prometheus-parser.js';
 import { isEnabled } from './platforms.js';
 import { copyText } from './clipboard.js';
+import { attachTip } from './field-tips.js';
+import { fieldTipsFor } from './field-tip-texts.js';
+import { renderExplanation as renderExplanationInto } from './explanation.js';
 
 const GAUGE_HEADROOM = 1.15;
 const MAX_REPLICAS = 1000;
@@ -37,7 +40,7 @@ function copyLabelFor(snippet) {
 /**
  * @param {object} options
  * @param {string} options.platformId - id from ./platforms.js
- * @param {{ format: Function }} options.formatter - the page's formatter module
+ * @param {{ format: Function, fieldTips?: object }} options.formatter - the page's formatter module
  */
 export function initCalculator({ platformId, formatter }) {
   const el = {
@@ -239,10 +242,17 @@ export function initCalculator({ platformId, formatter }) {
     el.snippetNote.classList.toggle('is-hidden', !alternative);
   }
 
-  function renderExplanation(explanation, note) {
-    el.explanation.textContent = explanation;
-    el.explanationNote.textContent = note ?? '';
-    el.explanationNote.classList.toggle('is-hidden', !note);
+  function renderExplanation(explanation, note, steps = null) {
+    renderExplanationInto(el, explanation, note, steps);
+  }
+
+  function attachFieldTips() {
+    for (const [key, text] of Object.entries(fieldTipsFor(formatter))) {
+      const control = el[key];
+      // A field the page hides, or doesn't have (QoS outside Kubernetes), gets no tooltip.
+      if (!control || control.closest('.is-hidden')) continue;
+      attachTip(document.querySelector(`label[for="${control.id}"]`), control, text);
+    }
   }
 
   function recalculate() {
@@ -272,7 +282,7 @@ export function initCalculator({ platformId, formatter }) {
     renderFigures(result.figures);
     renderWarnings(result.warnings);
     renderSnippet(result.snippet, result.alternative);
-    renderExplanation(result.explanation, result.note);
+    renderExplanation(result.explanation, result.note, result.explanationSteps);
   }
 
   // ---- events ------------------------------------------------------------
@@ -306,6 +316,7 @@ export function initCalculator({ platformId, formatter }) {
     }, 1600);
   });
 
+  attachFieldTips();
   setMode('manual');
   recalculate();
 }

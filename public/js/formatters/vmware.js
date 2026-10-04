@@ -15,6 +15,12 @@
 import { roundUpToMultiple } from '../calculator.js';
 import { describeProfile, percent } from './shared.js';
 
+// How the shared fields move this result (see ../field-tip-texts.js for the defaults).
+export const fieldTips = {
+  avg: 'The reservation is this plus the request margin.',
+  peak: 'The limit is this plus the limit margin, raised to the reservation if it would fall below it.'
+};
+
 export const RESERVATION_STEP_MB = 128;
 export const LIMIT_STEP_MB = 256;
 export const DEFAULT_SHARES = 'Normal';

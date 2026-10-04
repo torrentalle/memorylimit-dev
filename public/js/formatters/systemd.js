@@ -17,6 +17,12 @@
 import { roundUpToMultiple } from '../calculator.js';
 import { describeProfile, percent } from './shared.js';
 
+// How the shared fields move this result (see ../field-tip-texts.js for the defaults).
+export const fieldTips = {
+  avg: 'Only sets Expected usage, which isn’t enforced, and keeps MemoryHigh from going below it.',
+  peak: 'MemoryHigh is this plus the limit margin, and MemoryMax 1.2× MemoryHigh.'
+};
+
 export const HIGH_STEP_MIB = 32;
 export const MAX_STEP_MIB = 64;
 export const MAX_TO_HIGH_RATIO = 1.2;
