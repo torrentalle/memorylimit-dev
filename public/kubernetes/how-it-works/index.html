@@ -91,8 +91,9 @@
       This page walks through how the <a href="/kubernetes/">Kubernetes calculator</a> turns your usage data into
       <code>resources.requests.memory</code> and <code>resources.limits.memory</code>. The request and limit start
       from the <a href="/sizing-model/">shared sizing model</a>; this page covers what happens after that. Statements
-      backed by the Kubernetes documentation link to it. Choices the documentation doesn't make for us are marked as
-      an <span class="guide-tag guide-tag--assumption">Assumption</span> and explained.
+      backed by the documentation end with a <span class="guide-tag guide-tag--doc">Kubernetes docs</span> link to the
+      page that says so. Choices the documentation doesn't make for us are explained and marked
+      <span class="guide-tag guide-tag--assumption">Assumption</span>, which links to the table of all of them.
     </p>
   </div>
 
@@ -116,20 +117,15 @@
       <h2 id="settings-heading" class="panel__title"><span class="panel__index">01</span> What the two settings do</h2>
       <ul>
         <li>
-          <span class="guide-tag guide-tag--doc">Kubernetes docs</span>
           <strong>The request</strong> is what the scheduler uses to choose a node, and a container may use more
-          than it when the node has memory to spare
-          (<a href="https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/" target="_blank" rel="noopener">Resource Management for Pods and Containers</a>).
+          than it when the node has memory to spare. <a class="guide-tag guide-tag--doc" href="https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/" target="_blank" rel="noopener">Kubernetes docs</a>
         </li>
         <li>
-          <span class="guide-tag guide-tag--doc">Kubernetes docs</span>
-          <strong>The limit</strong> is enforced by the kernel: a container that goes over it may be OOM-killed.
+          <strong>The limit</strong> is enforced by the kernel: a container that goes over it may be OOM-killed. <a class="guide-tag guide-tag--doc" href="https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/" target="_blank" rel="noopener">Kubernetes docs</a>
         </li>
         <li>
-          <span class="guide-tag guide-tag--doc">Kubernetes docs</span>
           <strong>When a node runs short of memory</strong>, the kubelet evicts Pods, and only Pods using more than
-          their requests are candidates. BestEffort Pods go first, then Burstable, then Guaranteed
-          (<a href="https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/" target="_blank" rel="noopener">Pod Quality of Service Classes</a>).
+          their requests are candidates. BestEffort Pods go first, then Burstable, then Guaranteed. <a class="guide-tag guide-tag--doc" href="https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/" target="_blank" rel="noopener">Kubernetes docs</a>
         </li>
       </ul>
       <p>
@@ -147,15 +143,12 @@ limit   = max(peak × (1 + limit margin), 1.2 × request)   rounded up to a whol
         <a href="/sizing-model/">sizing model</a> explains them, and they are assumptions too.
       </p>
       <p>
-        <span class="guide-tag guide-tag--doc">Kubernetes docs</span>
-        A request can't be larger than its limit: the API rejects it
-        (<a href="https://github.com/kubernetes/kubernetes/blob/master/pkg/apis/core/validation/validation.go" target="_blank" rel="noopener">container resource validation</a>).
+        A request can't be larger than its limit: the API rejects it. <a class="guide-tag guide-tag--doc" href="https://github.com/kubernetes/kubernetes/blob/master/pkg/apis/core/validation/validation.go" target="_blank" rel="noopener">Kubernetes docs</a>
       </p>
       <p>
-        <span class="guide-tag guide-tag--assumption">Assumption</span>
         The calculator goes further and keeps the limit at least 1.2× the request. When peak and average are close,
         the peak-based limit can end up barely above the request; the floor leaves some room for growth before an OOM
-        kill. Kubernetes doesn't set or recommend this ratio, and we found no documentation that does.
+        kill. Kubernetes doesn't set or recommend this ratio, and we found no documentation that does. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a>
       </p>
 
       <h3 class="guide-subheading">Worked example</h3>
@@ -186,20 +179,16 @@ limit   = max(peak × (1 + limit margin), 1.2 × request)   rounded up to a whol
                       average × (1 + request margin))
                   rounded up to a whole Mi</code></pre>
       <p>
-        <span class="guide-tag guide-tag--doc">Kubernetes docs</span>
         A Pod is Guaranteed only if every container has a memory request equal to its memory limit <em>and</em> a CPU
-        request equal to its CPU limit
-        (<a href="https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/" target="_blank" rel="noopener">Pod Quality of Service Classes</a>).
+        request equal to its CPU limit.
         The calculator only writes memory, so the note under the result reminds you to set CPU the same way;
-        without it the Pod stays Burstable.
+        without it the Pod stays Burstable. <a class="guide-tag guide-tag--doc" href="https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/" target="_blank" rel="noopener">Kubernetes docs</a>
       </p>
       <p>
-        <span class="guide-tag guide-tag--doc">GKE docs</span>
         Google's GKE guidance recommends the same amount of memory for the request and the limit, because memory
-        can't be compressed: when it runs out, the Pod has to be taken down
-        (<a href="https://docs.cloud.google.com/architecture/best-practices-for-running-cost-effective-kubernetes-applications-on-gke" target="_blank" rel="noopener">Best practices for running cost-optimized Kubernetes applications on GKE</a>).
+        can't be compressed: when it runs out, the Pod has to be taken down.
         The calculator still defaults to Burstable, which packs more Pods per node; choose Guaranteed for workloads
-        that mustn't be evicted.
+        that mustn't be evicted. <a class="guide-tag guide-tag--doc" href="https://docs.cloud.google.com/architecture/best-practices-for-running-cost-effective-kubernetes-applications-on-gke" target="_blank" rel="noopener">GKE docs</a>
       </p>
       <div class="guide-table-wrap">
         <table class="guide-table guide-table--numbers" data-example="410 630 generic medium production 3 guaranteed">
@@ -220,7 +209,7 @@ limit   = max(peak × (1 + limit margin), 1.2 × request)   rounded up to a whol
             <tr>
               <td>Limit far above the request <span class="guide-level">warning</span></td>
               <td>The limit is more than 4× the request</td>
-              <td><span class="guide-tag guide-tag--doc">Kubernetes docs</span> The scheduler places Pods by their requests, and under node memory pressure Pods above their requests are evicted. The 4× threshold is an <span class="guide-tag guide-tag--assumption">Assumption</span>: Kubernetes lets a cluster admin cap the ratio with a LimitRange (<code>maxLimitRequestRatio</code>) but sets no default.</td>
+              <td>The scheduler places Pods by their requests, and under node memory pressure Pods above their requests are evicted first. <a class="guide-tag guide-tag--doc" href="https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/" target="_blank" rel="noopener">Kubernetes docs</a> A LimitRange can cap the ratio (<code>maxLimitRequestRatio</code>) but has no default. <a class="guide-tag guide-tag--doc" href="https://kubernetes.io/docs/reference/kubernetes-api/policy-resources/limit-range-v1/" target="_blank" rel="noopener">Kubernetes docs</a> The 4× threshold is ours. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a></td>
             </tr>
             <tr>
               <td>Peak below average <span class="guide-level guide-level--error">error</span></td>
@@ -263,9 +252,7 @@ limit   = max(peak × (1 + limit margin), 1.2 × request)   rounded up to a whol
         </table>
       </div>
       <p>
-        <span class="guide-tag guide-tag--doc">Kubernetes docs</span>
-        When VPA also sets limits, it keeps each container's limit-to-request ratio
-        (<a href="https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/features.md" target="_blank" rel="noopener">VPA features</a>).
+        When VPA also sets limits, it keeps each container's limit-to-request ratio. <a class="guide-tag guide-tag--doc" href="https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/features.md" target="_blank" rel="noopener">Kubernetes docs</a>
       </p>
       <p>
         The difference that matters: VPA sizes the <strong>request from daily peaks</strong>, while this calculator sizes
@@ -282,22 +269,18 @@ limit   = max(peak × (1 + limit margin), 1.2 × request)   rounded up to a whol
       <pre class="yaml-block"><code>container_memory_working_set_bytes{namespace="prod", container="api"}</code></pre>
       <ul>
         <li>
-          <span class="guide-tag guide-tag--doc">cAdvisor docs</span>
-          <code>container_memory_working_set_bytes</code> is a gauge of the container's current working set, in bytes
-          (<a href="https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md" target="_blank" rel="noopener">cAdvisor Prometheus metrics</a>).
+          <code>container_memory_working_set_bytes</code> is a gauge of the container's current working set, in bytes. <a class="guide-tag guide-tag--doc" href="https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md" target="_blank" rel="noopener">cAdvisor docs</a>
         </li>
         <li>
-          <span class="guide-tag guide-tag--doc">Kubernetes docs</span>
-          The working set is what the kubelet measures to decide when a node is short of memory
-          (<a href="https://kubernetes.io/docs/concepts/scheduling-eviction/node-pressure-eviction/" target="_blank" rel="noopener">Node-pressure Eviction</a>),
-          which is why it's the metric to size from. <code>container_memory_usage_bytes</code> instead counts all memory
+          The working set is what the kubelet measures to decide when a node is short of memory, which is why it's the
+          metric to size from. <a class="guide-tag guide-tag--doc" href="https://kubernetes.io/docs/concepts/scheduling-eviction/node-pressure-eviction/" target="_blank" rel="noopener">Kubernetes docs</a> <code>container_memory_usage_bytes</code> instead counts all memory
           "regardless of when it was accessed", as cAdvisor puts it.
         </li>
         <li>
           A range query over a representative period (a week is a good default) gives the best average and peak.
           Series with <code>container=""</code> (the whole Pod) and <code>container="POD"</code> (the pause container)
-          are skipped. <span class="guide-tag guide-tag--assumption">Assumption</span> These are the label values cAdvisor
-          commonly exports for them; we haven't found them documented.
+          are skipped. These are the label values cAdvisor
+          commonly exports for them; we haven't found them documented. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a>
         </li>
       </ul>
     </section>
