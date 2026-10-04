@@ -96,7 +96,7 @@
         <div class="prom-feedback" id="prom-feedback" aria-live="polite">Paste raw samples above — every numeric value is parsed automatically.</div>
         <details class="query-hint">
           <summary>Where do I get these numbers?</summary>
-          <p>Application Insights can report the function host's process memory as the <strong>Private Bytes</strong> performance counter; which counters you get depends on your plan and OS, so check what your app emits. Take its average and its maximum over a representative period and enter them under <em>Manual values</em>.</p>
+          <p>In Azure Monitor metrics for your function app, use <strong>Memory working set</strong> (take its maximum for the peak) and <strong>Average memory working set</strong>, split by instance. Microsoft documents both for Flex Consumption, and lists them, along with <strong>Private Bytes</strong>, for function apps in general (not on the legacy Linux Consumption plan). Enter the values under <em>Manual values</em>.</p>
           <p>Per-instance samples with units (<code>412 MiB</code>), or Prometheus output from a container-hosted app, can be pasted here instead.</p>
         </details>
       </div>

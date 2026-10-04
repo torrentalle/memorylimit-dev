@@ -90,7 +90,7 @@ its numbers; the common sources are:
 | vSphere, Proxmox (measure in the guest) | `node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes` |
 | Lambda | CloudWatch Logs Insights: `fields @maxMemoryUsed \| filter @type = "REPORT"` |
 | Cloud Run | Container memory utilization × current limit (Cloud Monitoring reports a percentage) |
-| Azure Functions | Application Insights Private Bytes counter (average and max), where your plan reports it |
+| Azure Functions | Azure Monitor metrics `MemoryWorkingSet` (max) and `AverageMemoryWorkingSet`, per instance |
 | Redis | `redis_memory_used_bytes`, or `redis-cli INFO memory \| grep '^used_memory:'` sampled in a loop |
 
 Unitless values are treated as bytes unless every one is below 1,000,000, in which case they're read as MiB.
