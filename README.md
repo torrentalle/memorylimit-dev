@@ -156,7 +156,7 @@ Three plain objects, each in its own module:
 | File | Object | Controls |
 | --- | --- | --- |
 | `public/js/platforms.js` | `ENABLED_PLATFORMS` | Which calculators appear in the nav, on the landing page and in the sitemap. If only one is enabled, `/` redirects to it. Run `npm run generate:sitemap` after changing it. |
-| `public/js/monetization.js` | `MONETIZATION` | EthicalAds text ad (needs a publisher ID from [ethicalads.io](https://www.ethicalads.io/)) and a GitHub Sponsors / Buy Me a Coffee link (needs an absolute `https://` URL). |
+| `public/js/monetization.js` | `MONETIZATION` | EthicalAds text ad (currently disabled: it needs a publisher ID from [ethicalads.io](https://www.ethicalads.io/), which requires a traffic minimum; the privacy page doesn't mention it until it is enabled) and a GitHub Sponsors / Buy Me a Coffee link (needs an absolute `https://` URL). |
 | `public/js/analytics.js` | `ANALYTICS` | Cloudflare Web Analytics beacon (needs a token from the Cloudflare dashboard). Cookieless, so there is no consent banner. |
 
 Each element renders only when it is switched on **and** configured. The shipped placeholders
