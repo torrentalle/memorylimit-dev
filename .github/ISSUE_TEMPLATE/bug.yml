@@ -8,22 +8,15 @@ body:
       value: |
         Thanks for reporting. **Issues are public: remove hostnames, tokens and anything sensitive from the sample you paste.**
         Questions about how to size something go to [Discussions](https://github.com/torrentalle/memorylimit-dev/discussions/categories/q-a).
-  - type: dropdown
+  # A text field rather than a dropdown: the "Report an issue" links prefill it
+  # with the calculator's label from platforms.js (?platform=...). A prefilled
+  # dropdown was observed to fall back to "None" on load.
+  - type: input
     id: platform
     attributes:
       label: Platform
-      options:
-        - Kubernetes
-        - Docker Compose
-        - AWS Lambda
-        - Systemd / Bare Metal / VM
-        - VMware vSphere
-        - HashiCorp Nomad
-        - Google Cloud Run
-        - Azure Functions
-        - Redis maxmemory
-        - Proxmox VE
-        - Not platform-specific (landing page, nav, theme)
+      description: The calculator you used, or "site" for the landing page, navigation or theme.
+      placeholder: Kubernetes
     validations:
       required: true
   - type: textarea
