@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>How the Kubernetes Memory Limit Calculator Works | MemoryLimit</title>
+<meta name="description" content="How the Kubernetes calculator sets memory requests and limits: rounding, the limit floor, Guaranteed QoS, every warning, and how it compares with the Vertical Pod Autoscaler, with links to the Kubernetes docs." />
+<link rel="canonical" href="https://memorylimit.dev/kubernetes/how-it-works/" />
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="MemoryLimit" />
+<meta property="og:title" content="How the Kubernetes Memory Limit Calculator Works" />
+<meta property="og:description" content="How the Kubernetes calculator sets memory requests and limits: rounding, the limit floor, Guaranteed QoS, every warning, and how it compares with the Vertical Pod Autoscaler, with links to the Kubernetes docs." />
+<meta property="og:url" content="https://memorylimit.dev/kubernetes/how-it-works/" />
+<meta property="og:image" content="https://memorylimit.dev/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="How the Kubernetes Memory Limit Calculator Works" />
+<meta name="twitter:description" content="How the Kubernetes calculator sets memory requests and limits: rounding, the limit floor, Guaranteed QoS, every warning, and how it compares with the Vertical Pod Autoscaler, with links to the Kubernetes docs." />
+<meta name="twitter:image" content="https://memorylimit.dev/og-image.png" />
+<link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/css/styles.css" />
+<script src="/js/theme-init.js"></script>
+</head>
+<body>
+
+<div class="skyline" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="brand" href="/" aria-label="MemoryLimit home">
+      <img class="brand__mark brand__mark--light" src="/brand/memorylimit-mark.svg" alt="" width="37" height="28" />
+      <img class="brand__mark brand__mark--dark" src="/brand/memorylimit-mark-on-dark.svg" alt="" width="37" height="28" />
+      <div><p class="brand__name">MemoryLimit</p><p class="brand__tagline">Memory request/limit sizing</p></div>
+    </a>
+    <!-- platform-nav:start -->
+    <nav class="site-nav" aria-label="Calculators">
+      <details class="site-nav__menu">
+        <summary class="site-nav__toggle">Calculators</summary>
+        <div class="site-nav__panel">
+          <div class="site-nav__group" data-platform-group="containers">
+            <p class="site-nav__group-title">Containers &amp; orchestration</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/kubernetes/" data-platform-link="kubernetes">Kubernetes</a></li>
+              <li><a class="site-nav__link" href="/docker-compose/" data-platform-link="dockerCompose">Docker Compose</a></li>
+              <li><a class="site-nav__link" href="/nomad/" data-platform-link="nomad">HashiCorp Nomad</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="serverless">
+            <p class="site-nav__group-title">Serverless</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/lambda/" data-platform-link="lambda">AWS Lambda</a></li>
+              <li><a class="site-nav__link" href="/cloud-run/" data-platform-link="cloudRun">Google Cloud Run</a></li>
+              <li><a class="site-nav__link" href="/azure-functions/" data-platform-link="azureFunctions">Azure Functions</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="vms">
+            <p class="site-nav__group-title">VMs &amp; bare metal</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/systemd/" data-platform-link="systemd">Systemd / Bare Metal / VM</a></li>
+              <li><a class="site-nav__link" href="/vmware/" data-platform-link="vmware">VMware vSphere</a></li>
+              <li><a class="site-nav__link" href="/proxmox/" data-platform-link="proxmox">Proxmox VE</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="datastores">
+            <p class="site-nav__group-title">Data stores</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/redis/" data-platform-link="redis">Redis maxmemory</a></li>
+              <li><a class="site-nav__link" href="/couchbase/" data-platform-link="couchbase">Couchbase memory quotas</a></li>
+            </ul>
+          </div>
+        </div>
+      </details>
+    </nav>
+    <!-- platform-nav:end -->
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Dark theme">
+      <span class="theme-toggle__icon" aria-hidden="true">◐</span><span class="theme-toggle__label">theme</span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <div class="wrap intro-section">
+    <p class="guide-back"><a href="/kubernetes/">← Kubernetes memory limit calculator</a></p>
+    <h1 class="intro-title">How the Kubernetes calculator works</h1>
+    <p class="intro-text">
+      This page walks through how the <a href="/kubernetes/">Kubernetes calculator</a> turns your usage data into
+      <code>resources.requests.memory</code> and <code>resources.limits.memory</code>. The request and limit start
+      from the <a href="/sizing-model/">shared sizing model</a>; this page covers what happens after that. Statements
+      backed by the Kubernetes documentation link to it. Choices the documentation doesn't make for us are marked as
+      an <span class="guide-tag guide-tag--assumption">Assumption</span> and explained.
+    </p>
+  </div>
+
+  <div class="wrap guide">
+
+    <nav class="panel guide-toc" aria-labelledby="toc-heading">
+      <h2 id="toc-heading" class="panel__title panel__title--tight">On this page</h2>
+      <ol>
+        <li><a href="#settings">What the two settings do</a></li>
+        <li><a href="#burstable">Burstable: request and limit</a></li>
+        <li><a href="#guaranteed">Guaranteed: request equal to limit</a></li>
+        <li><a href="#warnings">Every warning, and why</a></li>
+        <li><a href="#vpa">Compared with the Vertical Pod Autoscaler</a></li>
+        <li><a href="#paste">What to paste</a></li>
+        <li><a href="#assumptions">All assumptions in one place</a></li>
+        <li><a href="#references">References</a></li>
+      </ol>
+    </nav>
+
+    <section class="panel guide-section" id="settings" aria-labelledby="settings-heading">
+      <h2 id="settings-heading" class="panel__title"><span class="panel__index">01</span> What the two settings do</h2>
+      <ul>
+        <li>
+          <span class="guide-tag guide-tag--doc">Kubernetes docs</span>
+          <strong>The request</strong> is what the scheduler uses to choose a node, and a container may use more
+          than it when the node has memory to spare
+          (<a href="https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/" target="_blank" rel="noopener">Resource Management for Pods and Containers</a>).
+        </li>
+        <li>
+          <span class="guide-tag guide-tag--doc">Kubernetes docs</span>
+          <strong>The limit</strong> is enforced by the kernel: a container that goes over it may be OOM-killed.
+        </li>
+        <li>
+          <span class="guide-tag guide-tag--doc">Kubernetes docs</span>
+          <strong>When a node runs short of memory</strong>, the kubelet evicts Pods, and only Pods using more than
+          their requests are candidates. BestEffort Pods go first, then Burstable, then Guaranteed
+          (<a href="https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/" target="_blank" rel="noopener">Pod Quality of Service Classes</a>).
+        </li>
+      </ul>
+      <p>
+        The calculator writes both settings for one container, in <code>Mi</code> (mebibytes), one of the suffixes
+        the documentation lists for memory. Values are rounded up to a whole Mi.
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="burstable" aria-labelledby="burstable-heading">
+      <h2 id="burstable-heading" class="panel__title"><span class="panel__index">02</span> Burstable: request and limit</h2>
+      <pre class="yaml-block guide-formula"><code>request = average × (1 + request margin)                 rounded up to a whole Mi
+limit   = max(peak × (1 + limit margin), 1.2 × request)   rounded up to a whole Mi</code></pre>
+      <p>
+        The margins come from the sensitivity, workload type and environment you choose; the
+        <a href="/sizing-model/">sizing model</a> explains them, and they are assumptions too.
+      </p>
+      <p>
+        <span class="guide-tag guide-tag--doc">Kubernetes docs</span>
+        A request can't be larger than its limit: the API rejects it
+        (<a href="https://github.com/kubernetes/kubernetes/blob/master/pkg/apis/core/validation/validation.go" target="_blank" rel="noopener">container resource validation</a>).
+      </p>
+      <p>
+        <span class="guide-tag guide-tag--assumption">Assumption</span>
+        The calculator goes further and keeps the limit at least 1.2× the request. When peak and average are close,
+        the peak-based limit can end up barely above the request; the floor leaves some room for growth before an OOM
+        kill. Kubernetes doesn't set or recommend this ratio, and we found no documentation that does.
+      </p>
+
+      <h3 class="guide-subheading">Worked example</h3>
+      <p>Average 410 MiB, peak 630 MiB, generic workload, medium sensitivity, production, 3 replicas:</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-example="410 630 generic medium production 3 burstable">
+          <tbody>
+            <tr><th scope="row">request</th><td>410 MiB × 1.30 = 533 MiB</td><td data-check="request">533Mi</td></tr>
+            <tr><th scope="row">limit</th><td>630 MiB × 1.30 = 819 MiB, above 1.2 × 533 = 639.6</td><td data-check="limit">819Mi</td></tr>
+            <tr class="guide-table__result"><th scope="row">total request</th><td>533Mi × 3 replicas</td><td data-check="totalRequest">1599Mi</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>When the peak is close to the average, the 1.2× floor decides the limit. Average 500 MiB and peak 520 MiB, same profile:</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-example="500 520 generic medium production 3 burstable">
+          <tbody>
+            <tr><th scope="row">request</th><td>500 MiB × 1.30 = 650 MiB</td><td data-check="request">650Mi</td></tr>
+            <tr><th scope="row">limit</th><td>520 MiB × 1.30 = 676 MiB, below 1.2 × 650 = 780</td><td data-check="limit">780Mi</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="guaranteed" aria-labelledby="guaranteed-heading">
+      <h2 id="guaranteed-heading" class="panel__title"><span class="panel__index">03</span> Guaranteed: request equal to limit</h2>
+      <pre class="yaml-block guide-formula"><code>request = limit = max(peak × (1 + limit margin),
+                      average × (1 + request margin))
+                  rounded up to a whole Mi</code></pre>
+      <p>
+        <span class="guide-tag guide-tag--doc">Kubernetes docs</span>
+        A Pod is Guaranteed only if every container has a memory request equal to its memory limit <em>and</em> a CPU
+        request equal to its CPU limit
+        (<a href="https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/" target="_blank" rel="noopener">Pod Quality of Service Classes</a>).
+        The calculator only writes memory, so the note under the result reminds you to set CPU the same way;
+        without it the Pod stays Burstable.
+      </p>
+      <p>
+        <span class="guide-tag guide-tag--doc">GKE docs</span>
+        Google's GKE guidance recommends the same amount of memory for the request and the limit, because memory
+        can't be compressed: when it runs out, the Pod has to be taken down
+        (<a href="https://docs.cloud.google.com/architecture/best-practices-for-running-cost-effective-kubernetes-applications-on-gke" target="_blank" rel="noopener">Best practices for running cost-optimized Kubernetes applications on GKE</a>).
+        The calculator still defaults to Burstable, which packs more Pods per node; choose Guaranteed for workloads
+        that mustn't be evicted.
+      </p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-example="410 630 generic medium production 3 guaranteed">
+          <tbody>
+            <tr><th scope="row">request = limit</th><td>630 MiB × 1.30 = 819 MiB, the larger of 819 and 533 MiB</td><td data-check="limit">819Mi</td></tr>
+            <tr class="guide-table__result"><th scope="row">total request</th><td>819Mi × 3 replicas</td><td data-check="totalRequest">2457Mi</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="warnings" aria-labelledby="warnings-heading">
+      <h2 id="warnings-heading" class="panel__title"><span class="panel__index">04</span> Every warning, and why</h2>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Message about</th><th scope="col">Shown when</th><th scope="col">Basis</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Limit far above the request <span class="guide-level">warning</span></td>
+              <td>The limit is more than 4× the request</td>
+              <td><span class="guide-tag guide-tag--doc">Kubernetes docs</span> The scheduler places Pods by their requests, and under node memory pressure Pods above their requests are evicted. The 4× threshold is an <span class="guide-tag guide-tag--assumption">Assumption</span>: Kubernetes lets a cluster admin cap the ratio with a LimitRange (<code>maxLimitRequestRatio</code>) but sets no default.</td>
+            </tr>
+            <tr>
+              <td>Peak below average <span class="guide-level guide-level--error">error</span></td>
+              <td>The peak you entered is lower than the average</td>
+              <td>Impossible with real samples; it usually means two different series. See the <a href="/sizing-model/#inputs">sizing model</a>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p>For example, a worker averaging 100 MiB with a 600 MiB peak, at high sensitivity:</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-example="100 600 worker high production 3 burstable">
+          <tbody>
+            <tr><th scope="row">request</th><td>100 MiB × 1.40</td><td data-check="request">140Mi</td></tr>
+            <tr><th scope="row">limit</th><td>600 MiB × 1.75</td><td data-check="limit">1050Mi</td></tr>
+            <tr class="guide-table__result"><th scope="row">limit ÷ request</th><td>above 4, so the warning shows</td><td data-check="ratio">7.5×</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="vpa" aria-labelledby="vpa-heading">
+      <h2 id="vpa-heading" class="panel__title"><span class="panel__index">05</span> Compared with the Vertical Pod Autoscaler</h2>
+      <p>
+        Kubernetes itself doesn't publish a formula for memory requests. Its
+        <a href="https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler" target="_blank" rel="noopener">Vertical Pod Autoscaler</a>
+        (VPA), maintained by the Kubernetes autoscaling group, does recommend one. Its defaults
+        (<a href="https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/flags.md" target="_blank" rel="noopener">recommender flags</a>):
+      </p>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">VPA recommender</th><th scope="col">Default</th></tr></thead>
+          <tbody>
+            <tr><td>Peak memory usage is taken per interval of</td><td>24 hours (<code>memory-aggregation-interval</code>), over 8 intervals</td></tr>
+            <tr><td>Target is this percentile of those peaks</td><td>90th (<code>target-memory-percentile</code>)</td></tr>
+            <tr><td>Safety margin added to the recommended request</td><td>15% (<code>recommendation-margin-fraction</code>)</td></tr>
+            <tr><td>Minimum recommendation per Pod</td><td>250 MB (<code>pod-recommendation-min-memory-mb</code>)</td></tr>
+            <tr><td>Memory bump-up when an OOM kill occurs</td><td>ratio 1.2 (<code>oom-bump-up-ratio</code>), at least 100 MiB (<code>oom-min-bump-up-bytes</code>)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        <span class="guide-tag guide-tag--doc">Kubernetes docs</span>
+        When VPA also sets limits, it keeps each container's limit-to-request ratio
+        (<a href="https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/features.md" target="_blank" rel="noopener">VPA features</a>).
+      </p>
+      <p>
+        The difference that matters: VPA sizes the <strong>request from daily peaks</strong>, while this calculator sizes
+        it from the <strong>average</strong>. So VPA would recommend a higher request, and a Pod sized here spends more of its
+        time above its request, where it can be evicted under node memory pressure. The calculator keeps the
+        average because it works from as few as one or two samples; reproducing VPA needs at least a day of samples
+        with timestamps. If eviction is a concern, choose a higher sensitivity or Guaranteed QoS, or let VPA size
+        the request once the workload has history.
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="paste" aria-labelledby="paste-heading">
+      <h2 id="paste-heading" class="panel__title"><span class="panel__index">06</span> What to paste</h2>
+      <pre class="yaml-block"><code>container_memory_working_set_bytes{namespace="prod", container="api"}</code></pre>
+      <ul>
+        <li>
+          <span class="guide-tag guide-tag--doc">cAdvisor docs</span>
+          <code>container_memory_working_set_bytes</code> is a gauge of the container's current working set, in bytes
+          (<a href="https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md" target="_blank" rel="noopener">cAdvisor Prometheus metrics</a>).
+        </li>
+        <li>
+          <span class="guide-tag guide-tag--doc">Kubernetes docs</span>
+          The working set is what the kubelet measures to decide when a node is short of memory
+          (<a href="https://kubernetes.io/docs/concepts/scheduling-eviction/node-pressure-eviction/" target="_blank" rel="noopener">Node-pressure Eviction</a>),
+          which is why it's the metric to size from. <code>container_memory_usage_bytes</code> instead counts all memory
+          "regardless of when it was accessed", as cAdvisor puts it.
+        </li>
+        <li>
+          A range query over a representative period (a week is a good default) gives the best average and peak.
+          Series with <code>container=""</code> (the whole Pod) and <code>container="POD"</code> (the pause container)
+          are skipped. <span class="guide-tag guide-tag--assumption">Assumption</span> These are the label values cAdvisor
+          commonly exports for them; we haven't found them documented.
+        </li>
+      </ul>
+    </section>
+
+    <section class="panel guide-section" id="assumptions" aria-labelledby="assumptions-heading">
+      <h2 id="assumptions-heading" class="panel__title"><span class="panel__index">07</span> All assumptions in one place</h2>
+      <p>Besides the margins of the <a href="/sizing-model/#assumptions">shared sizing model</a>:</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Assumption</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
+          <tbody>
+            <tr><td>The limit is at least 1.2× the request</td><td>Leaves room for growth when peak and average are close</td><td>Kubernetes only needs limit ≥ request; lower the limit by hand if you want it tighter.</td></tr>
+            <tr><td>Warn when the limit is over 4× the request</td><td>A judgment call on when overcommit makes evictions likely</td><td>Only the warning moves; a LimitRange in your namespace may set a stricter cap.</td></tr>
+            <tr><td>The request comes from the average, not from daily peaks like VPA</td><td>Works with few samples</td><td>The Pod is more often above its request, so more likely to be evicted under node pressure.</td></tr>
+            <tr><td>Burstable by default</td><td>Packs more Pods per node</td><td>GKE recommends request = limit for memory; choose Guaranteed for workloads that mustn't be evicted.</td></tr>
+            <tr><td><code>container=""</code> and <code>container="POD"</code> are Pod-level and pause series</td><td>What cAdvisor commonly exports</td><td>If your setup labels them differently, they're averaged in and skew the result; filter them out in the query.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="references" aria-labelledby="references-heading">
+      <h2 id="references-heading" class="panel__title"><span class="panel__index">08</span> References</h2>
+      <ul class="guide-references">
+        <li><a href="https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/" target="_blank" rel="noopener">Resource Management for Pods and Containers</a> — requests, limits, OOM kills and memory units.</li>
+        <li><a href="https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/" target="_blank" rel="noopener">Pod Quality of Service Classes</a> — what makes a Pod Guaranteed or Burstable, and eviction order.</li>
+        <li><a href="https://kubernetes.io/docs/concepts/scheduling-eviction/node-pressure-eviction/" target="_blank" rel="noopener">Node-pressure Eviction</a> — the working set and how the kubelet decides a node is short of memory.</li>
+        <li><a href="https://kubernetes.io/docs/reference/kubernetes-api/policy-resources/limit-range-v1/" target="_blank" rel="noopener">LimitRange</a> — <code>maxLimitRequestRatio</code>, the per-namespace cap on limit ÷ request.</li>
+        <li><a href="https://github.com/kubernetes/kubernetes/blob/master/pkg/apis/core/validation/validation.go" target="_blank" rel="noopener">Container resource validation</a> (Kubernetes source) — a request must not exceed its limit.</li>
+        <li><a href="https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/flags.md" target="_blank" rel="noopener">VPA recommender flags</a> and <a href="https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/features.md" target="_blank" rel="noopener">features</a> — how VPA sizes memory.</li>
+        <li><a href="https://docs.cloud.google.com/architecture/best-practices-for-running-cost-effective-kubernetes-applications-on-gke" target="_blank" rel="noopener">Best practices for running cost-optimized Kubernetes applications on GKE</a> — request equal to limit for memory.</li>
+        <li><a href="https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md" target="_blank" rel="noopener">cAdvisor Prometheus metrics</a> — <code>container_memory_working_set_bytes</code>.</li>
+      </ul>
+      <p class="guide-back"><a href="/kubernetes/">← Back to the Kubernetes calculator</a></p>
+    </section>
+
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div id="ethical-ads-slot" class="ethical-ads-slot"></div>
+    <div class="footer-row">
+      <!-- footer-links:start -->
+      <p class="footer-tagline">Your pasted metrics and results never leave the browser.</p>
+      <nav class="footer-links" aria-label="Project">
+        <a href="/privacy/" class="footer-link">Privacy</a>
+        <a href="/support/" class="footer-link">Support</a>
+        <a href="https://github.com/torrentalle/memorylimit-dev" class="footer-link" target="_blank" rel="noopener">★ Star on GitHub</a>
+        <a href="https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml" class="footer-link" target="_blank" rel="noopener">Report an issue</a>
+      </nav>
+      <!-- footer-links:end -->
+      <div id="donation-slot" class="donation-slot"></div>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="/js/site.js"></script>
+</body>
+</html>

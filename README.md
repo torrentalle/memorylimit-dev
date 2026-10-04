@@ -65,10 +65,10 @@ platform's rules:
 
 | Platform | Output | Rules |
 | --- | --- | --- |
-| Kubernetes — Burstable | `requests` < `limits` | Request rounds up to 32 Mi. Limit rounds up to 64 Mi, never below 1.2× the rounded request. Warns when the limit exceeds 4× the request (node overcommit → evictions). |
-| Kubernetes — Guaranteed | `requests` = `limits` | One value covering both the peak-based limit and the average-based request, rounded up to 64 Mi. |
+| Kubernetes — Burstable | `requests` < `limits` | Request and limit round up to a whole Mi; the limit is never below 1.2× the rounded request (our assumption: Kubernetes only requires request ≤ limit). Warns when the limit exceeds 4× the request (node overcommit → evictions). The full method, sources and assumptions, including how this compares with the Vertical Pod Autoscaler, are on [/kubernetes/how-it-works/](public/kubernetes/how-it-works/index.html). |
+| Kubernetes — Guaranteed | `requests` = `limits` | One value covering both the peak-based limit and the average-based request, rounded up to a whole Mi. The Pod is only Guaranteed if its CPU request equals its CPU limit too, which the note says. |
 | Docker Compose | `reservations` ≤ `limits` | Both round up to 10 M; the limit is raised to the reservation for steady workloads. Also shows the `mem_limit` equivalent. |
-| HashiCorp Nomad | `memory` < `memory_max` | Same model and rounding as Kubernetes Burstable. `memory_max` needs memory oversubscription enabled on the cluster. |
+| HashiCorp Nomad | `memory` < `memory_max` | `memory` rounds up to 32 MB, `memory_max` to 64 MB, never below 1.2× `memory`. `memory_max` needs memory oversubscription enabled on the cluster. |
 | AWS Lambda | `MemorySize` | Peak-based (running out is a hard failure), rounded up to 1 MB, clamped to 128–10240 MB. |
 | Google Cloud Run | `--memory` | Peak-based, rounded up to 64 Mi, clamped to 128 Mi–32 Gi, with the minimum vCPU Cloud Run requires above 4 GiB. |
 | Azure Functions | Instance size | Peak-based, rounded up to the next Flex Consumption size (512, 2048 or 4096 MB); above 4096 MB it switches to the smallest Elastic Premium SKU (EP1–EP3) that fits. The legacy Consumption plan is fixed at 1.5 GB and isn't sized. |
