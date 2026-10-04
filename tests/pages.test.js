@@ -174,3 +174,19 @@ test('every font referenced by the stylesheet exists', () => {
   assert.ok(fonts.length > 0);
   assert.deepEqual(fonts.filter((f) => !existsSync(join(PUBLIC, f))), []);
 });
+
+for (const page of GUIDE_PAGES) {
+  test(`${page.path} marks sources with links: docs to the document, assumptions to the table`, () => {
+    const html = read(page.dir);
+    const body = html.slice(html.indexOf('<div class="wrap guide">'));
+    // Only the intro's legend may show a tag that isn't a link.
+    assert.doesNotMatch(body, /<span class="guide-tag/);
+    const docs = [...body.matchAll(/<a class="guide-tag guide-tag--doc" href="([^"]+)"/g)].map((m) => m[1]);
+    assert.ok(docs.length > 0);
+    for (const href of docs) assert.match(href, /^https:\/\//);
+    const assumptions = [...body.matchAll(/<a class="guide-tag guide-tag--assumption" href="([^"]+)"/g)].map((m) => m[1]);
+    assert.ok(assumptions.length > 0);
+    assert.ok(assumptions.every((href) => href === '#assumptions'));
+    assert.match(body, /id="assumptions"/);
+  });
+}
