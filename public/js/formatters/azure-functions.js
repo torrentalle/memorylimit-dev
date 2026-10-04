@@ -8,7 +8,13 @@
  * Cloud Run, the size is peak-based and rounds up to the next available step.
  * The legacy Consumption plan has a fixed 1.5 GB and nothing to size.
  */
-import { describeProfile, percent } from './shared.js';
+import { describeProfile, percent, PEAK_ONLY_FIELD_TIPS } from './shared.js';
+
+// How the shared fields move this result (see ../field-tip-texts.js for the defaults).
+export const fieldTips = {
+  ...PEAK_ONLY_FIELD_TIPS,
+  peak: 'The instance size is the smallest one that fits this plus the limit margin.'
+};
 
 export const FLEX_SIZES_MB = [512, 2048, 4096];
 

@@ -13,6 +13,12 @@
 import { roundUpToMultiple } from '../calculator.js';
 import { describeProfile, percent } from './shared.js';
 
+// How the shared fields move this result (see ../field-tip-texts.js for the defaults).
+export const fieldTips = {
+  avg: 'maxmemory never goes below this plus the request margin.',
+  peak: 'maxmemory is this plus the limit margin, and the memory to provision twice that.'
+};
+
 export const STEP_MB = 64;
 export const PERSISTENCE_OVERHEAD = 2;
 export const EVICTION_POLICY = 'allkeys-lru';

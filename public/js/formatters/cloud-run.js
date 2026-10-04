@@ -7,7 +7,13 @@
  * minimum CPU count Cloud Run requires for them.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { describeProfile, percent } from './shared.js';
+import { describeProfile, percent, PEAK_ONLY_FIELD_TIPS } from './shared.js';
+
+// How the shared fields move this result (see ../field-tip-texts.js for the defaults).
+export const fieldTips = {
+  ...PEAK_ONLY_FIELD_TIPS,
+  peak: 'The memory limit is this plus the limit margin; above 4 GiB it also sets the minimum CPU.'
+};
 
 export const STEP_MIB = 64;
 export const MIN_MEMORY_MIB = 128;

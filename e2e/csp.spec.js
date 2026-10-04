@@ -3,7 +3,7 @@
 // to every HTML response here; any violation fails the test.
 import { test, expect } from './fixtures.js';
 import { sitewideCsp } from '../tests/helpers/headers.js';
-import { PLATFORM_DEFINITIONS, getGuidePages } from '../public/js/platforms.js';
+import { PLATFORM_DEFINITIONS, getGuidePages, SIZING_MODEL_GUIDE } from '../public/js/platforms.js';
 
 // upgrade-insecure-requests would rewrite the http://localhost test server's
 // own asset URLs to https; it only matters on the real (https) origin.
@@ -17,6 +17,7 @@ const PAGES = [
   '/',
   '/privacy/',
   '/support/',
+  SIZING_MODEL_GUIDE,
   ...PLATFORM_DEFINITIONS.map((def) => def.path),
   ...getGuidePages().map((guide) => guide.path)
 ];

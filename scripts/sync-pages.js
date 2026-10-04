@@ -7,6 +7,7 @@
  *   <!-- platform-nav:start --> … <!-- platform-nav:end -->      every page
  *   <!-- platform-cards:start --> … <!-- platform-cards:end -->  landing page
  *   <!-- report-result:start --> … <!-- report-result:end -->    calculator pages
+ *   <!-- guide-link:start --> … <!-- guide-link:end -->          calculator pages
  *   <!-- footer-links:start --> … <!-- footer-links:end -->      every page (data from js/links.js)
  *
  * Every defined platform is written out; links to disabled ones are removed
@@ -18,7 +19,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PLATFORM_DEFINITIONS, getPlatformGroups, getGuidePages } from '../public/js/platforms.js';
+import { PLATFORM_DEFINITIONS, getPlatformGroups, getGuidePages, guideUrl, SIZING_MODEL_GUIDE } from '../public/js/platforms.js';
 import { LINKS, reportBugUrl } from '../public/js/links.js';
 
 export const PUBLIC_DIR = join(import.meta.dirname, '..', 'public');
@@ -32,6 +33,7 @@ export function navPages() {
     ['', null],
     ['privacy', null],
     ['support', null],
+    [SIZING_MODEL_GUIDE.slice(1, -1), null],
     ...PLATFORM_DEFINITIONS.map((def) => [def.path.slice(1, -1), def.id]),
     // A guide is not the calculator itself, so no nav link is marked as the current page.
     ...getGuidePages().map((guide) => [guide.path.slice(1, -1), null])
@@ -118,6 +120,21 @@ export function renderReportResult(currentId, indent = '          ') {
   return `${indent}<p class="report-link">Result looks wrong? <a href="${href}" target="_blank" rel="noopener">Report it</a></p>`;
 }
 
+/**
+ * The link under "How this was derived", to the platform's own guide or, until it has one, to the shared
+ * sizing model. It opens in a new tab so the reader keeps the result they're checking.
+ */
+export function renderGuideLink(currentId, indent = '          ') {
+  const current = PLATFORM_DEFINITIONS.find((def) => def.id === currentId);
+  const text = current.guide
+    ? 'How every number is calculated, with sources and assumptions'
+    : 'How the request and limit margins work, and which values are assumptions';
+  return (
+    `${indent}<p class="guide-link"><a href="${guideUrl(current)}" target="_blank" rel="noopener">${text}` +
+    '<span class="visually-hidden"> (opens in a new tab)</span> ↗</a></p>'
+  );
+}
+
 export function replaceBlock(html, name, content, file) {
   const pattern = new RegExp(`<!-- ${name}:start -->[\\s\\S]*?\\n([ \\t]*)<!-- ${name}:end -->`);
   if (!pattern.test(html)) throw new Error(`${file}: missing <!-- ${name}:start --> / <!-- ${name}:end --> markers`);
@@ -128,7 +145,10 @@ export function syncedPage(dir, currentId, html) {
   const file = join(dir || '.', 'index.html');
   let out = replaceBlock(html, 'platform-nav', renderNav(currentId), file);
   out = replaceBlock(out, 'footer-links', renderFooterLinks(dir, currentId), file);
-  if (currentId) out = replaceBlock(out, 'report-result', renderReportResult(currentId), file);
+  if (currentId) {
+    out = replaceBlock(out, 'guide-link', renderGuideLink(currentId), file);
+    out = replaceBlock(out, 'report-result', renderReportResult(currentId), file);
+  }
   if (dir === '') out = replaceBlock(out, 'platform-cards', renderCards(), file);
   return out;
 }

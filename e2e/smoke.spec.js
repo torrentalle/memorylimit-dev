@@ -74,7 +74,7 @@ test('Kubernetes: manual values produce the expected manifest', async ({ page })
 test('Kubernetes: Guaranteed QoS sets request equal to limit', async ({ page }) => {
   await page.goto('/kubernetes/');
   await fillUsage(page, 450.4, 629.4);
-  await page.getByLabel('QoS class').selectOption('guaranteed');
+  await field(page, 'QoS class').selectOption('guaranteed');
   await expect(page.locator('#snippet-code')).toHaveText(
     'resources:\n  requests:\n    memory: "832Mi"\n  limits:\n    memory: "832Mi"'
   );
@@ -108,7 +108,7 @@ test('Kubernetes: replacing a good paste with garbage clears the stale results',
 test('Docker Compose: steady workloads never get a reservation above the limit', async ({ page }) => {
   await page.goto('/docker-compose/');
   await fillUsage(page, 1000, 1020);
-  await page.getByLabel('Workload type').selectOption('cache');
+  await field(page, 'Workload type').selectOption('cache');
 
   await expect(page.locator('#snippet-code')).toHaveText(
     'deploy:\n  resources:\n    limits:\n      memory: 1350M\n    reservations:\n      memory: 1350M'
@@ -118,7 +118,7 @@ test('Docker Compose: steady workloads never get a reservation above the limit',
 
 test('AWS Lambda: recommends a single peak-based MemorySize and hides replicas', async ({ page }) => {
   await page.goto('/lambda/');
-  await expect(page.getByLabel('Replica count')).toBeHidden();
+  await expect(field(page, 'Replica count')).toBeHidden();
   await fillUsage(page, 450, 630);
   await expect(page.locator('#stat-row')).toContainText('819 MB');
   await expect(page.locator('#snippet-code')).toContainText('--memory-size 819');
@@ -128,7 +128,7 @@ test('AWS Lambda: recommends a single peak-based MemorySize and hides replicas',
 test('Systemd: produces a MemoryHigh / MemoryMax drop-in with high/max gauge markers', async ({ page }) => {
   await page.goto('/systemd/');
   await expect(currentNavLink(page)).toHaveText('Systemd / Bare Metal / VM');
-  await expect(page.getByLabel('Replica count')).toBeHidden();
+  await expect(field(page, 'Replica count')).toBeHidden();
   await fillUsage(page, 295, 390);
 
   await expect(page.locator('#snippet-code')).toHaveText('[Service]\nMemoryHigh=512M\nMemoryMax=640M');
@@ -140,7 +140,7 @@ test('Systemd: produces a MemoryHigh / MemoryMax drop-in with high/max gauge mar
 test('VMware vSphere: produces vSphere Client steps and a govc command', async ({ page }) => {
   await page.goto('/vmware/');
   await expect(currentNavLink(page)).toHaveText('VMware vSphere');
-  await expect(page.getByLabel('Replica count')).toBeHidden();
+  await expect(field(page, 'Replica count')).toBeHidden();
   await fillUsage(page, 390, 700);
 
   await expect(page.locator('#snippet-code')).toHaveText(
@@ -156,7 +156,7 @@ test('VMware vSphere: produces vSphere Client steps and a govc command', async (
 test('HashiCorp Nomad: produces a resources block and the oversubscription command', async ({ page }) => {
   await page.goto('/nomad/');
   await expect(currentNavLink(page)).toHaveText('HashiCorp Nomad');
-  await expect(page.getByLabel('Group count')).toBeVisible();
+  await expect(field(page, 'Group count')).toBeVisible();
   await fillUsage(page, 450.4, 629.4);
 
   await expect(page.locator('#snippet-code')).toHaveText('resources {\n  memory     = 608\n  memory_max = 832\n}');
@@ -185,7 +185,7 @@ test('Azure Functions: produces a Flex Consumption instance size command', async
 test('Redis: a used_memory paste produces maxmemory and host sizing', async ({ page }) => {
   await page.goto('/redis/');
   await expect(currentNavLink(page)).toHaveText('Redis maxmemory');
-  await expect(page.getByLabel('Workload type')).toHaveValue('cache');
+  await expect(field(page, 'Workload type')).toHaveValue('cache');
   await page.locator('#mode-paste-btn').click();
   await page.getByLabel('used_memory samples').fill('used_memory:419430400\nused_memory:524288000');
 
@@ -275,6 +275,29 @@ test('Couchbase: each input that changes the result has a tooltip saying how', a
   await expect(page.locator('.hint-tip__btn')).toHaveCount(8);
   await expect(page.getByText("These aren't calculated: each is added as entered")).toBeVisible();
   await expect(field(page, 'Bucket name')).not.toHaveAttribute('aria-describedby', /.+/);
+});
+
+test('shared fields have tooltips saying how they move the result, and the derivation links the sizing model', async ({ page }) => {
+  await page.goto('/kubernetes/');
+  // Average, peak, workload type, replicas, sensitivity, environment and QoS.
+  await expect(page.locator('.hint-tip__btn')).toHaveCount(7);
+  const tip = page.getByRole('tooltip').filter({ hasText: 'Guaranteed sets the request equal to the limit' });
+  await expect(tip).toBeHidden();
+  await expect(field(page, 'QoS class')).toHaveAccessibleDescription(/Guaranteed sets the request equal to the limit/);
+  await page.getByRole('button', { name: 'How QoS class affects the result' }).hover();
+  await expect(tip).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(tip).toBeHidden();
+
+  const guide = page.locator('.explanation-panel .guide-link a');
+  await expect(guide).toHaveAttribute('href', '/sizing-model/');
+  await expect(guide).toHaveAttribute('target', '_blank');
+
+  // Lambda is sized from the peak alone: no tooltip on the average, and the replica field is hidden.
+  await page.goto('/lambda/');
+  await expect(page.locator('.hint-tip__btn')).toHaveCount(4);
+  await expect(averageInput(page)).not.toHaveAttribute('aria-describedby', /.+/);
+  await expect(peakInput(page)).toHaveAccessibleDescription(/MemorySize is this plus the limit margin/);
 });
 
 test('Proxmox VE: produces a qm command and web UI steps', async ({ page }) => {

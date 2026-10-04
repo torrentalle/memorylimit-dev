@@ -18,9 +18,9 @@ function withEnabled(overrides, fn) {
 const PLATFORM_PATHS = PLATFORM_DEFINITIONS.map((def) => def.path);
 const GUIDE_PATHS = PLATFORM_DEFINITIONS.filter((def) => def.guide).map((def) => def.guide);
 
-test('lists the landing page, privacy and support pages, every enabled calculator and its guide', () => {
+test('lists the landing page, privacy and support pages, the sizing model, every enabled calculator and its guide', () => {
   const paths = sitemapPaths();
-  assert.deepEqual(paths.filter((p) => !GUIDE_PATHS.includes(p)), ['/', '/privacy/', '/support/', ...PLATFORM_PATHS]);
+  assert.deepEqual(paths.filter((p) => !GUIDE_PATHS.includes(p)), ['/', '/privacy/', '/support/', '/sizing-model/', ...PLATFORM_PATHS]);
   for (const guide of GUIDE_PATHS) assert.ok(paths.includes(guide), guide);
 });
 
