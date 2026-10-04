@@ -20,9 +20,14 @@ export const LINKS = {
 /**
  * Bug-report link for a calculator page. Only the platform is prefilled,
  * never anything the visitor pasted: inputs must not leave the browser.
- * The value has to match an option of the `platform` dropdown in
- * .github/ISSUE_TEMPLATE/bug.yml (the platform labels in platforms.js).
+ * It goes in twice: as the `platform` dropdown value, which has to match an
+ * option in .github/ISSUE_TEMPLATE/bug.yml (the labels in platforms.js), and
+ * in the title, because a prefilled dropdown was observed to fall back to
+ * "None" when the form loaded while a prefilled title is kept.
  */
 export function reportBugUrl(platformLabel) {
-  return platformLabel ? `${LINKS.newBug}&platform=${encodeURIComponent(platformLabel)}` : LINKS.newBug;
+  if (!platformLabel) return LINKS.newBug;
+  const platform = encodeURIComponent(platformLabel);
+  const title = encodeURIComponent(`[Bug] ${platformLabel}: `);
+  return `${LINKS.newBug}&platform=${platform}&title=${title}`;
 }

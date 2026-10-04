@@ -16,12 +16,12 @@ test('every project link is an https URL inside the repository', () => {
   }
 });
 
-test('the bug-report link prefills only the platform', () => {
+test('the bug-report link prefills only the platform, in the dropdown and the title', () => {
   assert.equal(reportBugUrl(null), LINKS.newBug);
-  assert.equal(
-    reportBugUrl('Systemd / Bare Metal / VM'),
-    `${LINKS.newBug}&platform=Systemd%20%2F%20Bare%20Metal%20%2F%20VM`
-  );
+  const params = new URL(reportBugUrl('Systemd / Bare Metal / VM')).searchParams;
+  assert.deepEqual([...params.keys()], ['template', 'platform', 'title']);
+  assert.equal(params.get('platform'), 'Systemd / Bare Metal / VM');
+  assert.equal(params.get('title'), '[Bug] Systemd / Bare Metal / VM: ');
 });
 
 test('every issue-form link points at a template that exists', () => {
