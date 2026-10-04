@@ -183,7 +183,8 @@ pollutes real analytics or serves real ads.
    (Couchbase: `/couchbase/how-it-works/`); `sync:pages` and the sitemap pick it up, and "How this was derived"
    links to it instead of the shared [/sizing-model/](public/sizing-model/index.html) page. A formatter can return
    `explanationSteps` (`[{ label, text }]`) to show the derivation as a list, and export `fieldTips` to reword or drop
-   (`null`) the tooltips of the shared fields (defaults in `public/js/field-tip-texts.js`).
+   (`null`) the tooltips of the shared fields (defaults in `public/js/field-tip-texts.js`). The format of the
+   guide, the derivation and the tooltips is set out in [ADR 0013](docs/adr/0013-explain-each-calculator-with-sourced-guides.md).
 3. Copy an existing calculator page to `public/<name>/index.html` and adjust its metadata, intro, paste hint,
    `<body data-platform>` and the formatter's `modulepreload` link.
 4. Run `npm run sync:pages && npm run generate:sitemap`, then add `tests/formatters/<name>.test.js`.
