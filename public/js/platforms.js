@@ -12,6 +12,7 @@ export const ENABLED_PLATFORMS = {
   vmware: true,
   nomad: true,
   cloudRun: true,
+  azureFunctions: true,
   redis: true,
   proxmox: true
 };
@@ -59,6 +60,12 @@ export const PLATFORM_DEFINITIONS = [
     label: 'Google Cloud Run',
     path: '/cloud-run/',
     tagline: 'Pick a Cloud Run memory limit, with the CPU it needs, from real instance usage.'
+  },
+  {
+    id: 'azureFunctions',
+    label: 'Azure Functions',
+    path: '/azure-functions/',
+    tagline: 'Pick the Flex Consumption instance size, or the Premium SKU, a function app needs.'
   },
   {
     id: 'redis',

@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>MemoryLimit — Memory Sizing Calculator for Containers, Serverless, VMs & Redis</title>
-<meta name="description" content="Turn observed Prometheus usage data into right-sized memory settings for Kubernetes, Docker Compose, Nomad, Lambda, Cloud Run, systemd, vSphere, Proxmox and Redis — no signup, runs entirely in your browser." />
+<meta name="description" content="Turn observed Prometheus usage data into right-sized memory settings for Kubernetes, Docker Compose, Nomad, Lambda, Cloud Run, Azure Functions, systemd, vSphere, Proxmox and Redis — no signup, runs entirely in your browser." />
 <link rel="canonical" href="https://memorylimit.dev/" />
 <link rel="icon" href="/favicon.ico" sizes="32x32" />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -12,14 +12,14 @@
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="MemoryLimit" />
 <meta property="og:title" content="MemoryLimit — Memory Sizing Calculator for Containers, Serverless, VMs & Redis" />
-<meta property="og:description" content="Turn observed Prometheus usage data into right-sized memory settings for Kubernetes, Docker Compose, Nomad, Lambda, Cloud Run, systemd, vSphere, Proxmox and Redis — no signup, runs entirely in your browser." />
+<meta property="og:description" content="Turn observed Prometheus usage data into right-sized memory settings for Kubernetes, Docker Compose, Nomad, Lambda, Cloud Run, Azure Functions, systemd, vSphere, Proxmox and Redis — no signup, runs entirely in your browser." />
 <meta property="og:url" content="https://memorylimit.dev/" />
 <meta property="og:image" content="https://memorylimit.dev/og-image.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="MemoryLimit — Memory Sizing Calculator for Containers, Serverless, VMs & Redis" />
-<meta name="twitter:description" content="Turn observed Prometheus usage data into right-sized memory settings for Kubernetes, Docker Compose, Nomad, Lambda, Cloud Run, systemd, vSphere, Proxmox and Redis — no signup, runs entirely in your browser." />
+<meta name="twitter:description" content="Turn observed Prometheus usage data into right-sized memory settings for Kubernetes, Docker Compose, Nomad, Lambda, Cloud Run, Azure Functions, systemd, vSphere, Proxmox and Redis — no signup, runs entirely in your browser." />
 <meta name="twitter:image" content="https://memorylimit.dev/og-image.png" />
 <link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="/css/styles.css" />
@@ -48,6 +48,7 @@
           <li><a class="site-nav__link" href="/vmware/" data-platform-link="vmware">VMware vSphere</a></li>
           <li><a class="site-nav__link" href="/nomad/" data-platform-link="nomad">HashiCorp Nomad</a></li>
           <li><a class="site-nav__link" href="/cloud-run/" data-platform-link="cloudRun">Google Cloud Run</a></li>
+          <li><a class="site-nav__link" href="/azure-functions/" data-platform-link="azureFunctions">Azure Functions</a></li>
           <li><a class="site-nav__link" href="/redis/" data-platform-link="redis">Redis maxmemory</a></li>
           <li><a class="site-nav__link" href="/proxmox/" data-platform-link="proxmox">Proxmox VE</a></li>
         </ul>
@@ -106,6 +107,11 @@
       <a class="platform-card" href="/cloud-run/" data-platform-card="cloudRun">
         <p class="platform-card__name">Google Cloud Run</p>
         <p class="platform-card__desc">Pick a Cloud Run memory limit, with the CPU it needs, from real instance usage.</p>
+        <p class="platform-card__cta">Open calculator →</p>
+      </a>
+      <a class="platform-card" href="/azure-functions/" data-platform-card="azureFunctions">
+        <p class="platform-card__name">Azure Functions</p>
+        <p class="platform-card__desc">Pick the Flex Consumption instance size, or the Premium SKU, a function app needs.</p>
         <p class="platform-card__cta">Open calculator →</p>
       </a>
       <a class="platform-card" href="/redis/" data-platform-card="redis">

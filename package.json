@@ -1,7 +1,7 @@
 {
   "name": "memorylimit",
   "version": "1.0.0",
-  "description": "Memory sizing calculator for Kubernetes, Docker Compose, Nomad, Lambda, Cloud Run, systemd, vSphere, Proxmox and Redis — static, no build step.",
+  "description": "Memory sizing calculator for Kubernetes, Docker Compose, Nomad, Lambda, Cloud Run, Azure Functions, systemd, vSphere, Proxmox and Redis — static, no build step.",
   "private": true,
   "type": "module",
   "engines": {

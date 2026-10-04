@@ -12,7 +12,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/torrentalle/memorylimit-dev?style=flat)](https://github.com/torrentalle/memorylimit-dev/stargazers)
 
 A memory sizing calculator for containers, serverless, VMs and Redis: **Kubernetes**, **Docker Compose**,
-**HashiCorp Nomad**, **AWS Lambda**, **Google Cloud Run**, **systemd** services on VMs or bare metal,
+**HashiCorp Nomad**, **AWS Lambda**, **Google Cloud Run**, **Azure Functions**, **systemd** services on VMs or bare metal,
 **VMware vSphere**, **Proxmox VE** and **Redis `maxmemory`**. Paste real usage data — Prometheus output,
 Grafana CSV, CloudWatch exports, `redis-cli INFO` — pick a workload profile, and get a ready-to-use
 configuration with a plain-English explanation and warnings for risky setups.
@@ -68,6 +68,7 @@ platform's rules:
 | HashiCorp Nomad | `memory` < `memory_max` | Same model and rounding as Kubernetes Burstable. `memory_max` needs memory oversubscription enabled on the cluster. |
 | AWS Lambda | `MemorySize` | Peak-based (running out is a hard failure), rounded up to 1 MB, clamped to 128–10240 MB. |
 | Google Cloud Run | `--memory` | Peak-based, rounded up to 64 Mi, clamped to 128 Mi–32 Gi, with the minimum vCPU Cloud Run requires above 4 GiB. |
+| Azure Functions | Instance size | Peak-based, rounded up to the next Flex Consumption size (512, 2048 or 4096 MB); above 4096 MB it switches to the smallest Elastic Premium SKU (EP1–EP3) that fits. The legacy Consumption plan is fixed at 1.5 GB and isn't sized. |
 | systemd | `MemoryHigh` < `MemoryMax` | `MemoryHigh` (throttle) sits just above the observed peak, rounded up to 32 M, so normal peaks never throttle. `MemoryMax` (OOM-kill) is 1.2× `MemoryHigh`, rounded up to 64 M. Needs cgroup v2. |
 | VMware vSphere | reservation ≤ limit | Reservation (average-based) rounds up to 128 MB, limit (peak-based) to 256 MB; shares stay Normal. vSphere Client steps plus a `govc vm.change` command. |
 | Proxmox VE | `balloon` ≤ `memory` | Minimum memory (average-based) rounds up to 128 MiB, memory (peak-based) to 256 MiB. `qm set` command plus web UI steps. |
@@ -89,6 +90,7 @@ its numbers; the common sources are:
 | vSphere, Proxmox (measure in the guest) | `node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes` |
 | Lambda | CloudWatch Logs Insights: `fields @maxMemoryUsed \| filter @type = "REPORT"` |
 | Cloud Run | Container memory utilization × current limit (Cloud Monitoring reports a percentage) |
+| Azure Functions | Azure Monitor metrics `MemoryWorkingSet` (max) and `AverageMemoryWorkingSet`, per instance |
 | Redis | `redis_memory_used_bytes`, or `redis-cli INFO memory \| grep '^used_memory:'` sampled in a loop |
 
 Unitless values are treated as bytes unless every one is below 1,000,000, in which case they're read as MiB.
@@ -99,7 +101,7 @@ The feedback line reports how many samples were parsed, skipped (pause/pod-level
 ```
 public/                     deployed as-is
   index.html                landing page
-  kubernetes/ docker-compose/ nomad/ lambda/ cloud-run/
+  kubernetes/ docker-compose/ nomad/ lambda/ cloud-run/ azure-functions/
   systemd/ vmware/ proxmox/ redis/        one calculator page per platform
   privacy/ support/         what the site collects; where to get help (GitHub links)
   k8s/                      meta-refresh fallback for the /k8s/ alias
