@@ -16,12 +16,12 @@ test('every project link is an https URL inside the repository', () => {
   }
 });
 
-test('the bug-report link prefills only the platform', () => {
+test('the bug-report link prefills only the platform, in the dropdown and the title', () => {
   assert.equal(reportBugUrl(null), LINKS.newBug);
-  assert.equal(
-    reportBugUrl('Systemd / Bare Metal / VM'),
-    `${LINKS.newBug}&platform=Systemd%20%2F%20Bare%20Metal%20%2F%20VM`
-  );
+  const params = new URL(reportBugUrl('Systemd / Bare Metal / VM')).searchParams;
+  assert.deepEqual([...params.keys()], ['template', 'platform', 'title']);
+  assert.equal(params.get('platform'), 'Systemd / Bare Metal / VM');
+  assert.equal(params.get('title'), '[Bug] Systemd / Bare Metal / VM: ');
 });
 
 test('every issue-form link points at a template that exists', () => {
@@ -39,4 +39,12 @@ test('the bug form offers every calculator platform, as labelled in platforms.js
 test('the support page links the same Sponsors page as the footer donation link', () => {
   const page = readFileSync(join(ROOT, 'public', 'support', 'index.html'), 'utf8');
   assert.ok(page.includes(`href="${MONETIZATION.donationUrl}"`));
+});
+
+test('every calculator page links a bug report for its own platform near the result', () => {
+  for (const def of PLATFORM_DEFINITIONS) {
+    const html = readFileSync(join(ROOT, 'public', def.path, 'index.html'), 'utf8');
+    const href = html.match(/<p class="report-link">[^<]*<a href="([^"]+)"/)?.[1];
+    assert.equal(href?.replaceAll('&amp;', '&'), reportBugUrl(def.label), def.path);
+  }
 });

@@ -20,6 +20,7 @@ body:
         - VMware vSphere
         - HashiCorp Nomad
         - Google Cloud Run
+        - Azure Functions
         - Redis maxmemory
         - Proxmox VE
         - Not platform-specific (landing page, nav, theme)

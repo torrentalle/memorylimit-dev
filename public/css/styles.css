@@ -345,6 +345,14 @@ code {
 
 .support-more { margin-top: 10px; }
 
+.report-link {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.report-link a { color: var(--text-tertiary); text-decoration: underline; text-underline-offset: 2px; }
+.report-link a:hover { color: var(--accent); }
+
 /* ---- landing page ---- */
 
 .landing-section { padding-top: 4px; padding-bottom: 56px; }

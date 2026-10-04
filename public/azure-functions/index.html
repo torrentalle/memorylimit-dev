@@ -3,30 +3,30 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>AWS Lambda Memory Size Calculator — Cost vs. Performance | MemoryLimit</title>
-<meta name="description" content="Find the right AWS Lambda MemorySize for your function. Balance cost per invocation against execution duration, sized from peak usage rather than average." />
-<link rel="canonical" href="https://memorylimit.dev/lambda/" />
+<title>Azure Functions Memory Calculator — Instance Size | MemoryLimit</title>
+<meta name="description" content="Pick the right Azure Functions instance size from real usage: the Flex Consumption memory setting, or the Elastic Premium SKU when you need more. Avoid out-of-memory restarts without overpaying." />
+<link rel="canonical" href="https://memorylimit.dev/azure-functions/" />
 <link rel="icon" href="/favicon.ico" sizes="32x32" />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="MemoryLimit" />
-<meta property="og:title" content="AWS Lambda Memory Size Calculator — Cost vs. Performance" />
-<meta property="og:description" content="Find the right AWS Lambda MemorySize for your function. Balance cost per invocation against execution duration, sized from peak usage rather than average." />
-<meta property="og:url" content="https://memorylimit.dev/lambda/" />
+<meta property="og:title" content="Azure Functions Memory Calculator — Instance Size" />
+<meta property="og:description" content="Pick the right Azure Functions instance size from real usage: the Flex Consumption memory setting, or the Elastic Premium SKU when you need more. Avoid out-of-memory restarts without overpaying." />
+<meta property="og:url" content="https://memorylimit.dev/azure-functions/" />
 <meta property="og:image" content="https://memorylimit.dev/og-image.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="AWS Lambda Memory Size Calculator — Cost vs. Performance" />
-<meta name="twitter:description" content="Find the right AWS Lambda MemorySize for your function. Balance cost per invocation against execution duration, sized from peak usage rather than average." />
+<meta name="twitter:title" content="Azure Functions Memory Calculator — Instance Size" />
+<meta name="twitter:description" content="Pick the right Azure Functions instance size from real usage: the Flex Consumption memory setting, or the Elastic Premium SKU when you need more. Avoid out-of-memory restarts without overpaying." />
 <meta name="twitter:image" content="https://memorylimit.dev/og-image.png" />
 <link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="/css/styles.css" />
-<link rel="modulepreload" href="/js/formatters/lambda.js" />
+<link rel="modulepreload" href="/js/formatters/azure-functions.js" />
 <script src="/js/theme-init.js"></script>
 </head>
-<body data-platform="lambda">
+<body data-platform="azureFunctions">
 
 <div class="skyline" aria-hidden="true"></div>
 
@@ -40,16 +40,16 @@
     <!-- platform-nav:start -->
     <nav class="site-nav" aria-label="Calculators">
       <details class="site-nav__menu">
-        <summary class="site-nav__toggle"><span class="site-nav__hint">Calculator</span> AWS Lambda</summary>
+        <summary class="site-nav__toggle"><span class="site-nav__hint">Calculator</span> Azure Functions</summary>
         <ul class="site-nav__list">
           <li><a class="site-nav__link" href="/kubernetes/" data-platform-link="kubernetes">Kubernetes</a></li>
           <li><a class="site-nav__link" href="/docker-compose/" data-platform-link="dockerCompose">Docker Compose</a></li>
-          <li><a class="site-nav__link" href="/lambda/" data-platform-link="lambda" aria-current="page">AWS Lambda</a></li>
+          <li><a class="site-nav__link" href="/lambda/" data-platform-link="lambda">AWS Lambda</a></li>
           <li><a class="site-nav__link" href="/systemd/" data-platform-link="systemd">Systemd / Bare Metal / VM</a></li>
           <li><a class="site-nav__link" href="/vmware/" data-platform-link="vmware">VMware vSphere</a></li>
           <li><a class="site-nav__link" href="/nomad/" data-platform-link="nomad">HashiCorp Nomad</a></li>
           <li><a class="site-nav__link" href="/cloud-run/" data-platform-link="cloudRun">Google Cloud Run</a></li>
-          <li><a class="site-nav__link" href="/azure-functions/" data-platform-link="azureFunctions">Azure Functions</a></li>
+          <li><a class="site-nav__link" href="/azure-functions/" data-platform-link="azureFunctions" aria-current="page">Azure Functions</a></li>
           <li><a class="site-nav__link" href="/redis/" data-platform-link="redis">Redis maxmemory</a></li>
           <li><a class="site-nav__link" href="/proxmox/" data-platform-link="proxmox">Proxmox VE</a></li>
         </ul>
@@ -65,12 +65,12 @@
 <main>
 
   <div class="wrap intro-section">
-    <h1 class="intro-title">AWS Lambda Memory Size Calculator</h1>
+    <h1 class="intro-title">Azure Functions Memory Calculator</h1>
     <p class="intro-text">
-      Lambda has no separate memory request and limit — one <code>MemorySize</code> value sets your function's
-      memory, its proportional vCPU allocation, and its per-millisecond cost all at once. Running out causes a
-      hard failure rather than graceful throttling, so this calculator sizes memory from peak usage, not
-      average, and flags anything outside AWS's 128–10240 MB range.
+      Azure Functions doesn't take a free-form memory value: the hosting plan fixes the instance size. Flex Consumption
+      offers 512, 2048 and 4096 MB instances, and anything larger needs an Elastic Premium SKU (EP1–EP3). An instance
+      that runs out of memory is recycled and its in-flight executions fail. This calculator sizes from peak usage and
+      picks the smallest instance that fits.
     </p>
   </div>
 
@@ -85,26 +85,24 @@
       </div>
 
       <div id="mode-paste">
-        <label class="field-label" for="prom-input">Max Memory Used samples</label>
+        <label class="field-label" for="prom-input">Per-instance memory samples</label>
         <textarea
           id="prom-input"
           class="prom-textarea"
           rows="7"
           spellcheck="false"
-          placeholder="@timestamp,@maxMemoryUsed&#10;2026-09-25 10:00:00.000,187245312&#10;2026-09-25 10:00:04.000,201400000"
+          placeholder="412 MiB&#10;455 MiB&#10;618 MiB"
         ></textarea>
         <div class="prom-feedback" id="prom-feedback" aria-live="polite">Paste raw samples above — every numeric value is parsed automatically.</div>
         <details class="query-hint">
           <summary>Where do I get these numbers?</summary>
-          <p>Run this in CloudWatch Logs Insights against the function's log group over a representative period, then export the results as CSV and paste them:</p>
-          <pre>fields @maxMemoryUsed
-| filter @type = "REPORT"</pre>
-          <p>Each <code>REPORT</code> line is one invocation; values are in bytes. Prometheus output and plain lists of numbers work too.</p>
+          <p>In Azure Monitor metrics for your function app, use <strong>Memory working set</strong> (take its maximum for the peak) and <strong>Average memory working set</strong>, split by instance. Microsoft documents both for Flex Consumption, and lists them, along with <strong>Private Bytes</strong>, for function apps in general (not on the legacy Linux Consumption plan). Enter the values under <em>Manual values</em>.</p>
+          <p>Per-instance samples with units (<code>412 MiB</code>), or Prometheus output from a container-hosted app, can be pasted here instead.</p>
         </details>
       </div>
 
       <div id="mode-manual" class="is-hidden">
-        <p class="field-hint">Enter observed usage directly, in MiB.</p>
+        <p class="field-hint">Enter observed per-instance usage directly, in MiB.</p>
       </div>
 
       <div class="field-grid">
@@ -133,7 +131,7 @@
             <option value="generic" selected>Generic</option>
           </select>
         </div>
-        <!-- Lambda scales by concurrency, not replicas; the field stays in the form model but is hidden. -->
+        <!-- Azure Functions scales instance count automatically, so replicas stay hidden. -->
         <div class="field is-hidden" id="replicas-field">
           <label class="field-label" for="replicas-input">Replica count</label>
           <input id="replicas-input" class="field-input" type="number" min="1" max="1000" step="1" inputmode="numeric" value="1" />
@@ -141,9 +139,9 @@
         <div class="field">
           <label class="field-label" for="sensitivity-select">OOM sensitivity</label>
           <select id="sensitivity-select" class="field-input">
-            <option value="low">Low — tolerate occasional out-of-memory errors</option>
+            <option value="low">Low — tolerate occasional instance recycles</option>
             <option value="medium" selected>Medium</option>
-            <option value="high">High — avoid out-of-memory errors at all cost</option>
+            <option value="high">High — avoid out-of-memory recycles at all cost</option>
           </select>
         </div>
         <div class="field">
@@ -160,7 +158,7 @@
     <section class="results" aria-labelledby="results-heading">
 
       <div id="disabled-state" class="panel empty-state is-hidden">
-        <p class="empty-state__message">The AWS Lambda calculator is currently turned off. See <a href="/">the other calculators</a>.</p>
+        <p class="empty-state__message">The Azure Functions calculator is currently turned off. See <a href="/">the other calculators</a>.</p>
       </div>
 
       <div id="output-panels" class="output-panels">
@@ -186,7 +184,7 @@
 
         <div class="panel">
           <div class="panel__header-row">
-            <h2 class="panel__title"><span class="panel__index">04</span> <span id="snippet-title">Lambda function configuration</span></h2>
+            <h2 class="panel__title"><span class="panel__index">04</span> <span id="snippet-title">Azure CLI command</span></h2>
             <button id="copy-snippet" class="copy-btn" type="button">Copy snippet</button>
           </div>
           <pre class="yaml-block"><code id="snippet-code">—</code></pre>
@@ -198,7 +196,7 @@
           <p class="explanation" id="explanation">Enter usage data to see the calculation.</p>
           <p class="explanation-note is-hidden" id="explanation-note"></p>
           <!-- report-result:start -->
-          <p class="report-link">Result looks wrong? <a href="https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml&amp;platform=AWS%20Lambda&amp;title=%5BBug%5D%20AWS%20Lambda%3A%20" target="_blank" rel="noopener">Report it</a></p>
+          <p class="report-link">Result looks wrong? <a href="https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml&amp;platform=Azure%20Functions&amp;title=%5BBug%5D%20Azure%20Functions%3A%20" target="_blank" rel="noopener">Report it</a></p>
           <!-- report-result:end -->
         </div>
 
@@ -220,7 +218,7 @@
         <a href="/privacy/" class="footer-link">Privacy</a>
         <a href="/support/" class="footer-link">Support</a>
         <a href="https://github.com/torrentalle/memorylimit-dev" class="footer-link" target="_blank" rel="noopener">★ Star on GitHub</a>
-        <a href="https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml&amp;platform=AWS%20Lambda&amp;title=%5BBug%5D%20AWS%20Lambda%3A%20" class="footer-link" target="_blank" rel="noopener">Report an issue</a>
+        <a href="https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml&amp;platform=Azure%20Functions&amp;title=%5BBug%5D%20Azure%20Functions%3A%20" class="footer-link" target="_blank" rel="noopener">Report an issue</a>
       </nav>
       <!-- footer-links:end -->
       <div id="donation-slot" class="donation-slot"></div>
