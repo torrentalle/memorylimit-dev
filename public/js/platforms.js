@@ -107,12 +107,18 @@ export const PLATFORM_DEFINITIONS = [
     label: 'Couchbase memory quotas',
     path: '/couchbase/',
     entry: '/js/couchbase-page.js',
+    guide: '/couchbase/how-it-works/',
     tagline: 'Set Data, Index and Search service quotas and each bucket’s quota from the dataset.'
   }
 ];
 
 export function isEnabled(id) {
   return ENABLED_PLATFORMS[id] === true;
+}
+
+/** Pages explaining a platform's method in detail (`guide` in its definition), as { platformId, path }. */
+export function getGuidePages(defs = PLATFORM_DEFINITIONS) {
+  return defs.filter((def) => def.guide).map((def) => ({ platformId: def.id, path: def.guide }));
 }
 
 export function getEnabledPlatforms() {

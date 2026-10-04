@@ -16,9 +16,19 @@ function withEnabled(overrides, fn) {
 }
 
 const PLATFORM_PATHS = PLATFORM_DEFINITIONS.map((def) => def.path);
+const GUIDE_PATHS = PLATFORM_DEFINITIONS.filter((def) => def.guide).map((def) => def.guide);
 
-test('lists the landing page, privacy and support pages and every enabled calculator', () => {
-  assert.deepEqual(sitemapPaths(), ['/', '/privacy/', '/support/', ...PLATFORM_PATHS]);
+test('lists the landing page, privacy and support pages, every enabled calculator and its guide', () => {
+  const paths = sitemapPaths();
+  assert.deepEqual(paths.filter((p) => !GUIDE_PATHS.includes(p)), ['/', '/privacy/', '/support/', ...PLATFORM_PATHS]);
+  for (const guide of GUIDE_PATHS) assert.ok(paths.includes(guide), guide);
+});
+
+test('a guide follows its calculator in and out of the sitemap', () => {
+  const couchbase = PLATFORM_DEFINITIONS.find((def) => def.guide);
+  const paths = sitemapPaths();
+  assert.equal(paths.indexOf(couchbase.guide), paths.indexOf(couchbase.path) + 1);
+  withEnabled({ [couchbase.id]: false }, () => assert.ok(!sitemapPaths().includes(couchbase.guide)));
 });
 
 for (const { id, path } of PLATFORM_DEFINITIONS) {

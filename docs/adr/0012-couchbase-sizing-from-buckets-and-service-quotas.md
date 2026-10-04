@@ -46,6 +46,10 @@ calculator page to contain every element id `app.js` reads.
   (`kv_curr_items`, peak per series, summed over nodes) and each paste fills in only what it contains, so
   buckets and cluster info can be pasted one after the other. Document and key sizes are never guessed. The
   mode toggle follows the other calculators: Manual values first and the default, the form visible in both.
+- **Method page:** the result's "How this was derived" block stays a short summary with the actual numbers.
+  The full method, every constant's source in Couchbase's documentation, and every assumption are on
+  `/couchbase/how-it-works/`, linked from that block and opened in a new tab so the result isn't lost. A platform
+  definition's `guide` field registers such a page for `sync:pages` and the sitemap.
 - **Shared code:** the clipboard helper moved out of `app.js` into `clipboard.js` so both entry points use it.
 
 ## Alternatives considered

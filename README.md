@@ -73,7 +73,7 @@ platform's rules:
 | VMware vSphere | reservation ≤ limit | Reservation (average-based) rounds up to 128 MB, limit (peak-based) to 256 MB; shares stay Normal. vSphere Client steps plus a `govc vm.change` command. |
 | Proxmox VE | `balloon` ≤ `memory` | Minimum memory (average-based) rounds up to 128 MiB, memory (peak-based) to 256 MiB. `qm set` command plus web UI steps. |
 | Redis | `maxmemory` | Peak `used_memory` + margin, rounded up to 64 MB, with `allkeys-lru`. Recommends 2× `maxmemory` for the host or container to cover persistence forks. |
-| Couchbase | Data, Index, Search, Eventing, Analytics quotas per node; one quota per bucket | Sized from the dataset, not from usage samples: per bucket, Couchbase's sizing formula, (resident metadata + working set) × 1.25 overhead ÷ 0.85 high-water mark, rounded up to a whole MiB. The Data quota per node is the bucket total ÷ Data nodes. Warns above Couchbase's recommended 90% of node RAM (80% under 5 GiB) and errors above its firm limit, max(RAM − 1 GiB, 80% × RAM); also warns when a bucket quota is under 10% of its dataset, and when a full-ejection bucket keeps under 20% in RAM (reads and existence checks go to disk). `couchbase-cli` commands plus the REST equivalent. Paste mode reads Prometheus `kv_curr_items` (text or API JSON), `/pools/default/buckets` and `/pools/default` to fill in buckets, nodes and quotas. See [ADR 0012](docs/adr/0012-couchbase-sizing-from-buckets-and-service-quotas.md). |
+| Couchbase | Data, Index, Search, Eventing, Analytics quotas per node; one quota per bucket | Sized from the dataset, not from usage samples: per bucket, Couchbase's sizing formula, (resident metadata + working set) × 1.25 overhead ÷ 0.85 high-water mark, rounded up to a whole MiB. The Data quota per node is the bucket total ÷ Data nodes. Warns above Couchbase's recommended 90% of node RAM (80% under 5 GiB) and errors above its firm limit, max(RAM − 1 GiB, 80% × RAM); also warns when a bucket quota is under 10% of its dataset, and when a full-ejection bucket keeps under 20% in RAM (reads and existence checks go to disk). `couchbase-cli` commands plus the REST equivalent. Paste mode reads Prometheus `kv_curr_items` (text or API JSON), `/pools/default/buckets` and `/pools/default` to fill in buckets, nodes and quotas. The full method, sources and assumptions are on [/couchbase/how-it-works/](public/couchbase/how-it-works/index.html); see also [ADR 0012](docs/adr/0012-couchbase-sizing-from-buckets-and-service-quotas.md). |
 
 Rounding tolerates floating-point noise, so 200 × 1.12 = `224.00000000000003` still rounds to 224 Mi, not 256.
 
@@ -176,7 +176,8 @@ pollutes real analytics or serves real ads.
    `public/js/platforms.js`.
 2. Add `public/js/formatters/<name>.js` exporting `format(raw)`; copy the shape another formatter returns.
    A platform whose input isn't an average/peak pair (Couchbase) also sets `entry` in its definition and
-   ships its own page script.
+   ships its own page script. A platform can also set `guide` to a page explaining its method in detail
+   (Couchbase: `/couchbase/how-it-works/`); `sync:pages` and the sitemap pick it up.
 3. Copy an existing calculator page to `public/<name>/index.html` and adjust its metadata, intro, paste hint,
    `<body data-platform>` and the formatter's `modulepreload` link.
 4. Run `npm run sync:pages && npm run generate:sitemap`, then add `tests/formatters/<name>.test.js`.

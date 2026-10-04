@@ -6,7 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { PLATFORM_DEFINITIONS, formatterUrl, entryUrl } from '../public/js/platforms.js';
+import { PLATFORM_DEFINITIONS, formatterUrl, entryUrl, getGuidePages } from '../public/js/platforms.js';
 import { navPages, renderNav, syncedPage } from '../scripts/sync-pages.js';
 
 const PUBLIC = join(import.meta.dirname, '..', 'public');
@@ -19,13 +19,15 @@ const metaName = (html, name) => attr(html, new RegExp(`<meta name="${name}" con
 const decode = (s) => s.replace(/&amp;/g, '&');
 
 const CALCULATOR_PAGES = PLATFORM_DEFINITIONS.map((def) => ({ ...def, dir: def.path.slice(1, -1) }));
+const GUIDE_PAGES = getGuidePages().map(({ path }) => ({ path, dir: path.slice(1, -1) }));
 const CONTENT_PAGES = [
   { path: '/', dir: '' },
   { path: '/privacy/', dir: 'privacy' },
   { path: '/support/', dir: 'support' },
-  ...CALCULATOR_PAGES
+  ...CALCULATOR_PAGES,
+  ...GUIDE_PAGES
 ];
-const SHAREABLE_PAGES = [{ path: '/', dir: '' }, ...CALCULATOR_PAGES];
+const SHAREABLE_PAGES = [{ path: '/', dir: '' }, ...CALCULATOR_PAGES, ...GUIDE_PAGES];
 
 // The ids a page script looks up with element('…'); each page must contain the ones its own entry script needs.
 const requiredIds = (script) =>

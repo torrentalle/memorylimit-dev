@@ -18,7 +18,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PLATFORM_DEFINITIONS, getPlatformGroups } from '../public/js/platforms.js';
+import { PLATFORM_DEFINITIONS, getPlatformGroups, getGuidePages } from '../public/js/platforms.js';
 import { LINKS, reportBugUrl } from '../public/js/links.js';
 
 export const PUBLIC_DIR = join(import.meta.dirname, '..', 'public');
@@ -32,7 +32,9 @@ export function navPages() {
     ['', null],
     ['privacy', null],
     ['support', null],
-    ...PLATFORM_DEFINITIONS.map((def) => [def.path.slice(1, -1), def.id])
+    ...PLATFORM_DEFINITIONS.map((def) => [def.path.slice(1, -1), def.id]),
+    // A guide is not the calculator itself, so no nav link is marked as the current page.
+    ...getGuidePages().map((guide) => [guide.path.slice(1, -1), null])
   ];
 }
 

@@ -81,17 +81,10 @@ const REST_FIELDS = {
   analytics: 'cbasMemoryQuota'
 };
 
+// Kept short on purpose: the details, sources and assumptions are on the guide page (/couchbase/how-it-works/).
 const NOTE =
-  'Quotas are per node and apply on every node running the service; bucket quotas are cluster-wide and come out of ' +
-  'the Data quota. The Query service has no quota and uses OS memory, so leave it room — and the OS, which Couchbase ' +
-  'also relies on for the file cache. Index, Search, Eventing and Analytics quotas are the values you entered; size ' +
-  'them from the real index and service sizes. With full ejection Couchbase evicts a document’s key and metadata ' +
-  'along with its value, so only the resident documents’ metadata is counted; Couchbase’s sizing formula has no ' +
-  'separate case for this, so treat it as derived from that behaviour rather than documented. Minimums and defaults vary between Couchbase Server versions, so check ' +
-  'yours before applying. The bucket commands use bucket-edit, which only changes buckets that already exist (create ' +
-  'new ones with bucket-create), and a bucket quota can’t be lowered below what the bucket currently uses. The CLI ' +
-  'reference describes --cluster-ramsize as the Data quota “for future nodes”; check on a running cluster that the ' +
-  'quota changed, or use the REST call.';
+  'Index, Search, Eventing and Analytics quotas are the values you entered. Full-ejection buckets count only the ' +
+  'metadata of documents kept in RAM — an assumption. bucket-edit only changes buckets that already exist.';
 
 function assertNonNegativeNumber(name, value) {
   if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
@@ -257,11 +250,12 @@ export function restCommand(quotas) {
 }
 
 function explain(sizing) {
-  const { buckets, dataNodes, bucketsTotalMiB, quotas } = sizing;
+  const { buckets, dataNodes, bucketsTotalMiB, quotas, quotaTotalMiB, quotaShare } = sizing;
   return (
-    `Each bucket = (resident metadata + working set) × ${1 + OVERHEAD} overhead ÷ ${HIGH_WATER_MARK} high-water mark, ` +
-    `rounded up to a whole MiB: ${buckets.map((b) => `${b.name} ${b.quotaMiB} MiB`).join(', ')} ` +
-    `→ ${bucketsTotalMiB} MiB across ${pluralize(dataNodes, 'Data node')} → Data quota ${quotas.data} MiB per node.`
+    `Bucket quota = (metadata + working set in RAM) × ${1 + OVERHEAD} ÷ ${HIGH_WATER_MARK}: ` +
+    `${buckets.map((b) => `${b.name} ${b.quotaMiB} MiB`).join(', ')}. ` +
+    `Data quota = ${bucketsTotalMiB} MiB ÷ ${pluralize(dataNodes, 'Data node')} = ${quotas.data} MiB per node. ` +
+    `All quotas: ${quotaTotalMiB} MiB, ${Math.round(quotaShare * 100)}% of the node's RAM.`
   );
 }
 

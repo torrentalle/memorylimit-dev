@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import * as couchbase from '../../public/js/formatters/couchbase.js';
 
 const BUCKET = { name: 'default', documents: 1000000, keyBytes: 36, documentBytes: 1024, replicas: 1, workingSetPct: 20, eviction: 'value' };
@@ -69,11 +71,6 @@ test('full ejection with a working set under 20% warns that reads and existence 
   assert.match(message, /Magma/);
 });
 
-test('the note explains why full ejection counts only resident metadata', () => {
-  const { note } = couchbase.format(INPUT);
-  assert.match(note, /full ejection Couchbase evicts a document’s key and metadata/);
-  assert.match(note, /no separate case/);
-});
 
 test('a tiny bucket is raised to the minimum and flagged', () => {
   const result = sizing({ buckets: [bucketWith({ documents: 1000 })] });
@@ -152,18 +149,31 @@ test('the figures list every quota and end with the per-node total', () => {
   assert.equal(figures.at(-1).role, 'total');
 });
 
-test('the note says the quotas are per node and that Query has none', () => {
-  const { note } = couchbase.format(INPUT);
-  assert.match(note, /per node/);
-  assert.match(note, /Query service has no quota/);
+test('the explanation is a short summary with the actual numbers', () => {
+  const { explanation } = couchbase.format(INPUT);
+  assert.equal(
+    explanation,
+    'Bucket quota = (metadata + working set in RAM) × 1.25 ÷ 0.85: default 833 MiB. ' +
+      "Data quota = 833 MiB ÷ 3 Data nodes = 278 MiB per node. All quotas: 790 MiB, 5% of the node's RAM."
+  );
 });
 
-test('the note covers bucket-edit limits and the CLI wording for --cluster-ramsize', () => {
+test('the note stays short and flags the full-ejection assumption', () => {
   const { note } = couchbase.format(INPUT);
-  assert.match(note, /bucket-edit.*already exist/);
-  assert.match(note, /bucket-create/);
-  assert.match(note, /lowered/);
-  assert.match(note, /future nodes/);
+  assert.ok(note.length < 300, `note is ${note.length} characters`);
+  assert.match(note, /Full-ejection.*assumption/);
+  assert.match(note, /bucket-edit only changes buckets that already exist/);
+});
+
+test('the guide page carries the details the note leaves out, with sources and assumptions', () => {
+  const guide = readFileSync(join(import.meta.dirname, '..', '..', 'public', 'couchbase', 'how-it-works', 'index.html'), 'utf8');
+  for (const text of ['Query service has no quota', 'bucket-create', 'currently uses', 'for future nodes', 'max(RAM − 1 GiB, 80% × RAM)', '832.50 MiB', '833 MiB', '278 MiB']) {
+    assert.ok(guide.includes(text), text);
+  }
+  for (const doc of ['install/sizing-general.html', 'buckets-memory-and-storage/memory.html', 'change-ejection-policy.html', 'rest-configure-memory.html']) {
+    assert.ok(guide.includes(`https://docs.couchbase.com/server/current/${doc}`) || guide.includes(doc), doc);
+  }
+  assert.ok((guide.match(/guide-tag--assumption/g) ?? []).length >= 8);
 });
 
 test('rejects invalid input rather than coercing it', () => {

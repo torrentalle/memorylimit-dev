@@ -15,7 +15,7 @@ export const BASE_URL = 'https://memorylimit.dev';
 const ALWAYS_INCLUDED_PATHS = ['/', '/privacy/', '/support/'];
 
 export function sitemapPaths(platforms = getEnabledPlatforms()) {
-  return [...ALWAYS_INCLUDED_PATHS, ...platforms.map((def) => def.path)];
+  return [...ALWAYS_INCLUDED_PATHS, ...platforms.flatMap((def) => (def.guide ? [def.path, def.guide] : [def.path]))];
 }
 
 export function buildSitemapXml(paths = sitemapPaths()) {
