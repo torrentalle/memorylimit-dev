@@ -65,7 +65,10 @@ const NOTE =
   'the Data quota. The Query service has no quota and uses OS memory, so leave it room — and the OS, which Couchbase ' +
   'also relies on for the file cache. Index, Search, Eventing and Analytics quotas are the values you entered; size ' +
   'them from the real index and service sizes. Minimums and defaults vary between Couchbase Server versions, so check ' +
-  'yours before applying.';
+  'yours before applying. The bucket commands use bucket-edit, which only changes buckets that already exist (create ' +
+  'new ones with bucket-create), and a bucket quota can’t be lowered below what the bucket currently uses. The CLI ' +
+  'reference describes --cluster-ramsize as the Data quota “for future nodes”; check on a running cluster that the ' +
+  'quota changed, or use the REST call.';
 
 function assertNonNegativeNumber(name, value) {
   if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {

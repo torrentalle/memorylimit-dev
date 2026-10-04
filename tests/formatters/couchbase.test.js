@@ -118,6 +118,14 @@ test('the note says the quotas are per node and that Query has none', () => {
   assert.match(note, /Query service has no quota/);
 });
 
+test('the note covers bucket-edit limits and the CLI wording for --cluster-ramsize', () => {
+  const { note } = couchbase.format(INPUT);
+  assert.match(note, /bucket-edit.*already exist/);
+  assert.match(note, /bucket-create/);
+  assert.match(note, /lowered/);
+  assert.match(note, /future nodes/);
+});
+
 test('rejects invalid input rather than coercing it', () => {
   assert.throws(() => sizing({ buckets: [] }), RangeError);
   assert.throws(() => sizing({ dataNodes: 0 }), RangeError);
