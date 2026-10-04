@@ -18,9 +18,12 @@ const CONFIGURED = {
   donationUrl: 'https://github.com/sponsors/example'
 };
 
-test('nothing renders while the shipped placeholders are still in place', () => {
+test('the ad stays off while its shipped publisher id is still a placeholder', () => {
   assert.equal(Monetization.getEthicalAdsConfig(PRODUCTION_HOST), null);
-  assert.equal(Monetization.getDonationConfig(), null);
+});
+
+test('the shipped donation link points at the project GitHub Sponsors page', () => {
+  assert.equal(Monetization.getDonationConfig().url, 'https://github.com/sponsors/torrentalle');
 });
 
 test('getEthicalAdsConfig returns the publisher id once it is configured, on the production host', () => {
