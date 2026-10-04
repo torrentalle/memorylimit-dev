@@ -31,9 +31,9 @@ test('every issue-form link points at a template that exists', () => {
   }
 });
 
-test('the bug form has the text field with id "platform" that the report links prefill', () => {
+test('the bug form offers every calculator platform, as labelled in platforms.js', () => {
   const form = readFileSync(join(ROOT, '.github', 'ISSUE_TEMPLATE', 'bug.yml'), 'utf8');
-  assert.match(form, /- type: input\n\s+id: platform\n/);
+  for (const { label } of PLATFORM_DEFINITIONS) assert.ok(form.includes(`- ${label}\n`), label);
 });
 
 test('the support page links the same Sponsors page as the footer donation link', () => {
