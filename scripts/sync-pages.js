@@ -6,6 +6,7 @@
  *
  *   <!-- platform-nav:start --> … <!-- platform-nav:end -->      every page
  *   <!-- platform-cards:start --> … <!-- platform-cards:end -->  landing page
+ *   <!-- report-result:start --> … <!-- report-result:end -->    calculator pages
  *   <!-- footer-links:start --> … <!-- footer-links:end -->      every page (data from js/links.js)
  *
  * Every defined platform is written out; links to disabled ones are removed
@@ -96,6 +97,12 @@ export function renderFooterLinks(dir, currentId, indent = '      ') {
     .join('\n');
 }
 
+export function renderReportResult(currentId, indent = '          ') {
+  const current = PLATFORM_DEFINITIONS.find((def) => def.id === currentId);
+  const href = escapeHtml(reportBugUrl(current?.label));
+  return `${indent}<p class="report-link">Result looks wrong? <a href="${href}" target="_blank" rel="noopener">Report it</a></p>`;
+}
+
 export function replaceBlock(html, name, content, file) {
   const pattern = new RegExp(`<!-- ${name}:start -->[\\s\\S]*?\\n([ \\t]*)<!-- ${name}:end -->`);
   if (!pattern.test(html)) throw new Error(`${file}: missing <!-- ${name}:start --> / <!-- ${name}:end --> markers`);
@@ -106,6 +113,7 @@ export function syncedPage(dir, currentId, html) {
   const file = join(dir || '.', 'index.html');
   let out = replaceBlock(html, 'platform-nav', renderNav(currentId), file);
   out = replaceBlock(out, 'footer-links', renderFooterLinks(dir, currentId), file);
+  if (currentId) out = replaceBlock(out, 'report-result', renderReportResult(currentId), file);
   if (dir === '') out = replaceBlock(out, 'platform-cards', renderCards(), file);
   return out;
 }

@@ -40,3 +40,11 @@ test('the support page links the same Sponsors page as the footer donation link'
   const page = readFileSync(join(ROOT, 'public', 'support', 'index.html'), 'utf8');
   assert.ok(page.includes(`href="${MONETIZATION.donationUrl}"`));
 });
+
+test('every calculator page links a bug report for its own platform near the result', () => {
+  for (const def of PLATFORM_DEFINITIONS) {
+    const html = readFileSync(join(ROOT, 'public', def.path, 'index.html'), 'utf8');
+    const href = html.match(/<p class="report-link">[^<]*<a href="([^"]+)"/)?.[1];
+    assert.equal(href?.replaceAll('&amp;', '&'), reportBugUrl(def.label), def.path);
+  }
+});
