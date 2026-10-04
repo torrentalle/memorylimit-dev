@@ -175,6 +175,8 @@ pollutes real analytics or serves real ads.
    `<body data-platform>` and the formatter's `modulepreload` link.
 4. Run `npm run sync:pages && npm run generate:sitemap`, then add `tests/formatters/<name>.test.js`.
    `tests/pages.test.js` checks the new page automatically.
+5. Add the platform's label to the `platform` dropdown in `.github/ISSUE_TEMPLATE/bug.yml` (`tests/links.test.js`
+   fails otherwise), add a `platform: <name>` label to `.github/labels.json` and run `node scripts/setup-labels.js`.
 
 ## Testing
 
