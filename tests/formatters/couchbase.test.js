@@ -149,13 +149,21 @@ test('the figures list every quota and end with the per-node total', () => {
   assert.equal(figures.at(-1).role, 'total');
 });
 
-test('the explanation is a short summary with the actual numbers', () => {
-  const { explanation } = couchbase.format(INPUT);
-  assert.equal(
-    explanation,
-    'Bucket quota = (metadata + working set in RAM) × 1.25 ÷ 0.85: default 833 MiB. ' +
-      "Data quota = 833 MiB ÷ 3 Data nodes = 278 MiB per node. All quotas: 790 MiB, 5% of the node's RAM."
-  );
+test('the explanation is three short steps with the actual numbers', () => {
+  const { explanationSteps, explanation } = couchbase.format(INPUT);
+  assert.deepEqual(explanationSteps, [
+    { label: 'Bucket', text: '(metadata + working set in RAM) × 1.25 ÷ 0.85 → default 833 MiB' },
+    { label: 'Data quota', text: '833 MiB ÷ 3 Data nodes = 278 MiB per node' },
+    { label: 'All quotas', text: "790 MiB per node, 5% of the node's RAM" }
+  ]);
+  assert.equal(explanation, explanationSteps.map((s) => `${s.label}: ${s.text}.`).join(' '));
+});
+
+test('with several buckets the explanation stays three steps', () => {
+  const { explanationSteps } = couchbase.format({ ...INPUT, buckets: [BUCKET, bucketWith({ name: 'sessions', documents: 1000 })] });
+  assert.equal(explanationSteps.length, 3);
+  assert.equal(explanationSteps[0].label, 'Each bucket');
+  assert.match(explanationSteps[0].text, /default 833 MiB, sessions 100 MiB$/);
 });
 
 test('the note stays short and flags the full-ejection assumption', () => {

@@ -442,8 +442,23 @@ function renderSnippet(snippet, alternative) {
   el.snippetNote.classList.toggle('is-hidden', !alternative);
 }
 
-function renderExplanation(explanation, note) {
-  el.explanation.textContent = explanation;
+function renderExplanation(explanation, note, steps = null) {
+  if (steps) {
+    const list = document.createElement('ul');
+    list.className = 'explanation-steps';
+    list.append(
+      ...steps.map(({ label, text }) => {
+        const item = document.createElement('li');
+        const term = document.createElement('strong');
+        term.textContent = `${label}:`;
+        item.append(term, ` ${text}`);
+        return item;
+      })
+    );
+    el.explanation.replaceChildren(list);
+  } else {
+    el.explanation.textContent = explanation;
+  }
   el.explanationNote.textContent = note ?? '';
   el.explanationNote.classList.toggle('is-hidden', !note);
 }
@@ -485,7 +500,7 @@ function recalculate() {
   renderFigures(result.figures);
   renderWarnings(result.warnings);
   renderSnippet(result.snippet, result.alternative);
-  renderExplanation(result.explanation, result.note);
+  renderExplanation(result.explanation, result.note, result.explanationSteps);
 }
 
 // ---- events --------------------------------------------------------------

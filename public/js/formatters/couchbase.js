@@ -249,14 +249,17 @@ export function restCommand(quotas) {
   return ['curl -u Administrator:"$CB_PASSWORD" -X POST http://localhost:8091/pools/default', ...fields].join(' \\\n  ');
 }
 
-function explain(sizing) {
+/** The calculation as three steps, whatever the number of buckets: bucket quotas, Data quota, total. */
+function explainSteps(sizing) {
   const { buckets, dataNodes, bucketsTotalMiB, quotas, quotaTotalMiB, quotaShare } = sizing;
-  return (
-    `Bucket quota = (metadata + working set in RAM) × ${1 + OVERHEAD} ÷ ${HIGH_WATER_MARK}: ` +
-    `${buckets.map((b) => `${b.name} ${b.quotaMiB} MiB`).join(', ')}. ` +
-    `Data quota = ${bucketsTotalMiB} MiB ÷ ${pluralize(dataNodes, 'Data node')} = ${quotas.data} MiB per node. ` +
-    `All quotas: ${quotaTotalMiB} MiB, ${Math.round(quotaShare * 100)}% of the node's RAM.`
-  );
+  return [
+    {
+      label: buckets.length === 1 ? 'Bucket' : 'Each bucket',
+      text: `(metadata + working set in RAM) × ${1 + OVERHEAD} ÷ ${HIGH_WATER_MARK} → ${buckets.map((b) => `${b.name} ${b.quotaMiB} MiB`).join(', ')}`
+    },
+    { label: 'Data quota', text: `${bucketsTotalMiB} MiB ÷ ${pluralize(dataNodes, 'Data node')} = ${quotas.data} MiB per node` },
+    { label: 'All quotas', text: `${quotaTotalMiB} MiB per node, ${Math.round(quotaShare * 100)}% of the node's RAM` }
+  ];
 }
 
 /** @param {object} input - see calculateSizing() */
@@ -297,7 +300,9 @@ export function format(input) {
     },
     alternative: { label: 'Cluster quotas through the REST API', code: restCommand(quotas) },
     warnings: [...sizing.warnings],
-    explanation: explain(sizing),
+    // The same steps as one string, for the result shape every formatter shares; the page shows them as a list.
+    explanationSteps: explainSteps(sizing),
+    explanation: explainSteps(sizing).map((step) => `${step.label}: ${step.text}.`).join(' '),
     note: NOTE
   };
 }

@@ -1240,3 +1240,7 @@ body.tips-dismissed .hint-tip__text { visibility: hidden !important; opacity: 0 
 @media (prefers-reduced-motion: reduce) {
   .hint-tip__text { transition: none; }
 }
+
+.explanation-steps { margin: 0; padding-left: 18px; }
+.explanation-steps li + li { margin-top: 4px; }
+.explanation-steps strong { color: var(--text-primary); font-weight: 600; }
