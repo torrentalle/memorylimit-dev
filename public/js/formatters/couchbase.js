@@ -21,19 +21,21 @@
  *   metadata  = documents × (METADATA_BYTES + key length) × copies
  *   dataset   = documents × document size × copies
  *   resident  = dataset × working set %
- *   quota     = (metadata + resident) × (1 + headroom) / HIGH_WATER_MARK
+ *   quota     = (metadata + resident) × (1 + OVERHEAD) / HIGH_WATER_MARK, rounded up to a whole MiB
  * With full eviction metadata isn't pinned in RAM, so only the working-set
  * share of it counts.
  */
 import { roundUpToMultiple } from '../calculator.js';
 import { pluralize } from './shared.js';
 
-export const STEP_MIB = 64;
+// Couchbase takes quotas in whole MiB; any value above the minimum is valid, so round up no further.
+export const STEP_MIB = 1;
 export const METADATA_BYTES = 56;
 export const HIGH_WATER_MARK = 0.85;
 export const MAX_REPLICAS = 3;
 export const EVICTION_POLICIES = ['value', 'full'];
-export const HEADROOM = { low: 0.2, medium: 0.25, high: 0.3 };
+// The sizing guide's overhead_percentage: memory the bucket uses beyond the metadata and working set it counts.
+export const OVERHEAD = 0.25;
 
 /** Documented minimums, in MiB, for the cluster-wide service quotas and for a bucket. */
 export const MIN_QUOTA_MIB = { data: 256, index: 256, search: 256, eventing: 256, analytics: 1024 };
@@ -47,6 +49,9 @@ export const MIN_BUCKET_MIB = 100;
 export const RECOMMENDED_QUOTA_SHARE = 0.9;
 export const SMALL_NODE_QUOTA_SHARE = 0.8;
 export const SMALL_NODE_MIB = 5 * 1024;
+
+/** Below this working set, a full-ejection bucket sends most reads and existence checks to disk. Our threshold. */
+export const FULL_EJECTION_LOW_WORKING_SET_PCT = 20;
 
 /** Couchbase's guidance: a bucket quota of at least 10% of the dataset (Couchstore; 1% for Magma). */
 export const MIN_DATASET_SHARE = 0.1;
@@ -80,8 +85,9 @@ const NOTE =
   'Quotas are per node and apply on every node running the service; bucket quotas are cluster-wide and come out of ' +
   'the Data quota. The Query service has no quota and uses OS memory, so leave it room — and the OS, which Couchbase ' +
   'also relies on for the file cache. Index, Search, Eventing and Analytics quotas are the values you entered; size ' +
-  'them from the real index and service sizes. Couchbase’s sizing formula has no separate case for full ejection; ' +
-  'here it counts only the working-set share of the metadata, an estimate. Minimums and defaults vary between Couchbase Server versions, so check ' +
+  'them from the real index and service sizes. With full ejection Couchbase evicts a document’s key and metadata ' +
+  'along with its value, so only the resident documents’ metadata is counted; Couchbase’s sizing formula has no ' +
+  'separate case for this, so treat it as derived from that behaviour rather than documented. Minimums and defaults vary between Couchbase Server versions, so check ' +
   'yours before applying. The bucket commands use bucket-edit, which only changes buckets that already exist (create ' +
   'new ones with bucket-create), and a bucket quota can’t be lowered below what the bucket currently uses. The CLI ' +
   'reference describes --cluster-ramsize as the Data quota “for future nodes”; check on a running cluster that the ' +
@@ -97,7 +103,7 @@ function assertPositiveInteger(name, value) {
   if (!Number.isInteger(value) || value < 1) throw new RangeError(`${name} must be a positive integer (got ${value})`);
 }
 
-function sizeBucket(bucket, headroom) {
+function sizeBucket(bucket) {
   const { name, documents, keyBytes, documentBytes, replicas, workingSetPct, eviction } = bucket;
   if (typeof name !== 'string' || !name.trim()) throw new RangeError('bucket name must not be empty');
   assertNonNegativeNumber(`${name}: documents`, documents);
@@ -119,7 +125,7 @@ function sizeBucket(bucket, headroom) {
   const datasetMiB = (documents * documentBytes * copies) / MIB;
   const residentMetadataMiB = eviction === 'value' ? metadataMiB : metadataMiB * workingSet;
   const residentDataMiB = datasetMiB * workingSet;
-  const rawQuotaMiB = ((residentMetadataMiB + residentDataMiB) * (1 + headroom)) / HIGH_WATER_MARK;
+  const rawQuotaMiB = ((residentMetadataMiB + residentDataMiB) * (1 + OVERHEAD)) / HIGH_WATER_MARK;
 
   return {
     name: name.trim(),
@@ -129,6 +135,7 @@ function sizeBucket(bucket, headroom) {
     datasetMiB,
     residentMetadataMiB,
     residentDataMiB,
+    workingSetPct,
     rawQuotaMiB,
     quotaMiB: Math.max(MIN_BUCKET_MIB, roundUpToMultiple(rawQuotaMiB, STEP_MIB))
   };
@@ -140,20 +147,18 @@ function sizeBucket(bucket, headroom) {
  * @param {number} input.dataNodes - nodes running the Data service
  * @param {number} input.nodeRamMiB - RAM of one node
  * @param {object} [input.services] - per-node quota in MiB for index/search/eventing/analytics; 0 or absent = not running
- * @param {string} [input.headroom='medium'] - one of HEADROOM's keys
  * @throws {RangeError} on invalid input, rather than silently coercing it
  */
-export function calculateSizing({ buckets, dataNodes, nodeRamMiB, services = {}, headroom = 'medium' }) {
+export function calculateSizing({ buckets, dataNodes, nodeRamMiB, services = {} }) {
   if (!Array.isArray(buckets) || buckets.length === 0) throw new RangeError('at least one bucket is required');
   assertPositiveInteger('dataNodes', dataNodes);
   if (typeof nodeRamMiB !== 'number' || !Number.isFinite(nodeRamMiB) || nodeRamMiB <= 0) {
     throw new RangeError(`nodeRamMiB must be a positive number (got ${nodeRamMiB})`);
   }
-  if (!(headroom in HEADROOM)) throw new RangeError(`headroom must be one of ${Object.keys(HEADROOM).join(', ')} (got ${headroom})`);
   const names = buckets.map((bucket) => String(bucket.name).trim());
   if (new Set(names).size !== names.length) throw new RangeError('bucket names must be unique');
 
-  const sized = buckets.map((bucket) => sizeBucket(bucket, HEADROOM[headroom]));
+  const sized = buckets.map(sizeBucket);
   const bucketsTotalMiB = sized.reduce((sum, bucket) => sum + bucket.quotaMiB, 0);
 
   const quotas = { data: Math.max(MIN_QUOTA_MIB.data, roundUpToMultiple(bucketsTotalMiB / dataNodes, STEP_MIB)) };
@@ -211,13 +216,21 @@ export function calculateSizing({ buckets, dataNodes, nodeRamMiB, services = {},
           `recommends a quota of at least ${Math.round(MIN_DATASET_SHARE * 100)}% of the dataset for Couchstore (1% for Magma).`
       });
     }
+    if (bucket.eviction === 'full' && bucket.workingSetPct < FULL_EJECTION_LOW_WORKING_SET_PCT) {
+      warnings.push({
+        level: 'warning',
+        code: 'full-ejection-low-working-set',
+        message:
+          `Bucket "${bucket.name}" uses full ejection with ${bucket.workingSetPct}% in RAM: reads of other documents, and ` +
+          'existence checks on keys not in RAM, go to disk. Expect higher latency; the Magma storage engine reduces the cost.'
+      });
+    }
   }
 
   return {
     buckets: sized,
     dataNodes,
     nodeRamMiB,
-    headroom,
     bucketsTotalMiB,
     quotas,
     quotaTotalMiB,
@@ -244,10 +257,10 @@ export function restCommand(quotas) {
 }
 
 function explain(sizing) {
-  const { buckets, dataNodes, headroom, bucketsTotalMiB, quotas } = sizing;
+  const { buckets, dataNodes, bucketsTotalMiB, quotas } = sizing;
   return (
-    `Each bucket = (resident metadata + working set) × ${1 + HEADROOM[headroom]} headroom ÷ ${HIGH_WATER_MARK} high-water mark, ` +
-    `rounded up to ${STEP_MIB} MiB: ${buckets.map((b) => `${b.name} ${b.quotaMiB} MiB`).join(', ')} ` +
+    `Each bucket = (resident metadata + working set) × ${1 + OVERHEAD} overhead ÷ ${HIGH_WATER_MARK} high-water mark, ` +
+    `rounded up to a whole MiB: ${buckets.map((b) => `${b.name} ${b.quotaMiB} MiB`).join(', ')} ` +
     `→ ${bucketsTotalMiB} MiB across ${pluralize(dataNodes, 'Data node')} → Data quota ${quotas.data} MiB per node.`
   );
 }

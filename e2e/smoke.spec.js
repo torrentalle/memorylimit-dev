@@ -196,10 +196,10 @@ test('Couchbase: default bucket produces quotas and couchbase-cli commands, and 
   await page.goto('/couchbase/');
   await expect(currentNavLink(page)).toHaveText('Couchbase memory quotas');
 
-  // 1M docs × (92 B metadata+key, 1 KiB value) × 2 copies, 20% resident → 896 MiB; ÷ 3 Data nodes → 320 MiB per node.
-  await expect(page.locator('#snippet-code')).toContainText('--cluster-ramsize 320');
+  // 1M docs × (92 B metadata+key, 1 KiB value) × 2 copies, 20% resident → 833 MiB; ÷ 3 Data nodes → 278 MiB per node.
+  await expect(page.locator('#snippet-code')).toContainText('--cluster-ramsize 278');
   await expect(page.locator('#snippet-code')).toContainText('--cluster-index-ramsize 512');
-  await expect(page.locator('#snippet-code')).toContainText('--bucket default --bucket-ramsize 896');
+  await expect(page.locator('#snippet-code')).toContainText('--bucket default --bucket-ramsize 833');
   await expect(page.locator('#stat-row')).toContainText('Bucket default');
 
   await page.getByRole('button', { name: 'Add bucket' }).click();
@@ -213,7 +213,8 @@ test('Couchbase: default bucket produces quotas and couchbase-cli commands, and 
 
 test('Couchbase: quotas above the node RAM raise an error warning', async ({ page }) => {
   await page.goto('/couchbase/');
-  await page.getByLabel('RAM per node').fill('1');
+  // 790 MiB of quotas on a 768 MiB node, above its 614 MiB firm limit
+  await page.getByLabel('RAM per node').fill('0.75');
   await expect(page.locator('#warnings .is-error')).toContainText('will refuse them');
 });
 

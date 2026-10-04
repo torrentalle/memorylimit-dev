@@ -3,36 +3,40 @@ import assert from 'node:assert/strict';
 import * as couchbase from '../../public/js/formatters/couchbase.js';
 
 const BUCKET = { name: 'default', documents: 1000000, keyBytes: 36, documentBytes: 1024, replicas: 1, workingSetPct: 20, eviction: 'value' };
-const INPUT = { buckets: [BUCKET], dataNodes: 3, nodeRamMiB: 16384, services: { index: 512 }, headroom: 'medium' };
+const INPUT = { buckets: [BUCKET], dataNodes: 3, nodeRamMiB: 16384, services: { index: 512 } };
 const sizing = (overrides = {}) => couchbase.calculateSizing({ ...INPUT, ...overrides });
 const bucketWith = (overrides) => ({ ...BUCKET, ...overrides });
 
 test('golden: exact commands for a known input', () => {
   // metadata 1M × 92 B × 2 = 175.5 MiB; resident data 1M × 1 KiB × 2 × 20% = 390.6 MiB
-  // (175.5 + 390.6) × 1.25 ÷ 0.85 = 832.5 → 896 MiB; 896 ÷ 3 nodes = 298.7 → 320 MiB per node
+  // (175.5 + 390.6) × 1.25 ÷ 0.85 = 832.5 → 833 MiB; 833 ÷ 3 nodes = 277.7 → 278 MiB per node
   const result = couchbase.format(INPUT);
   assert.equal(
     result.snippet.code,
     [
       'couchbase-cli setting-cluster -c localhost:8091 -u Administrator -p "$CB_PASSWORD" \\',
-      '  --cluster-ramsize 320 \\',
+      '  --cluster-ramsize 278 \\',
       '  --cluster-index-ramsize 512',
-      'couchbase-cli bucket-edit -c localhost:8091 -u Administrator -p "$CB_PASSWORD" --bucket default --bucket-ramsize 896'
+      'couchbase-cli bucket-edit -c localhost:8091 -u Administrator -p "$CB_PASSWORD" --bucket default --bucket-ramsize 833'
     ].join('\n')
   );
   assert.equal(
     result.alternative.code,
-    'curl -u Administrator:"$CB_PASSWORD" -X POST http://localhost:8091/pools/default \\\n  -d memoryQuota=320 \\\n  -d indexMemoryQuota=512'
+    'curl -u Administrator:"$CB_PASSWORD" -X POST http://localhost:8091/pools/default \\\n  -d memoryQuota=278 \\\n  -d indexMemoryQuota=512'
   );
 });
 
-test('bucket quota follows the documented formula and rounds up to 64 MiB', () => {
+test('bucket quota is exactly the documented formula, rounded up to a whole MiB', () => {
   const [bucket] = sizing().buckets;
+  assert.equal(couchbase.METADATA_BYTES, 56);
+  assert.equal(couchbase.OVERHEAD, 0.25);
+  assert.equal(couchbase.HIGH_WATER_MARK, 0.85);
   assert.ok(Math.abs(bucket.metadataMiB - 175.48) < 0.01);
   assert.ok(Math.abs(bucket.residentDataMiB - 390.63) < 0.01);
-  assert.equal(bucket.quotaMiB, 896);
-  assert.equal(bucket.quotaMiB % couchbase.STEP_MIB, 0);
+  assert.ok(Math.abs(bucket.rawQuotaMiB - 832.5) < 0.1);
+  assert.equal(bucket.quotaMiB, 833);
 });
+
 
 test('replicas multiply both metadata and data', () => {
   const none = sizing({ buckets: [bucketWith({ replicas: 0 })] }).buckets[0];
@@ -49,11 +53,26 @@ test('full ejection counts only the working-set share of the metadata', () => {
   assert.ok(full.quotaMiB < value.quotaMiB);
 });
 
-test('a larger working set or more headroom never lowers the quota', () => {
-  const quota = (overrides, headroom) => sizing({ buckets: [bucketWith(overrides)], headroom }).buckets[0].rawQuotaMiB;
-  assert.ok(quota({ workingSetPct: 50 }, 'medium') > quota({ workingSetPct: 20 }, 'medium'));
-  assert.ok(quota({}, 'high') > quota({}, 'medium'));
-  assert.ok(quota({}, 'medium') > quota({}, 'low'));
+test('a larger working set never lowers the quota', () => {
+  const quota = (workingSetPct) => sizing({ buckets: [bucketWith({ workingSetPct })] }).buckets[0].rawQuotaMiB;
+  assert.ok(quota(50) > quota(20));
+  assert.ok(quota(100) > quota(50));
+});
+
+test('full ejection with a working set under 20% warns that reads and existence checks go to disk', () => {
+  const codes = (overrides) => sizing({ buckets: [bucketWith(overrides)] }).warnings.map((w) => w.code);
+  assert.ok(codes({ eviction: 'full', workingSetPct: 10 }).includes('full-ejection-low-working-set'));
+  assert.ok(!codes({ eviction: 'full', workingSetPct: 20 }).includes('full-ejection-low-working-set'));
+  assert.ok(!codes({ eviction: 'value', workingSetPct: 10 }).includes('full-ejection-low-working-set'));
+  const { message } = sizing({ buckets: [bucketWith({ eviction: 'full', workingSetPct: 10 })] }).warnings.find((w) => w.code === 'full-ejection-low-working-set');
+  assert.match(message, /existence checks/);
+  assert.match(message, /Magma/);
+});
+
+test('the note explains why full ejection counts only resident metadata', () => {
+  const { note } = couchbase.format(INPUT);
+  assert.match(note, /full ejection Couchbase evicts a document’s key and metadata/);
+  assert.match(note, /no separate case/);
 });
 
 test('a tiny bucket is raised to the minimum and flagged', () => {
@@ -67,7 +86,7 @@ test('the Data quota splits the bucket total across the Data nodes, never below 
   const one = sizing({ buckets, dataNodes: 1 });
   const four = sizing({ buckets, dataNodes: 4 });
   assert.equal(one.quotas.data, one.bucketsTotalMiB);
-  assert.equal(four.quotas.data, Math.ceil(four.bucketsTotalMiB / 4 / couchbase.STEP_MIB) * couchbase.STEP_MIB);
+  assert.equal(four.quotas.data, Math.ceil(four.bucketsTotalMiB / 4));
   assert.equal(sizing({ dataNodes: 50 }).quotas.data, couchbase.MIN_QUOTA_MIB.data);
 });
 
@@ -108,13 +127,14 @@ test('the recommended share is 90%, or 80% on nodes under 5 GiB', () => {
 });
 
 test('quotas above the firm limit are an error, above the recommended share a warning, below that silent', () => {
-  // data 320 MiB + index; 16 GiB node: 90% = 14745.6 MiB, firm limit 15360 MiB
+  // data 278 MiB + index; 16 GiB node: 90% = 14745.6 MiB, firm limit 15360 MiB
   const codes = (index, nodeRamMiB = 16384) => sizing({ nodeRamMiB, services: { index } }).warnings.map((w) => `${w.level}:${w.code}`);
   assert.deepEqual(codes(512), []);
   assert.deepEqual(codes(14800), ['warning:quotas-high-share']);
   assert.deepEqual(codes(15100), ['error:quotas-exceed-limit']);
-  // 832 MiB on a 1 GiB node: firm limit 819.2 MiB
-  assert.deepEqual(codes(512, 1024), ['error:quotas-exceed-limit']);
+  // 790 MiB: 77% of a 1 GiB node (under its 80%), but over the 716.8 MiB firm limit of a 896 MiB one
+  assert.deepEqual(codes(512, 1024), []);
+  assert.deepEqual(codes(512, 896), ['error:quotas-exceed-limit']);
 });
 
 test('a bucket quota under 10% of its dataset is flagged', () => {
@@ -151,7 +171,6 @@ test('rejects invalid input rather than coercing it', () => {
   assert.throws(() => sizing({ dataNodes: 0 }), RangeError);
   assert.throws(() => sizing({ dataNodes: 1.5 }), RangeError);
   assert.throws(() => sizing({ nodeRamMiB: 0 }), RangeError);
-  assert.throws(() => sizing({ headroom: 'extreme' }), RangeError);
   assert.throws(() => sizing({ services: { index: -1 } }), RangeError);
   assert.throws(() => sizing({ buckets: [bucketWith({ replicas: 4 })] }), RangeError);
   assert.throws(() => sizing({ buckets: [bucketWith({ workingSetPct: 0 })] }), RangeError);

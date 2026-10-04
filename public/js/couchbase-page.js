@@ -43,7 +43,6 @@ const el = {
   searchQuota: element('search-quota-input'),
   eventingQuota: element('eventing-quota-input'),
   analyticsQuota: element('analytics-quota-input'),
-  headroom: element('headroom-select'),
   disabledState: element('disabled-state'),
   outputPanels: element('output-panels'),
   statRow: element('stat-row'),
@@ -372,8 +371,7 @@ function recalculate() {
         search: readNumber(el.searchQuota) ?? 0,
         eventing: readNumber(el.eventingQuota) ?? 0,
         analytics: readNumber(el.analyticsQuota) ?? 0
-      },
-      headroom: el.headroom.value
+      }
     });
   } catch (error) {
     if (!(error instanceof RangeError)) throw error;
@@ -411,7 +409,6 @@ el.bucketList.addEventListener('change', recalculate);
 for (const input of [el.dataNodes, el.nodeRam, el.indexQuota, el.searchQuota, el.eventingQuota, el.analyticsQuota]) {
   input.addEventListener('input', recalculate);
 }
-el.headroom.addEventListener('change', recalculate);
 
 el.copyButton.addEventListener('click', async () => {
   if (!currentSnippet) return;
