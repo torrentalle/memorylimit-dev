@@ -80,6 +80,7 @@ test('Kubernetes: Guaranteed QoS sets request equal to limit', async ({ page }) 
 
 test('Kubernetes: a Prometheus range-table paste fills the fields and skips the pause container', async ({ page }) => {
   await page.goto('/kubernetes/');
+  await page.getByRole('button', { name: 'Paste Prometheus' }).click();
   await page.getByLabel('Raw query output / scrape').fill(PROMETHEUS_PASTE);
 
   await expect(page.locator('#prom-feedback')).toContainText('2 samples parsed');
@@ -90,6 +91,7 @@ test('Kubernetes: a Prometheus range-table paste fills the fields and skips the 
 
 test('Kubernetes: replacing a good paste with garbage clears the stale results', async ({ page }) => {
   await page.goto('/kubernetes/');
+  await page.getByRole('button', { name: 'Paste Prometheus' }).click();
   const paste = page.getByLabel('Raw query output / scrape');
   await paste.fill(PROMETHEUS_PASTE);
   await expect(page.locator('#stat-row')).not.toBeEmpty();
@@ -182,6 +184,7 @@ test('Redis: a used_memory paste produces maxmemory and host sizing', async ({ p
   await page.goto('/redis/');
   await expect(currentNavLink(page)).toHaveText('Redis maxmemory');
   await expect(page.getByLabel('Workload type')).toHaveValue('cache');
+  await page.locator('#mode-paste-btn').click();
   await page.getByLabel('used_memory samples').fill('used_memory:419430400\nused_memory:524288000');
 
   await expect(page.locator('#prom-feedback')).toContainText('2 samples parsed');

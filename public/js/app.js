@@ -327,6 +327,6 @@ export function initCalculator({ platformId, formatter }) {
     }, 1600);
   });
 
-  setMode('paste');
+  setMode('manual');
   recalculate();
 }
