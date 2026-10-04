@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>How the Memory Sizing Model Works | MemoryLimit</title>
+<meta name="description" content="How the MemoryLimit calculators turn average and peak memory usage into a request and a limit: the formula, the margin tables, a worked example, and which values are assumptions." />
+<link rel="canonical" href="https://memorylimit.dev/sizing-model/" />
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="MemoryLimit" />
+<meta property="og:title" content="How the Memory Sizing Model Works" />
+<meta property="og:description" content="How the MemoryLimit calculators turn average and peak memory usage into a request and a limit: the formula, the margin tables, a worked example, and which values are assumptions." />
+<meta property="og:url" content="https://memorylimit.dev/sizing-model/" />
+<meta property="og:image" content="https://memorylimit.dev/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="How the Memory Sizing Model Works" />
+<meta name="twitter:description" content="How the MemoryLimit calculators turn average and peak memory usage into a request and a limit: the formula, the margin tables, a worked example, and which values are assumptions." />
+<meta name="twitter:image" content="https://memorylimit.dev/og-image.png" />
+<link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/css/styles.css" />
+<script src="/js/theme-init.js"></script>
+</head>
+<body>
+
+<div class="skyline" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="brand" href="/" aria-label="MemoryLimit home">
+      <img class="brand__mark brand__mark--light" src="/brand/memorylimit-mark.svg" alt="" width="37" height="28" />
+      <img class="brand__mark brand__mark--dark" src="/brand/memorylimit-mark-on-dark.svg" alt="" width="37" height="28" />
+      <div><p class="brand__name">MemoryLimit</p><p class="brand__tagline">Memory request/limit sizing</p></div>
+    </a>
+    <!-- platform-nav:start -->
+    <nav class="site-nav" aria-label="Calculators">
+      <details class="site-nav__menu">
+        <summary class="site-nav__toggle">Calculators</summary>
+        <div class="site-nav__panel">
+          <div class="site-nav__group" data-platform-group="containers">
+            <p class="site-nav__group-title">Containers &amp; orchestration</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/kubernetes/" data-platform-link="kubernetes">Kubernetes</a></li>
+              <li><a class="site-nav__link" href="/docker-compose/" data-platform-link="dockerCompose">Docker Compose</a></li>
+              <li><a class="site-nav__link" href="/nomad/" data-platform-link="nomad">HashiCorp Nomad</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="serverless">
+            <p class="site-nav__group-title">Serverless</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/lambda/" data-platform-link="lambda">AWS Lambda</a></li>
+              <li><a class="site-nav__link" href="/cloud-run/" data-platform-link="cloudRun">Google Cloud Run</a></li>
+              <li><a class="site-nav__link" href="/azure-functions/" data-platform-link="azureFunctions">Azure Functions</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="vms">
+            <p class="site-nav__group-title">VMs &amp; bare metal</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/systemd/" data-platform-link="systemd">Systemd / Bare Metal / VM</a></li>
+              <li><a class="site-nav__link" href="/vmware/" data-platform-link="vmware">VMware vSphere</a></li>
+              <li><a class="site-nav__link" href="/proxmox/" data-platform-link="proxmox">Proxmox VE</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="datastores">
+            <p class="site-nav__group-title">Data stores</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/redis/" data-platform-link="redis">Redis maxmemory</a></li>
+              <li><a class="site-nav__link" href="/couchbase/" data-platform-link="couchbase">Couchbase memory quotas</a></li>
+            </ul>
+          </div>
+        </div>
+      </details>
+    </nav>
+    <!-- platform-nav:end -->
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Dark theme">
+      <span class="theme-toggle__icon" aria-hidden="true">◐</span><span class="theme-toggle__label">theme</span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <div class="wrap intro-section">
+    <p class="guide-back"><a href="/">← All calculators</a></p>
+    <h1 class="intro-title">How the sizing model works</h1>
+    <p class="intro-text">
+      Ten of the calculators start the same way: from the average and peak memory you observed, they work out two
+      values, a <strong>request</strong> and a <strong>limit</strong>, and only then apply their platform's own
+      rules. This page explains that shared step. The margins it adds are MemoryLimit's own defaults, not figures from
+      any vendor, so each one is marked as an <span class="guide-tag guide-tag--assumption">Assumption</span> and
+      explained. What each platform does next is on its own calculator page.
+    </p>
+  </div>
+
+  <div class="wrap guide">
+
+    <nav class="panel guide-toc" aria-labelledby="toc-heading">
+      <h2 id="toc-heading" class="panel__title panel__title--tight">On this page</h2>
+      <ol>
+        <li><a href="#two-values">Two values, two jobs</a></li>
+        <li><a href="#inputs">Average and peak</a></li>
+        <li><a href="#formula">The formula</a></li>
+        <li><a href="#margins">The margins</a></li>
+        <li><a href="#example">Worked example</a></li>
+        <li><a href="#profiles">How the profile changes the result</a></li>
+        <li><a href="#platforms">What each calculator does next</a></li>
+        <li><a href="#assumptions">All assumptions in one place</a></li>
+        <li><a href="#references">References</a></li>
+      </ol>
+    </nav>
+
+    <section class="panel guide-section" id="two-values" aria-labelledby="two-values-heading">
+      <h2 id="two-values-heading" class="panel__title"><span class="panel__index">01</span> Two values, two jobs</h2>
+      <p>
+        Most platforms take memory as a pair of settings with different jobs. Kubernetes is the clearest case
+        (<a href="https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/" target="_blank" rel="noopener">Resource Management for Pods and Containers</a>):
+      </p>
+      <ul>
+        <li>
+          <span class="guide-tag guide-tag--doc">Kubernetes docs</span>
+          <strong>The request</strong> is what the scheduler uses to decide which node a Pod goes on. A container may
+          use more than its request when the node has memory to spare.
+        </li>
+        <li>
+          <span class="guide-tag guide-tag--doc">Kubernetes docs</span>
+          <strong>The limit</strong> is enforced by the kernel: a container that uses more than its memory limit
+          may be OOM-killed.
+        </li>
+      </ul>
+      <p>
+        So the request should cover normal running, and the limit the worst moment. Sizing both from one number
+        either wastes memory (everything sized for the peak) or invites OOM kills (everything sized for the
+        average). That's why the model sizes the request from the <strong>average</strong> and the limit from the
+        <strong>peak</strong>. Other platforms call the pair something else: a reservation and a limit, a minimum
+        and a maximum, <code>memory</code> and <code>memory_max</code>.
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="inputs" aria-labelledby="inputs-heading">
+      <h2 id="inputs-heading" class="panel__title"><span class="panel__index">02</span> Average and peak</h2>
+      <p>
+        You can type the two numbers, in MiB, or paste monitoring output and let the calculator read them. A paste
+        is turned into a list of samples: the average is their mean and the peak is the largest. Values in bytes are
+        converted to MiB. Kubernetes exports a series for the whole Pod and one for its pause container next to each
+        real container; those are skipped, because averaging them in would skew the result.
+      </p>
+      <p>
+        <span class="guide-tag guide-tag--assumption">Assumption</span>
+        The samples cover a representative period, busiest times included, and each one is the memory of a single
+        instance (one container, task, function or process), not a total across replicas. The model can't tell
+        either from the numbers.
+      </p>
+      <p>
+        A peak below the average can't happen with real samples, so the calculator still shows a result but flags
+        it as an error: it usually means two different series were pasted or typed.
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="formula" aria-labelledby="formula-heading">
+      <h2 id="formula-heading" class="panel__title"><span class="panel__index">03</span> The formula</h2>
+      <pre class="yaml-block guide-formula"><code>request = average × (1 + request margin)
+limit   = peak    × (1 + limit margin)
+
+margin  = (sensitivity base + workload adjustment) × environment multiplier</code></pre>
+      <p>
+        The two margins are worked out the same way, each from its own table. The base comes from the sensitivity
+        you choose, the workload type adds or removes percentage points, and the environment then scales the sum.
+        The values stay unrounded here; each calculator rounds them to the steps and units its platform accepts.
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="margins" aria-labelledby="margins-heading">
+      <h2 id="margins-heading" class="panel__title"><span class="panel__index">04</span> The margins</h2>
+      <p>
+        <span class="guide-tag guide-tag--assumption">Assumption</span>
+        No vendor publishes a general safety margin for memory, so every value below is a MemoryLimit default: round
+        figures that give clearly different results for each choice. They aren't measured, they're the same on every
+        platform, and changing one changes every calculator's output.
+      </p>
+
+      <h3 class="guide-subheading">Sensitivity: the base</h3>
+      <p>How much an out-of-memory event would hurt. The calculators label it after what happens on their platform: OOMKill, eviction or memory pressure.</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers">
+          <thead><tr><th scope="col">Sensitivity</th><th scope="col">Request margin</th><th scope="col">Limit margin</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Low</th><td>15%</td><td>20%</td></tr>
+            <tr><th scope="row">Medium</th><td>30%</td><td>30%</td></tr>
+            <tr><th scope="row">High</th><td>50%</td><td>40%</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="guide-subheading">Workload type: the adjustment</h3>
+      <p>Percentage points added to the base, before the environment scales it.</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Workload type</th><th scope="col">Request</th><th scope="col">Limit</th><th scope="col">Why</th></tr></thead>
+          <tbody>
+            <tr><td>JVM</td><td>+15</td><td>+30</td><td><span class="guide-tag guide-tag--assumption">Assumption</span> A JVM's heap can keep growing toward its maximum until garbage collection reclaims it, so samples may not have caught how much it will take.</td></tr>
+            <tr><td>Worker / batch</td><td>−10</td><td>+35</td><td><span class="guide-tag guide-tag--assumption">Assumption</span> Memory is spiky: small between jobs, large during one. Less is reserved and more room is left above the peak.</td></tr>
+            <tr><td>Cache</td><td>+5</td><td>0</td><td><span class="guide-tag guide-tag--assumption">Assumption</span> A cache tends to fill whatever it's given, so its usual level sits close to its peak.</td></tr>
+            <tr><td>API service, Node.js, Python, generic</td><td>0</td><td>0</td><td>The base margins as they are.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="guide-subheading">Environment: the multiplier</h3>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers">
+          <thead><tr><th scope="col">Environment</th><th scope="col">Margins kept</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Development</th><td>60%</td></tr>
+            <tr><th scope="row">Staging</th><td>85%</td></tr>
+            <tr><th scope="row">Production</th><td>100%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        <span class="guide-tag guide-tag--assumption">Assumption</span>
+        An OOM kill costs less outside production, so less memory is set aside for it there. If a staging
+        environment has to behave exactly like production, choose Production.
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="example" aria-labelledby="example-heading">
+      <h2 id="example-heading" class="panel__title"><span class="panel__index">05</span> Worked example</h2>
+      <p>A JVM service with medium sensitivity in staging, averaging 410 MiB with a 630 MiB peak:</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-example="410 630 jvm medium staging">
+          <tbody>
+            <tr><th scope="row">request margin</th><td>(30% + 15%) × 0.85</td><td data-check="requestMarginPct">38.25%</td></tr>
+            <tr class="guide-table__result"><th scope="row">request</th><td>410 MiB × 1.3825</td><td data-check="requestMiB">566.825 MiB</td></tr>
+            <tr><th scope="row">limit margin</th><td>(30% + 30%) × 0.85</td><td data-check="limitMarginPct">51%</td></tr>
+            <tr class="guide-table__result"><th scope="row">limit</th><td>630 MiB × 1.51</td><td data-check="limitMiB">951.3 MiB</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        On the Kubernetes calculator these become a 576Mi request and a 960Mi limit once rounded up to its steps;
+        another platform would round them its own way.
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="profiles" aria-labelledby="profiles-heading">
+      <h2 id="profiles-heading" class="panel__title"><span class="panel__index">06</span> How the profile changes the result</h2>
+      <p>The same 410 MiB average and 630 MiB peak under a few profiles, before any rounding:</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers">
+          <thead><tr><th scope="col">Workload, sensitivity, environment</th><th scope="col">Request margin</th><th scope="col">Request</th><th scope="col">Limit margin</th><th scope="col">Limit</th></tr></thead>
+          <tbody>
+            <tr data-example="410 630 generic medium production"><th scope="row">Generic, medium, production</th><td data-check="requestMarginPct">30%</td><td data-check="requestMiB">533 MiB</td><td data-check="limitMarginPct">30%</td><td data-check="limitMiB">819 MiB</td></tr>
+            <tr data-example="410 630 jvm medium production"><th scope="row">JVM, medium, production</th><td data-check="requestMarginPct">45%</td><td data-check="requestMiB">594.5 MiB</td><td data-check="limitMarginPct">60%</td><td data-check="limitMiB">1,008 MiB</td></tr>
+            <tr data-example="410 630 worker medium production"><th scope="row">Worker / batch, medium, production</th><td data-check="requestMarginPct">20%</td><td data-check="requestMiB">492 MiB</td><td data-check="limitMarginPct">65%</td><td data-check="limitMiB">1,039.5 MiB</td></tr>
+            <tr data-example="410 630 cache medium production"><th scope="row">Cache, medium, production</th><td data-check="requestMarginPct">35%</td><td data-check="requestMiB">553.5 MiB</td><td data-check="limitMarginPct">30%</td><td data-check="limitMiB">819 MiB</td></tr>
+            <tr data-example="410 630 generic high production"><th scope="row">Generic, high, production</th><td data-check="requestMarginPct">50%</td><td data-check="requestMiB">615 MiB</td><td data-check="limitMarginPct">40%</td><td data-check="limitMiB">882 MiB</td></tr>
+            <tr data-example="410 630 generic medium staging"><th scope="row">Generic, medium, staging</th><td data-check="requestMarginPct">25.5%</td><td data-check="requestMiB">514.55 MiB</td><td data-check="limitMarginPct">25.5%</td><td data-check="limitMiB">790.65 MiB</td></tr>
+            <tr data-example="410 630 worker low development"><th scope="row">Worker / batch, low, development</th><td data-check="requestMarginPct">3%</td><td data-check="requestMiB">422.3 MiB</td><td data-check="limitMarginPct">33%</td><td data-check="limitMiB">837.9 MiB</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="platforms" aria-labelledby="platforms-heading">
+      <h2 id="platforms-heading" class="panel__title"><span class="panel__index">07</span> What each calculator does next</h2>
+      <p>
+        Each calculator maps the two values onto its platform's settings, then rounds them and applies the
+        platform's minimums, maximums and ordering rules. Platforms with a single memory setting use only the
+        peak-based limit, because running out there is a hard failure.
+      </p>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Calculator</th><th scope="col">From the request</th><th scope="col">From the limit</th></tr></thead>
+          <tbody>
+            <tr><td><a href="/kubernetes/">Kubernetes</a></td><td><code>requests.memory</code></td><td><code>limits.memory</code>; with Guaranteed QoS, both get the larger value</td></tr>
+            <tr><td><a href="/docker-compose/">Docker Compose</a></td><td><code>reservations.memory</code></td><td><code>limits.memory</code></td></tr>
+            <tr><td><a href="/nomad/">HashiCorp Nomad</a></td><td><code>memory</code></td><td><code>memory_max</code></td></tr>
+            <tr><td><a href="/lambda/">AWS Lambda</a></td><td>Not used</td><td><code>MemorySize</code></td></tr>
+            <tr><td><a href="/cloud-run/">Google Cloud Run</a></td><td>Not used</td><td>Memory limit</td></tr>
+            <tr><td><a href="/azure-functions/">Azure Functions</a></td><td>Not used</td><td>Instance size</td></tr>
+            <tr><td><a href="/systemd/">Systemd / Bare Metal / VM</a></td><td>Expected usage (shown, not enforced)</td><td><code>MemoryHigh</code>, and <code>MemoryMax</code> above it</td></tr>
+            <tr><td><a href="/vmware/">VMware vSphere</a></td><td>Reservation</td><td>Limit</td></tr>
+            <tr><td><a href="/proxmox/">Proxmox VE</a></td><td>Minimum memory (<code>balloon</code>)</td><td>Memory</td></tr>
+            <tr><td><a href="/redis/">Redis maxmemory</a></td><td colspan="2"><code>maxmemory</code>: the larger of the two</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        The <a href="/couchbase/">Couchbase calculator</a> doesn't use this model: its quotas come from the
+        dataset, with Couchbase's own sizing formula (<a href="/couchbase/how-it-works/">how it works</a>).
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="assumptions" aria-labelledby="assumptions-heading">
+      <h2 id="assumptions-heading" class="panel__title"><span class="panel__index">08</span> All assumptions in one place</h2>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Assumption</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
+          <tbody>
+            <tr><td>Sensitivity base margins: 15/30/50% on the request, 20/30/40% on the limit</td><td>No vendor publishes a general memory margin; these are round defaults</td><td>Too small and you'll see OOM kills or evictions; too large and memory sits unused. Pick another sensitivity, or adjust the result.</td></tr>
+            <tr><td>Workload adjustments for JVM, worker/batch and cache</td><td>How these runtimes typically use memory beyond what samples show</td><td>If your service doesn't behave like its type, choose Generic.</td></tr>
+            <tr><td>Development keeps 60% of the margins, staging 85%</td><td>An OOM kill costs less outside production</td><td>Choose Production for an environment that must not fail.</td></tr>
+            <tr><td>The samples cover a representative period, busiest times included</td><td>The average and the peak are only as good as the window</td><td>A missed peak gives a limit that's too low.</td></tr>
+            <tr><td>Each sample is one instance's memory</td><td>Every value is per replica, task or process</td><td>A series summed across replicas makes every value too large by the replica count.</td></tr>
+            <tr><td>Average and maximum, not percentiles</td><td>They work with as few as one or two samples</td><td>One outlier spike raises the limit; remove it from the paste if it isn't real.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="references" aria-labelledby="references-heading">
+      <h2 id="references-heading" class="panel__title"><span class="panel__index">09</span> References</h2>
+      <ul class="guide-references">
+        <li><a href="https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/" target="_blank" rel="noopener">Resource Management for Pods and Containers</a> (Kubernetes) — what a memory request and a memory limit each do.</li>
+        <li><a href="https://github.com/torrentalle/memorylimit-dev/blob/main/docs/adr/0003-sizing-model-average-for-request-peak-for-limit.md" target="_blank" rel="noopener">ADR 0003: average for the request, peak for the limit</a> — why the model works this way, and the alternatives considered.</li>
+        <li><a href="https://github.com/torrentalle/memorylimit-dev/blob/main/public/js/calculator.js" target="_blank" rel="noopener"><code>calculator.js</code></a> — the code, with the margin tables.</li>
+      </ul>
+      <p class="guide-back"><a href="/">← All calculators</a></p>
+    </section>
+
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div id="ethical-ads-slot" class="ethical-ads-slot"></div>
+    <div class="footer-row">
+      <!-- footer-links:start -->
+      <p class="footer-tagline">Your pasted metrics and results never leave the browser.</p>
+      <nav class="footer-links" aria-label="Project">
+        <a href="/privacy/" class="footer-link">Privacy</a>
+        <a href="/support/" class="footer-link">Support</a>
+        <a href="https://github.com/torrentalle/memorylimit-dev" class="footer-link" target="_blank" rel="noopener">★ Star on GitHub</a>
+        <a href="https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml" class="footer-link" target="_blank" rel="noopener">Report an issue</a>
+      </nav>
+      <!-- footer-links:end -->
+      <div id="donation-slot" class="donation-slot"></div>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="/js/site.js"></script>
+</body>
+</html>

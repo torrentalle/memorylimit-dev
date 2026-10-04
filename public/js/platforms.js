@@ -116,6 +116,14 @@ export function isEnabled(id) {
   return ENABLED_PLATFORMS[id] === true;
 }
 
+/** The page explaining the average/peak sizing model the calculators share (calculator.js). */
+export const SIZING_MODEL_GUIDE = '/sizing-model/';
+
+/** Where a calculator's "How this was derived" links to: its own guide, or the shared sizing model. */
+export function guideUrl(def) {
+  return def.guide ?? SIZING_MODEL_GUIDE;
+}
+
 /** Pages explaining a platform's method in detail (`guide` in its definition), as { platformId, path }. */
 export function getGuidePages(defs = PLATFORM_DEFINITIONS) {
   return defs.filter((def) => def.guide).map((def) => ({ platformId: def.id, path: def.guide }));

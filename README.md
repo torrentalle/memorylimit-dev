@@ -57,6 +57,9 @@ Pages use ES modules and root-relative paths, so serve `public/` over HTTP rathe
 2. plus a workload adjustment — request: JVM +15 %, cache +5 %, worker −10 %; limit: worker +35 %, JVM +30 %,
 3. scaled by environment — development × 0.6, staging × 0.85, production × 1.0.
 
+The full model, with a worked example and the reasoning behind each margin, is on
+[/sizing-model/](public/sizing-model/index.html). These margins are MemoryLimit's own defaults, not vendor figures.
+
 `calculateRawSizing()` stops there and returns unrounded MiB values. Each formatter then applies its
 platform's rules:
 
@@ -177,7 +180,10 @@ pollutes real analytics or serves real ads.
 2. Add `public/js/formatters/<name>.js` exporting `format(raw)`; copy the shape another formatter returns.
    A platform whose input isn't an average/peak pair (Couchbase) also sets `entry` in its definition and
    ships its own page script. A platform can also set `guide` to a page explaining its method in detail
-   (Couchbase: `/couchbase/how-it-works/`); `sync:pages` and the sitemap pick it up.
+   (Couchbase: `/couchbase/how-it-works/`); `sync:pages` and the sitemap pick it up, and "How this was derived"
+   links to it instead of the shared [/sizing-model/](public/sizing-model/index.html) page. A formatter can return
+   `explanationSteps` (`[{ label, text }]`) to show the derivation as a list, and export `fieldTips` to reword or drop
+   (`null`) the tooltips of the shared fields (defaults in `public/js/field-tip-texts.js`).
 3. Copy an existing calculator page to `public/<name>/index.html` and adjust its metadata, intro, paste hint,
    `<body data-platform>` and the formatter's `modulepreload` link.
 4. Run `npm run sync:pages && npm run generate:sitemap`, then add `tests/formatters/<name>.test.js`.

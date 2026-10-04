@@ -6,8 +6,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { PLATFORM_DEFINITIONS, formatterUrl, entryUrl, getGuidePages } from '../public/js/platforms.js';
-import { navPages, renderNav, syncedPage } from '../scripts/sync-pages.js';
+import { PLATFORM_DEFINITIONS, formatterUrl, entryUrl, getGuidePages, SIZING_MODEL_GUIDE } from '../public/js/platforms.js';
+import { navPages, renderNav, renderGuideLink, syncedPage } from '../scripts/sync-pages.js';
 
 const PUBLIC = join(import.meta.dirname, '..', 'public');
 const BASE_URL = 'https://memorylimit.dev';
@@ -19,7 +19,7 @@ const metaName = (html, name) => attr(html, new RegExp(`<meta name="${name}" con
 const decode = (s) => s.replace(/&amp;/g, '&');
 
 const CALCULATOR_PAGES = PLATFORM_DEFINITIONS.map((def) => ({ ...def, dir: def.path.slice(1, -1) }));
-const GUIDE_PAGES = getGuidePages().map(({ path }) => ({ path, dir: path.slice(1, -1) }));
+const GUIDE_PAGES = [SIZING_MODEL_GUIDE, ...getGuidePages().map(({ path }) => path)].map((path) => ({ path, dir: path.slice(1, -1) }));
 const CONTENT_PAGES = [
   { path: '/', dir: '' },
   { path: '/privacy/', dir: 'privacy' },
@@ -110,6 +110,18 @@ test('the generated nav marks exactly one link as current on each calculator pag
     assert.deepEqual(current, [def.path]);
   }
   assert.doesNotMatch(renderNav(null), /aria-current/);
+});
+
+test('"How this was derived" links to the platform’s own guide, or the shared sizing model, in a new tab', () => {
+  for (const def of PLATFORM_DEFINITIONS) {
+    const link = renderGuideLink(def.id);
+    assert.ok(link.includes(`href="${def.guide ?? SIZING_MODEL_GUIDE}" target="_blank" rel="noopener"`), def.id);
+    assert.ok(link.includes('<span class="visually-hidden"> (opens in a new tab)</span>'), def.id);
+  }
+});
+
+test('the explanation is a <div>, so a formatter’s steps can render as a list inside it', () => {
+  for (const page of CALCULATOR_PAGES) assert.match(read(page.dir), /<div class="explanation" id="explanation">/, page.path);
 });
 
 for (const page of CONTENT_PAGES) {
