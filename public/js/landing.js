@@ -14,6 +14,10 @@ for (const card of document.querySelectorAll('[data-platform-card]')) {
   if (!isEnabled(card.dataset.platformCard)) card.remove();
 }
 
+for (const group of document.querySelectorAll('.platform-group')) {
+  if (!group.querySelector('[data-platform-card]')) group.remove();
+}
+
 const list = document.getElementById('platform-card-list');
 if (list && !list.querySelector('[data-platform-card]')) {
   const empty = document.createElement('p');

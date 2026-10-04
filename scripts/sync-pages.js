@@ -18,7 +18,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PLATFORM_DEFINITIONS } from '../public/js/platforms.js';
+import { PLATFORM_DEFINITIONS, getPlatformGroups } from '../public/js/platforms.js';
 import { LINKS, reportBugUrl } from '../public/js/links.js';
 
 export const PUBLIC_DIR = join(import.meta.dirname, '..', 'public');
@@ -41,20 +41,27 @@ export function renderNav(currentId, indent = '    ') {
   const summary = current
     ? `<span class="site-nav__hint">Calculator</span> ${escapeHtml(current.label)}`
     : 'Calculators';
-  const items = PLATFORM_DEFINITIONS.map((def) => {
-    const currentAttr = def.id === currentId ? ' aria-current="page"' : '';
-    return (
-      `      <li><a class="site-nav__link" href="${def.path}" data-platform-link="${def.id}"${currentAttr}>` +
-      `${escapeHtml(def.label)}</a></li>`
-    );
-  });
+  const groups = getPlatformGroups().flatMap((group) => [
+    `      <div class="site-nav__group" data-platform-group="${group.id}">`,
+    `        <p class="site-nav__group-title">${escapeHtml(group.label)}</p>`,
+    '        <ul class="site-nav__list">',
+    ...group.platforms.map((def) => {
+      const currentAttr = def.id === currentId ? ' aria-current="page"' : '';
+      return (
+        `          <li><a class="site-nav__link" href="${def.path}" data-platform-link="${def.id}"${currentAttr}>` +
+        `${escapeHtml(def.label)}</a></li>`
+      );
+    }),
+    '        </ul>',
+    '      </div>'
+  ]);
   return [
     '<nav class="site-nav" aria-label="Calculators">',
     '  <details class="site-nav__menu">',
     `    <summary class="site-nav__toggle">${summary}</summary>`,
-    '    <ul class="site-nav__list">',
-    ...items,
-    '    </ul>',
+    '    <div class="site-nav__panel">',
+    ...groups,
+    '    </div>',
     '  </details>',
     '</nav>'
   ]
@@ -63,17 +70,23 @@ export function renderNav(currentId, indent = '    ') {
 }
 
 export function renderCards(indent = '      ') {
-  return PLATFORM_DEFINITIONS.map((def) =>
-    [
-      `<a class="platform-card" href="${def.path}" data-platform-card="${def.id}">`,
-      `  <p class="platform-card__name">${escapeHtml(def.label)}</p>`,
-      `  <p class="platform-card__desc">${escapeHtml(def.tagline)}</p>`,
-      '  <p class="platform-card__cta">Open calculator →</p>',
-      '</a>'
-    ]
-      .map((line) => indent + line)
-      .join('\n')
-  ).join('\n');
+  return getPlatformGroups()
+    .flatMap((group) => [
+      `<section class="platform-group" data-platform-group="${group.id}" aria-labelledby="platform-group-${group.id}">`,
+      `  <h2 class="platform-group__title" id="platform-group-${group.id}">${escapeHtml(group.label)}</h2>`,
+      '  <div class="platform-group__cards">',
+      ...group.platforms.flatMap((def) => [
+        `    <a class="platform-card" href="${def.path}" data-platform-card="${def.id}">`,
+        `      <p class="platform-card__name">${escapeHtml(def.label)}</p>`,
+        `      <p class="platform-card__desc">${escapeHtml(def.tagline)}</p>`,
+        '      <p class="platform-card__cta">Open calculator →</p>',
+        '    </a>'
+      ]),
+      '  </div>',
+      '</section>'
+    ])
+    .map((line) => indent + line)
+    .join('\n');
 }
 
 export function renderFooterLinks(dir, currentId, indent = '      ') {
