@@ -89,7 +89,7 @@ The feedback line reports how many samples were parsed, skipped (pause/pod-level
 ## Project structure
 
 ```
-public/                     deployed as-is by Cloudflare Pages
+public/                     deployed as-is
   index.html                landing page
   kubernetes/ docker-compose/ nomad/ lambda/ cloud-run/
   systemd/ vmware/ proxmox/ redis/        one calculator page per platform
@@ -176,19 +176,10 @@ PW_CHANNEL=msedge npm run test:e2e         # or reuse an installed Edge/Chrome i
 
 `.github/workflows/ci.yml` runs both suites on every push and pull request to `main`.
 
-## Deploying (Cloudflare Pages)
+## Deployment
 
-Connect the GitHub repo in Cloudflare Pages with:
+The site is the contents of `public/`, served as-is with no build step.
 
-| Setting | Value |
-| --- | --- |
-| Build command | *(none)* |
-| Build output directory | `public` |
-
-Every push to `main` deploys; every pull request gets a preview deployment.
-
-- **Custom domain:** with the domain already in the same Cloudflare account, add it under the Pages project's
-  *Custom domains*. The certificate is provisioned automatically.
 - **Redirects:** `public/_redirects` issues a 301 from `/k8s/` to `/kubernetes/`. `public/k8s/index.html` is a
   meta-refresh fallback for hosts that ignore `_redirects`. Add future aliases the same way.
 - **Caching:** `public/_headers` gives the favicon and share image a one-day cache. JS and CSS keep the
@@ -222,7 +213,7 @@ these third-party hosts:
 `style-src` allows `'unsafe-inline'` only because the EthicalAds client injects a `<style>` element. Scripts
 can never be inline or use `eval`, and the site can't be framed (`frame-ancestors 'none'`).
 
-Cloudflare Pages applies these headers at deploy time. `serve`, used locally and in CI, ignores them, so
+The host applies these headers at deploy time. `serve`, used locally and in CI, ignores them, so
 `e2e/csp.spec.js` injects the policy into every HTML response instead and fails on any violation. It
 covers every page, plus a run with both third parties switched on and stubbed to behave like the real
 scripts. `tests/headers.test.js` pins the policy itself. If you add a third party, add its hosts to both
