@@ -10,7 +10,7 @@ const PROMETHEUS_PASTE = [
 ].join('\n');
 
 const PLATFORM_COUNT = 11;
-const K8S_REFERENCE_MANIFEST = 'resources:\n  requests:\n    memory: "608Mi"\n  limits:\n    memory: "832Mi"';
+const K8S_REFERENCE_MANIFEST = 'resources:\n  requests:\n    memory: "586Mi"\n  limits:\n    memory: "819Mi"';
 
 const averageInput = (page) => page.getByRole('spinbutton', { name: /^Average usage/ });
 const peakInput = (page) => page.getByRole('spinbutton', { name: /^Peak usage/ });
@@ -67,8 +67,14 @@ test('Kubernetes: manual values produce the expected manifest', async ({ page })
   await fillUsage(page, 450.4, 629.4);
 
   await expect(page.locator('#snippet-code')).toHaveText(K8S_REFERENCE_MANIFEST);
-  await expect(page.locator('#stat-row')).toContainText('1824Mi');
-  await expect(page.locator('#gauge-track')).toHaveAttribute('aria-label', /request 608Mi, limit 832Mi/);
+  await expect(page.locator('#stat-row')).toContainText('1758Mi');
+  await expect(page.locator('#gauge-track')).toHaveAttribute('aria-label', /request 586Mi, limit 819Mi/);
+  await expect(page.locator('#explanation .explanation-steps li')).toHaveText([
+    'Request: 450.4 MiB average + 30% = 585.5 MiB → 586Mi',
+    'Limit: 629.4 MiB peak + 30% = 818.2 MiB → 819Mi',
+    'Total request: 586Mi × 3 replicas = 1758Mi'
+  ]);
+  await expect(page.locator('#explanation-note')).toContainText('Vertical Pod Autoscaler');
 });
 
 test('Kubernetes: Guaranteed QoS sets request equal to limit', async ({ page }) => {
@@ -76,8 +82,9 @@ test('Kubernetes: Guaranteed QoS sets request equal to limit', async ({ page }) 
   await fillUsage(page, 450.4, 629.4);
   await field(page, 'QoS class').selectOption('guaranteed');
   await expect(page.locator('#snippet-code')).toHaveText(
-    'resources:\n  requests:\n    memory: "832Mi"\n  limits:\n    memory: "832Mi"'
+    'resources:\n  requests:\n    memory: "819Mi"\n  limits:\n    memory: "819Mi"'
   );
+  await expect(page.locator('#explanation-note')).toContainText('CPU request equal to its CPU limit');
 });
 
 test('Kubernetes: a Prometheus range-table paste fills the fields and skips the pause container', async ({ page }) => {
@@ -290,11 +297,13 @@ test('shared fields have tooltips saying how they move the result, and the deriv
   await expect(tip).toBeHidden();
 
   const guide = page.locator('.explanation-panel .guide-link a');
-  await expect(guide).toHaveAttribute('href', '/sizing-model/');
+  await expect(guide).toHaveAttribute('href', '/kubernetes/how-it-works/');
   await expect(guide).toHaveAttribute('target', '_blank');
 
   // Lambda is sized from the peak alone: no tooltip on the average, and the replica field is hidden.
+  // Without a guide of its own, it links the shared sizing model.
   await page.goto('/lambda/');
+  await expect(guide).toHaveAttribute('href', '/sizing-model/');
   await expect(page.locator('.hint-tip__btn')).toHaveCount(4);
   await expect(averageInput(page)).not.toHaveAttribute('aria-describedby', /.+/);
   await expect(peakInput(page)).toHaveAccessibleDescription(/MemorySize is this plus the limit margin/);
@@ -356,7 +365,7 @@ test('copy button reports success and resets, even when clicked twice', async ({
   await button.click();
   await expect(button).toHaveText('Copied');
   await expect(button).toHaveText('Copy YAML', { timeout: 3000 });
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('memory: "544Mi"');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('memory: "520Mi"');
 });
 
 test('theme choice persists across pages without a flash', async ({ page }) => {
