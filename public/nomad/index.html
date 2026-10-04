@@ -99,11 +99,11 @@
       <h2 id="inputs-heading" class="panel__title"><span class="panel__index">01</span> Usage data</h2>
 
       <div class="mode-toggle" role="group" aria-label="Input mode">
-        <button class="mode-toggle__btn" id="mode-paste-btn" type="button" aria-pressed="true" aria-controls="mode-paste">Paste Prometheus</button>
-        <button class="mode-toggle__btn" id="mode-manual-btn" type="button" aria-pressed="false" aria-controls="mode-manual">Manual values</button>
+        <button class="mode-toggle__btn" id="mode-manual-btn" type="button" aria-pressed="true" aria-controls="mode-manual">Manual values</button>
+        <button class="mode-toggle__btn" id="mode-paste-btn" type="button" aria-pressed="false" aria-controls="mode-paste">Paste Prometheus</button>
       </div>
 
-      <div id="mode-paste">
+      <div id="mode-paste" class="is-hidden">
         <label class="field-label" for="prom-input">Raw query output / samples</label>
         <textarea
           id="prom-input"
@@ -121,7 +121,7 @@
         </details>
       </div>
 
-      <div id="mode-manual" class="is-hidden">
+      <div id="mode-manual">
         <p class="field-hint">Enter observed usage directly, in MiB (Nomad's "MB").</p>
       </div>
 
