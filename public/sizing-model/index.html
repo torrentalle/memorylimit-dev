@@ -91,8 +91,10 @@
       Ten of the calculators start the same way: from the average and peak memory you observed, they work out two
       values, a <strong>request</strong> and a <strong>limit</strong>, and only then apply their platform's own
       rules. This page explains that shared step. The margins it adds are MemoryLimit's own defaults, not figures from
-      any vendor, so each one is marked as an <span class="guide-tag guide-tag--assumption">Assumption</span> and
-      explained. What each platform does next is on its own calculator page.
+      any vendor, so each one is explained and marked
+      <span class="guide-tag guide-tag--assumption">Assumption</span>, which links to the table of all of them.
+      Statements backed by vendor documentation end with a link to it, such as
+      <span class="guide-tag guide-tag--doc">Kubernetes docs</span>. What each platform does next is on its own calculator page.
     </p>
   </div>
 
@@ -121,14 +123,12 @@
       </p>
       <ul>
         <li>
-          <span class="guide-tag guide-tag--doc">Kubernetes docs</span>
           <strong>The request</strong> is what the scheduler uses to decide which node a Pod goes on. A container may
-          use more than its request when the node has memory to spare.
+          use more than its request when the node has memory to spare. <a class="guide-tag guide-tag--doc" href="https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/" target="_blank" rel="noopener">Kubernetes docs</a>
         </li>
         <li>
-          <span class="guide-tag guide-tag--doc">Kubernetes docs</span>
           <strong>The limit</strong> is enforced by the kernel: a container that uses more than its memory limit
-          may be OOM-killed.
+          may be OOM-killed. <a class="guide-tag guide-tag--doc" href="https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/" target="_blank" rel="noopener">Kubernetes docs</a>
         </li>
       </ul>
       <p>
@@ -149,10 +149,9 @@
         real container; those are skipped, because averaging them in would skew the result.
       </p>
       <p>
-        <span class="guide-tag guide-tag--assumption">Assumption</span>
         The samples cover a representative period, busiest times included, and each one is the memory of a single
         instance (one container, task, function or process), not a total across replicas. The model can't tell
-        either from the numbers.
+        either from the numbers. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a>
       </p>
       <p>
         A peak below the average can't happen with real samples, so the calculator still shows a result but flags
@@ -176,10 +175,9 @@ margin  = (sensitivity base + workload adjustment) × environment multiplier</co
     <section class="panel guide-section" id="margins" aria-labelledby="margins-heading">
       <h2 id="margins-heading" class="panel__title"><span class="panel__index">04</span> The margins</h2>
       <p>
-        <span class="guide-tag guide-tag--assumption">Assumption</span>
         No vendor publishes a general safety margin for memory, so every value below is a MemoryLimit default: round
         figures that give clearly different results for each choice. They aren't measured, they're the same on every
-        platform, and changing one changes every calculator's output.
+        platform, and changing one changes every calculator's output. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a>
       </p>
 
       <h3 class="guide-subheading">Sensitivity: the base</h3>
@@ -201,9 +199,9 @@ margin  = (sensitivity base + workload adjustment) × environment multiplier</co
         <table class="guide-table">
           <thead><tr><th scope="col">Workload type</th><th scope="col">Request</th><th scope="col">Limit</th><th scope="col">Why</th></tr></thead>
           <tbody>
-            <tr><td>JVM</td><td>+15</td><td>+30</td><td><span class="guide-tag guide-tag--assumption">Assumption</span> A JVM's heap can keep growing toward its maximum until garbage collection reclaims it, so samples may not have caught how much it will take.</td></tr>
-            <tr><td>Worker / batch</td><td>−10</td><td>+35</td><td><span class="guide-tag guide-tag--assumption">Assumption</span> Memory is spiky: small between jobs, large during one. Less is reserved and more room is left above the peak.</td></tr>
-            <tr><td>Cache</td><td>+5</td><td>0</td><td><span class="guide-tag guide-tag--assumption">Assumption</span> A cache tends to fill whatever it's given, so its usual level sits close to its peak.</td></tr>
+            <tr><td>JVM</td><td>+15</td><td>+30</td><td>A JVM's heap can keep growing toward its maximum until garbage collection reclaims it, so samples may not have caught how much it will take. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a></td></tr>
+            <tr><td>Worker / batch</td><td>−10</td><td>+35</td><td>Memory is spiky: small between jobs, large during one. Less is reserved and more room is left above the peak. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a></td></tr>
+            <tr><td>Cache</td><td>+5</td><td>0</td><td>A cache tends to fill whatever it's given, so its usual level sits close to its peak. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a></td></tr>
             <tr><td>API service, Node.js, Python, generic</td><td>0</td><td>0</td><td>The base margins as they are.</td></tr>
           </tbody>
         </table>
@@ -221,9 +219,8 @@ margin  = (sensitivity base + workload adjustment) × environment multiplier</co
         </table>
       </div>
       <p>
-        <span class="guide-tag guide-tag--assumption">Assumption</span>
         An OOM kill costs less outside production, so less memory is set aside for it there. If a staging
-        environment has to behave exactly like production, choose Production.
+        environment has to behave exactly like production, choose Production. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a>
       </p>
     </section>
 
