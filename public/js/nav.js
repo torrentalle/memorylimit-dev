@@ -10,6 +10,10 @@ export function initNav() {
     if (!isEnabled(link.dataset.platformLink)) (link.closest('li') ?? link).remove();
   }
 
+  for (const group of document.querySelectorAll('.site-nav__group')) {
+    if (!group.querySelector('a')) group.remove();
+  }
+
   const nav = document.querySelector('.site-nav');
   if (!nav) return;
   if (!nav.querySelector('a')) {

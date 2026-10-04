@@ -41,18 +41,38 @@
     <nav class="site-nav" aria-label="Calculators">
       <details class="site-nav__menu">
         <summary class="site-nav__toggle"><span class="site-nav__hint">Calculator</span> Redis maxmemory</summary>
-        <ul class="site-nav__list">
-          <li><a class="site-nav__link" href="/kubernetes/" data-platform-link="kubernetes">Kubernetes</a></li>
-          <li><a class="site-nav__link" href="/docker-compose/" data-platform-link="dockerCompose">Docker Compose</a></li>
-          <li><a class="site-nav__link" href="/lambda/" data-platform-link="lambda">AWS Lambda</a></li>
-          <li><a class="site-nav__link" href="/systemd/" data-platform-link="systemd">Systemd / Bare Metal / VM</a></li>
-          <li><a class="site-nav__link" href="/vmware/" data-platform-link="vmware">VMware vSphere</a></li>
-          <li><a class="site-nav__link" href="/nomad/" data-platform-link="nomad">HashiCorp Nomad</a></li>
-          <li><a class="site-nav__link" href="/cloud-run/" data-platform-link="cloudRun">Google Cloud Run</a></li>
-          <li><a class="site-nav__link" href="/azure-functions/" data-platform-link="azureFunctions">Azure Functions</a></li>
-          <li><a class="site-nav__link" href="/redis/" data-platform-link="redis" aria-current="page">Redis maxmemory</a></li>
-          <li><a class="site-nav__link" href="/proxmox/" data-platform-link="proxmox">Proxmox VE</a></li>
-        </ul>
+        <div class="site-nav__panel">
+          <div class="site-nav__group" data-platform-group="containers">
+            <p class="site-nav__group-title">Containers &amp; orchestration</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/kubernetes/" data-platform-link="kubernetes">Kubernetes</a></li>
+              <li><a class="site-nav__link" href="/docker-compose/" data-platform-link="dockerCompose">Docker Compose</a></li>
+              <li><a class="site-nav__link" href="/nomad/" data-platform-link="nomad">HashiCorp Nomad</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="serverless">
+            <p class="site-nav__group-title">Serverless</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/lambda/" data-platform-link="lambda">AWS Lambda</a></li>
+              <li><a class="site-nav__link" href="/cloud-run/" data-platform-link="cloudRun">Google Cloud Run</a></li>
+              <li><a class="site-nav__link" href="/azure-functions/" data-platform-link="azureFunctions">Azure Functions</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="vms">
+            <p class="site-nav__group-title">VMs &amp; bare metal</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/systemd/" data-platform-link="systemd">Systemd / Bare Metal / VM</a></li>
+              <li><a class="site-nav__link" href="/vmware/" data-platform-link="vmware">VMware vSphere</a></li>
+              <li><a class="site-nav__link" href="/proxmox/" data-platform-link="proxmox">Proxmox VE</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="datastores">
+            <p class="site-nav__group-title">Data stores</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/redis/" data-platform-link="redis" aria-current="page">Redis maxmemory</a></li>
+            </ul>
+          </div>
+        </div>
       </details>
     </nav>
     <!-- platform-nav:end -->

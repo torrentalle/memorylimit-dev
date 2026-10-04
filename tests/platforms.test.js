@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as Platforms from '../public/js/platforms.js';
 
-const ALL_IDS = ['kubernetes', 'dockerCompose', 'lambda', 'systemd', 'vmware', 'nomad', 'cloudRun', 'azureFunctions', 'redis', 'proxmox'];
+const ALL_IDS = ['kubernetes', 'dockerCompose', 'nomad', 'lambda', 'cloudRun', 'azureFunctions', 'systemd', 'vmware', 'proxmox', 'redis'];
 
 function withEnabled(overrides, fn) {
   const previous = { ...Platforms.ENABLED_PLATFORMS };
@@ -40,6 +40,19 @@ test('disabling every platform yields an empty list, not an error', () => {
 test('getPlatform looks up a definition by id', () => {
   assert.equal(Platforms.getPlatform('kubernetes').path, '/kubernetes/');
   assert.equal(Platforms.getPlatform('nonexistent'), null);
+});
+
+test('every platform belongs to a known category', () => {
+  const categories = Platforms.PLATFORM_CATEGORIES.map((c) => c.id);
+  assert.ok(Platforms.PLATFORM_DEFINITIONS.every((p) => categories.includes(p.category)));
+});
+
+test('getPlatformGroups groups platforms by category in order and omits empty categories', () => {
+  const groups = Platforms.getPlatformGroups();
+  assert.deepEqual(groups.map((g) => g.id), ['containers', 'serverless', 'vms', 'datastores']);
+  assert.deepEqual(groups.flatMap((g) => g.platforms.map((p) => p.id)), ALL_IDS);
+  const onlyRedis = Platforms.getPlatformGroups(Platforms.PLATFORM_DEFINITIONS.filter((p) => p.id === 'redis'));
+  assert.deepEqual(onlyRedis.map((g) => g.id), ['datastores']);
 });
 
 test('every platform has a distinct canonical path', () => {
