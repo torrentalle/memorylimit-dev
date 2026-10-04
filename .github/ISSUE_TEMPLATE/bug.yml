@@ -1,0 +1,52 @@
+name: Wrong or unexpected output
+description: A calculator gave a wrong result, rejected valid input, or the page misbehaves.
+title: "[Bug] "
+labels: ["type: bug", "status: needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Issues are public: remove hostnames, tokens and anything sensitive from the sample you paste.**
+        Questions about how to size something go to [Discussions](https://github.com/torrentalle/memorylimit-dev/discussions/categories/q-a).
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Kubernetes
+        - Docker Compose
+        - AWS Lambda
+        - Systemd / Bare Metal / VM
+        - VMware vSphere
+        - HashiCorp Nomad
+        - Google Cloud Run
+        - Redis maxmemory
+        - Proxmox VE
+        - Not platform-specific (landing page, nav, theme)
+    validations:
+      required: true
+  - type: textarea
+    id: input
+    attributes:
+      label: Input
+      description: The settings you chose and a short, anonymised sample of the pasted data.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What you got
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser and OS
+      placeholder: Firefox 130 on Windows 11

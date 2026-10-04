@@ -17,8 +17,8 @@ function withEnabled(overrides, fn) {
 
 const PLATFORM_PATHS = PLATFORM_DEFINITIONS.map((def) => def.path);
 
-test('lists the landing page, privacy page and every enabled calculator', () => {
-  assert.deepEqual(sitemapPaths(), ['/', '/privacy/', ...PLATFORM_PATHS]);
+test('lists the landing page, privacy and support pages and every enabled calculator', () => {
+  assert.deepEqual(sitemapPaths(), ['/', '/privacy/', '/support/', ...PLATFORM_PATHS]);
 });
 
 for (const { id, path } of PLATFORM_DEFINITIONS) {

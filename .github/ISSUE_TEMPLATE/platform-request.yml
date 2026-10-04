@@ -1,0 +1,25 @@
+name: Support a new platform or format
+description: Ask for a platform, orchestrator or configuration format the calculators do not cover.
+title: "[Platform] "
+labels: ["type: platform-request", "status: needs-triage"]
+body:
+  - type: input
+    id: platform
+    attributes:
+      label: Platform or tool
+      placeholder: Azure Container Apps
+    validations:
+      required: true
+  - type: textarea
+    id: format
+    attributes:
+      label: Target configuration
+      description: Paste an example of the setting(s) the calculator should produce, and link the documentation.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why you need it
+      description: What are you sizing today, and how do you measure it?

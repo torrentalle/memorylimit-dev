@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question
+    url: https://github.com/torrentalle/memorylimit-dev/discussions/categories/q-a
+    about: How do I size something? Questions belong in Discussions, not Issues.
+  - name: Share an idea
+    url: https://github.com/torrentalle/memorylimit-dev/discussions/categories/ideas
+    about: Not sure it is a feature yet? Talk it through in Discussions first.
+  - name: Report a security problem
+    url: https://github.com/torrentalle/memorylimit-dev/security/advisories/new
+    about: Please report vulnerabilities privately, never in a public issue.

@@ -869,6 +869,27 @@ select.field-input {
 }
 .footer-link:hover { color: var(--accent); }
 
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 14px;
+  font-size: 12px;
+}
+
+.support-list {
+  max-width: 62ch;
+  margin: 0 0 20px;
+  padding-left: 20px;
+  display: grid;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.support-list a { color: var(--accent); }
+.support-list strong { display: block; color: var(--text-primary); }
+
 /* ---- monetization: EthicalAds + donation link ----
    js/monetization-ui.js removes a slot outright when its element is off
    or unconfigured; :empty only covers the case where scripts never run. */
