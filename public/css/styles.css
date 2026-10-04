@@ -1149,3 +1149,60 @@ select.field-input {
   .guide-nesting__row { flex-direction: column; }
   .guide-nesting__box--muted { flex-basis: auto; }
 }
+
+/* ---- field tooltips ---- */
+
+.field-grid { position: relative; }
+
+.field-label-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.field-label-row .field-label { margin-bottom: 0; }
+
+.hint-tip__btn {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+  cursor: help;
+}
+.hint-tip__btn:hover,
+.hint-tip__btn:focus-visible { color: var(--accent); border-color: var(--accent); }
+.hint-tip__btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Absolutely positioned against the field grid, so it spans the grid's width under the label wherever the field sits. */
+.hint-tip__text {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: 8px 10px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-panel);
+  color: var(--text-primary);
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.5;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.12s ease, visibility 0.12s;
+}
+
+.field-head:has(.hint-tip__btn:hover) .hint-tip__text,
+.field-head:has(.hint-tip__btn:focus) .hint-tip__text,
+.hint-tip__text:hover { visibility: visible; opacity: 1; }
+
+body.tips-dismissed .hint-tip__text { visibility: hidden !important; opacity: 0 !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hint-tip__text { transition: none; }
+}

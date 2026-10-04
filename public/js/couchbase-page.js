@@ -60,9 +60,73 @@ let currentSnippet = null;
 let copyResetTimer = null;
 let renderedWarnings = '';
 
+// ---- tooltips --------------------------------------------------------------
+
+// One sentence per input on how it moves the result. The bucket name has none: it doesn't affect the numbers.
+const BUCKET_TIPS = {
+  documents: 'Metadata and data both grow with it: twice the documents, twice the quota.',
+  keyBytes: 'Added to the 56 bytes of metadata each document keeps in RAM, so longer keys raise the quota for every document.',
+  documentBytes: 'Only the working-set share of it is held in RAM, so it raises the quota by size × working set %.',
+  replicas: 'Each replica is a full extra copy of data and metadata: 1 replica doubles the quota, 2 triple it.',
+  workingSetPct: 'The share of the data kept in RAM: the quota grows with it, and reads outside it go to disk.',
+  eviction: 'Value ejection keeps every document’s metadata in RAM; full ejection only the working set’s, for a smaller quota but more disk reads.'
+};
+const FIELD_TIPS = {
+  dataNodes: 'The bucket total is divided by this to give the Data quota per node: more nodes, a smaller quota on each.',
+  nodeRam: 'Doesn’t change any quota; the quotas are checked against it (at most 90% recommended, never above RAM − 1 GiB).',
+  indexQuota: 'Added as entered to each node’s total; it isn’t calculated. 0 means the service doesn’t run here.',
+  searchQuota: 'Added as entered to each node’s total; it isn’t calculated. 0 means the service doesn’t run here.',
+  eventingQuota: 'Added as entered to each node’s total; it isn’t calculated. 0 means the service doesn’t run here.',
+  analyticsQuota: 'Added as entered to each node’s total (at least 1024 MiB if it runs); it isn’t calculated. 0 means it doesn’t run here.'
+};
+
+/**
+ * Wraps a field's label in a row with a "?" button whose tooltip holds `text`. The tooltip shows while the
+ * button is hovered or focused (and while the tooltip itself is hovered), Escape hides it, and the control
+ * is described by it so screen readers read the sentence with the field. Returns the element to put in
+ * place of the label.
+ */
+function attachTip(label, control, text) {
+  const tipId = `${control.id}-tip`;
+  const head = document.createElement('div');
+  head.className = 'field-head';
+  if (label.parentNode) label.replaceWith(head);
+
+  const row = document.createElement('div');
+  row.className = 'field-label-row';
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'hint-tip__btn';
+  button.textContent = '?';
+  button.setAttribute('aria-label', `How ${label.firstChild.textContent.trim()} affects the result`);
+  button.setAttribute('aria-describedby', tipId);
+  row.append(label, button);
+
+  const tip = document.createElement('span');
+  tip.className = 'hint-tip__text';
+  tip.id = tipId;
+  tip.setAttribute('role', 'tooltip');
+  tip.textContent = text;
+
+  control.setAttribute('aria-describedby', tipId);
+  head.append(row, tip);
+  return head;
+}
+
+// WCAG 1.4.13: a tooltip must be dismissable without moving the pointer or focus.
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') document.body.classList.add('tips-dismissed');
+});
+document.addEventListener('pointerover', (event) => {
+  if (event.target.closest?.('.hint-tip__btn')) document.body.classList.remove('tips-dismissed');
+});
+document.addEventListener('focusin', (event) => {
+  if (event.target.closest?.('.hint-tip__btn')) document.body.classList.remove('tips-dismissed');
+});
+
 // ---- bucket rows ---------------------------------------------------------
 
-function fieldNode({ id, label, unit, control }) {
+function fieldNode({ id, label, unit, control, tip }) {
   const field = document.createElement('div');
   field.className = 'field';
   const labelNode = document.createElement('label');
@@ -77,7 +141,7 @@ function fieldNode({ id, label, unit, control }) {
   }
   control.id = id;
   control.classList.add('field-input');
-  field.append(labelNode, control);
+  field.append(tip ? attachTip(labelNode, control, tip) : labelNode, control);
   return field;
 }
 
@@ -132,23 +196,43 @@ function addBucketRow(values = {}) {
   grid.className = 'field-grid';
   grid.append(
     fieldNode({ id: `bucket-${serial}-name`, label: 'Bucket name', control: name }),
-    fieldNode({ id: `bucket-${serial}-documents`, label: 'Documents', control: numberInput('documents', bucket.documents) }),
-    fieldNode({ id: `bucket-${serial}-key`, label: 'Average key length', unit: 'bytes', control: numberInput('keyBytes', bucket.keyBytes) }),
-    fieldNode({ id: `bucket-${serial}-size`, label: 'Average document size', unit: 'bytes', control: numberInput('documentBytes', bucket.documentBytes) }),
+    fieldNode({
+      id: `bucket-${serial}-documents`,
+      label: 'Documents',
+      control: numberInput('documents', bucket.documents),
+      tip: BUCKET_TIPS.documents
+    }),
+    fieldNode({
+      id: `bucket-${serial}-key`,
+      label: 'Average key length',
+      unit: 'bytes',
+      control: numberInput('keyBytes', bucket.keyBytes),
+      tip: BUCKET_TIPS.keyBytes
+    }),
+    fieldNode({
+      id: `bucket-${serial}-size`,
+      label: 'Average document size',
+      unit: 'bytes',
+      control: numberInput('documentBytes', bucket.documentBytes),
+      tip: BUCKET_TIPS.documentBytes
+    }),
     fieldNode({
       id: `bucket-${serial}-replicas`,
       label: 'Replicas',
-      control: selectInput('replicas', [0, 1, 2, 3].map((n) => [String(n), String(n)]), bucket.replicas)
+      control: selectInput('replicas', [0, 1, 2, 3].map((n) => [String(n), String(n)]), bucket.replicas),
+      tip: BUCKET_TIPS.replicas
     }),
     fieldNode({
       id: `bucket-${serial}-working-set`,
       label: 'Working set in RAM',
       unit: '%',
-      control: numberInput('workingSetPct', bucket.workingSetPct, { min: 1, step: 1 })
+      control: numberInput('workingSetPct', bucket.workingSetPct, { min: 1, step: 1 }),
+      tip: BUCKET_TIPS.workingSetPct
     }),
     fieldNode({
       id: `bucket-${serial}-eviction`,
       label: 'Eviction policy',
+      tip: BUCKET_TIPS.eviction,
       control: selectInput(
         'eviction',
         [
@@ -427,6 +511,9 @@ const live = isEnabled('couchbase');
 el.disabledState.classList.toggle('is-hidden', live);
 el.outputPanels.classList.toggle('is-hidden', !live);
 if (live) {
+  for (const [key, text] of Object.entries(FIELD_TIPS)) {
+    attachTip(document.querySelector(`label[for="${el[key].id}"]`), el[key], text);
+  }
   setMode('manual');
   addBucketRow();
   recalculate();

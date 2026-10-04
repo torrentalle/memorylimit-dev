@@ -15,6 +15,8 @@ const K8S_REFERENCE_MANIFEST = 'resources:\n  requests:\n    memory: "608Mi"\n  
 const averageInput = (page) => page.getByRole('spinbutton', { name: /^Average usage/ });
 const peakInput = (page) => page.getByRole('spinbutton', { name: /^Peak usage/ });
 const currentNavLink = (page) => page.locator('.site-nav [aria-current="page"]');
+// The form control for a label, not the tooltip button next to it (whose name repeats the label).
+const field = (page, label) => page.getByLabel(label).and(page.locator('input, select, textarea'));
 
 async function fillUsage(page, average, peak) {
   await averageInput(page).fill(String(average));
@@ -214,7 +216,7 @@ test('Couchbase: default bucket produces quotas and couchbase-cli commands, and 
 test('Couchbase: quotas above the node RAM raise an error warning', async ({ page }) => {
   await page.goto('/couchbase/');
   // 790 MiB of quotas on a 768 MiB node, above its 614 MiB firm limit
-  await page.getByLabel('RAM per node').fill('0.75');
+  await field(page, 'RAM per node').fill('0.75');
   await expect(page.locator('#warnings .is-error')).toContainText('will refuse them');
 });
 
@@ -228,28 +230,49 @@ test('Couchbase: pasted bucket API and cluster API output fill in the form', asy
   );
   await expect(page.locator('#metrics-feedback')).toContainText('Bucket API: 1 bucket');
   await expect(page.locator('[data-bucket-row]')).toHaveCount(1);
-  await expect(page.getByLabel('Bucket name')).toHaveValue('orders');
-  await expect(page.getByLabel('Documents')).toHaveValue('2500000');
-  await expect(page.getByLabel('Replicas')).toHaveValue('2');
-  await expect(page.getByLabel('Eviction policy')).toHaveValue('full');
+  await expect(field(page, 'Bucket name')).toHaveValue('orders');
+  await expect(field(page, 'Documents')).toHaveValue('2500000');
+  await expect(field(page, 'Replicas')).toHaveValue('2');
+  await expect(field(page, 'Eviction policy')).toHaveValue('full');
 
   await page.getByLabel('Prometheus metrics or Couchbase REST output').fill(
     JSON.stringify({ memoryQuota: 4096, indexMemoryQuota: 1024, nodes: [{ services: ['kv', 'index'], systemStats: { mem_total: 34359738368 } }, { services: ['kv'], systemStats: { mem_total: 34359738368 } }] })
   );
   await expect(page.locator('#metrics-feedback')).toContainText('Cluster info read');
-  await expect(page.getByLabel('Data nodes')).toHaveValue('2');
-  await expect(page.getByLabel('RAM per node')).toHaveValue('32');
-  await expect(page.getByLabel('Index quota')).toHaveValue('1024');
+  await expect(field(page, 'Data nodes')).toHaveValue('2');
+  await expect(field(page, 'RAM per node')).toHaveValue('32');
+  await expect(field(page, 'Index quota')).toHaveValue('1024');
 });
 
 test('Couchbase: a Prometheus paste sets the document count and keeps the sizes you entered', async ({ page }) => {
   await page.goto('/couchbase/');
-  await page.getByLabel('Average document size').fill('2048');
+  await field(page, 'Average document size').fill('2048');
   await page.locator('#mode-paste-btn').click();
   await page.getByLabel('Prometheus metrics or Couchbase REST output').fill('kv_curr_items{bucket="default",instance="a"} 300000\nkv_curr_items{bucket="default",instance="b"} 200000');
   await expect(page.locator('#metrics-feedback')).toContainText('Prometheus: 1 bucket');
-  await expect(page.getByLabel('Documents')).toHaveValue('500000');
-  await expect(page.getByLabel('Average document size')).toHaveValue('2048');
+  await expect(field(page, 'Documents')).toHaveValue('500000');
+  await expect(field(page, 'Average document size')).toHaveValue('2048');
+});
+
+test('Couchbase: each input that changes the result has a tooltip saying how', async ({ page }) => {
+  await page.goto('/couchbase/');
+  const button = page.getByRole('button', { name: 'How Replicas affects the result' });
+  const tip = page.getByRole('tooltip').filter({ hasText: '1 replica doubles the quota' });
+  await expect(tip).toBeHidden();
+  await expect(field(page, 'Replicas')).toHaveAccessibleDescription(/1 replica doubles the quota/);
+
+  await button.hover();
+  await expect(tip).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(tip).toBeHidden();
+
+  await page.mouse.move(0, 0);
+  await page.getByRole('button', { name: 'How Data nodes affects the result' }).focus();
+  await expect(page.getByRole('tooltip').filter({ hasText: 'divided by this' })).toBeVisible();
+
+  // 6 per bucket + 6 cluster/service fields; the bucket name doesn't affect the numbers, so it has none.
+  await expect(page.locator('.hint-tip__btn')).toHaveCount(12);
+  await expect(field(page, 'Bucket name')).not.toHaveAttribute('aria-describedby', /.+/);
 });
 
 test('Proxmox VE: produces a qm command and web UI steps', async ({ page }) => {
