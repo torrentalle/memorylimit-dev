@@ -2,6 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://memorylimit.dev/</loc></url>
   <url><loc>https://memorylimit.dev/privacy/</loc></url>
+  <url><loc>https://memorylimit.dev/support/</loc></url>
   <url><loc>https://memorylimit.dev/kubernetes/</loc></url>
   <url><loc>https://memorylimit.dev/docker-compose/</loc></url>
   <url><loc>https://memorylimit.dev/lambda/</loc></url>

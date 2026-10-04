@@ -6,6 +6,7 @@
  *
  *   <!-- platform-nav:start --> … <!-- platform-nav:end -->      every page
  *   <!-- platform-cards:start --> … <!-- platform-cards:end -->  landing page
+ *   <!-- footer-links:start --> … <!-- footer-links:end -->      every page (data from js/links.js)
  *
  * Every defined platform is written out; links to disabled ones are removed
  * at runtime by js/nav.js and js/landing.js. tests/pages.test.js fails if a
@@ -17,6 +18,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PLATFORM_DEFINITIONS } from '../public/js/platforms.js';
+import { LINKS, reportBugUrl } from '../public/js/links.js';
 
 export const PUBLIC_DIR = join(import.meta.dirname, '..', 'public');
 
@@ -28,6 +30,7 @@ export function navPages() {
   return [
     ['', null],
     ['privacy', null],
+    ['support', null],
     ...PLATFORM_DEFINITIONS.map((def) => [def.path.slice(1, -1), def.id])
   ];
 }
@@ -72,6 +75,27 @@ export function renderCards(indent = '      ') {
   ).join('\n');
 }
 
+export function renderFooterLinks(dir, currentId, indent = '      ') {
+  const current = PLATFORM_DEFINITIONS.find((def) => def.id === currentId);
+  const internal = (path, text) => {
+    const currentAttr = dir === path.slice(1, -1) ? ' aria-current="page"' : '';
+    return `  <a href="${path}" class="footer-link"${currentAttr}>${text}</a>`;
+  };
+  const external = (href, text) =>
+    `  <a href="${escapeHtml(href)}" class="footer-link" target="_blank" rel="noopener">${text}</a>`;
+  return [
+    '<p class="footer-tagline">Your pasted metrics and results never leave the browser.</p>',
+    '<nav class="footer-links" aria-label="Project">',
+    internal('/privacy/', 'Privacy'),
+    internal('/support/', 'Support'),
+    external(LINKS.repo, '★ Star on GitHub'),
+    external(reportBugUrl(current?.label), 'Report an issue'),
+    '</nav>'
+  ]
+    .map((line) => indent + line)
+    .join('\n');
+}
+
 export function replaceBlock(html, name, content, file) {
   const pattern = new RegExp(`<!-- ${name}:start -->[\\s\\S]*?\\n([ \\t]*)<!-- ${name}:end -->`);
   if (!pattern.test(html)) throw new Error(`${file}: missing <!-- ${name}:start --> / <!-- ${name}:end --> markers`);
@@ -81,6 +105,7 @@ export function replaceBlock(html, name, content, file) {
 export function syncedPage(dir, currentId, html) {
   const file = join(dir || '.', 'index.html');
   let out = replaceBlock(html, 'platform-nav', renderNav(currentId), file);
+  out = replaceBlock(out, 'footer-links', renderFooterLinks(dir, currentId), file);
   if (dir === '') out = replaceBlock(out, 'platform-cards', renderCards(), file);
   return out;
 }

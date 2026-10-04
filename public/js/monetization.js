@@ -16,7 +16,7 @@ export const MONETIZATION = {
   donationLink: true,
   donationProvider: 'github-sponsors', // 'github-sponsors' | 'buy-me-a-coffee'
   // Must be an absolute https:// URL; the link stays hidden until it is.
-  donationUrl: 'REPLACE_WITH_ACTUAL_URL'
+  donationUrl: 'https://github.com/sponsors/torrentalle'
 };
 
 export const DONATION_PROVIDERS = {

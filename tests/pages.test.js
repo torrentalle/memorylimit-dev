@@ -22,6 +22,7 @@ const CALCULATOR_PAGES = PLATFORM_DEFINITIONS.map((def) => ({ ...def, dir: def.p
 const CONTENT_PAGES = [
   { path: '/', dir: '' },
   { path: '/privacy/', dir: 'privacy' },
+  { path: '/support/', dir: 'support' },
   ...CALCULATOR_PAGES
 ];
 const SHAREABLE_PAGES = [{ path: '/', dir: '' }, ...CALCULATOR_PAGES];

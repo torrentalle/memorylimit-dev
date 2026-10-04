@@ -336,6 +336,15 @@ code {
 
 .intro-text a { color: var(--accent); }
 
+.support-heading {
+  margin: 28px 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.support-more { margin-top: 10px; }
+
 /* ---- landing page ---- */
 
 .landing-section { padding-top: 4px; padding-bottom: 56px; }
@@ -868,6 +877,27 @@ select.field-input {
   text-underline-offset: 2px;
 }
 .footer-link:hover { color: var(--accent); }
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 14px;
+  font-size: 12px;
+}
+
+.support-list {
+  max-width: 62ch;
+  margin: 0 0 20px;
+  padding-left: 20px;
+  display: grid;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.support-list a { color: var(--accent); }
+.support-list strong { display: block; color: var(--text-primary); }
 
 /* ---- monetization: EthicalAds + donation link ----
    js/monetization-ui.js removes a slot outright when its element is off

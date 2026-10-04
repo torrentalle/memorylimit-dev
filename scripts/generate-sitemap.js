@@ -12,7 +12,7 @@ import { getEnabledPlatforms } from '../public/js/platforms.js';
 
 export const BASE_URL = 'https://memorylimit.dev';
 // Always-present pages. /k8s/ is a redirect, not a canonical page.
-const ALWAYS_INCLUDED_PATHS = ['/', '/privacy/'];
+const ALWAYS_INCLUDED_PATHS = ['/', '/privacy/', '/support/'];
 
 export function sitemapPaths(platforms = getEnabledPlatforms()) {
   return [...ALWAYS_INCLUDED_PATHS, ...platforms.map((def) => def.path)];

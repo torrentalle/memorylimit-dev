@@ -13,7 +13,7 @@ const POLICY = sitewideCsp()
   .filter((directive) => directive && directive !== 'upgrade-insecure-requests')
   .join('; ');
 
-const PAGES = ['/', '/privacy/', ...PLATFORM_DEFINITIONS.map((def) => def.path)];
+const PAGES = ['/', '/privacy/', '/support/', ...PLATFORM_DEFINITIONS.map((def) => def.path)];
 
 const GIF = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
 
@@ -109,7 +109,7 @@ for (const path of PAGES) {
   test(`${path} works under the CSP without violations`, async ({ page }) => {
     await page.goto(path);
     await page.locator('.theme-toggle').click();
-    if (path.length > 1 && path !== '/privacy/') {
+    if (path.length > 1 && path !== '/privacy/' && path !== '/support/') {
       await page.getByRole('spinbutton', { name: /^Average usage/ }).fill('400');
       await page.getByRole('spinbutton', { name: /^Peak usage/ }).fill('600');
       await expect(page.locator('#snippet-code')).not.toBeEmpty();

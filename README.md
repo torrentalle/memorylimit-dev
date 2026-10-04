@@ -8,6 +8,8 @@
 # MemoryLimit
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI](https://github.com/torrentalle/memorylimit-dev/actions/workflows/ci.yml/badge.svg)](https://github.com/torrentalle/memorylimit-dev/actions/workflows/ci.yml)
+[![GitHub stars](https://img.shields.io/github/stars/torrentalle/memorylimit-dev?style=flat)](https://github.com/torrentalle/memorylimit-dev/stargazers)
 
 A memory sizing calculator for containers, serverless, VMs and Redis: **Kubernetes**, **Docker Compose**,
 **HashiCorp Nomad**, **AWS Lambda**, **Google Cloud Run**, **systemd** services on VMs or bare metal,
@@ -17,6 +19,12 @@ configuration with a plain-English explanation and warnings for risky setups.
 
 It's a static site with no backend and no build step. Everything runs in the browser; nothing you paste
 leaves it.
+
+## Support
+
+Questions go to [Discussions](https://github.com/torrentalle/memorylimit-dev/discussions); bugs and platform
+requests to [Issues](https://github.com/torrentalle/memorylimit-dev/issues/new/choose). See [SUPPORT.md](SUPPORT.md).
+If MemoryLimit saved you time, a star helps others find it.
 
 ## Features
 
@@ -93,7 +101,7 @@ public/                     deployed as-is
   index.html                landing page
   kubernetes/ docker-compose/ nomad/ lambda/ cloud-run/
   systemd/ vmware/ proxmox/ redis/        one calculator page per platform
-  privacy/                  what the site does and doesn't collect
+  privacy/ support/         what the site collects; where to get help (GitHub links)
   k8s/                      meta-refresh fallback for the /k8s/ alias
   css/styles.css
   fonts/                    self-hosted IBM Plex (SIL OFL 1.1)
@@ -103,6 +111,7 @@ public/                     deployed as-is
     formatters/             pure platform output, one module per platform (+ shared.js)
     platforms.js            ENABLED_PLATFORMS + platform metadata (labels, paths, taglines)
     monetization.js         MONETIZATION config
+    links.js                GitHub repo / issue-form URLs (footer and /support/)
     analytics.js            ANALYTICS config
     app.js                  calculator page wiring
     calculator-page.js      entry point of every calculator page (reads <body data-platform>)
