@@ -6,6 +6,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { LINKS, REPO_URL, reportBugUrl } from '../public/js/links.js';
 import { PLATFORM_DEFINITIONS } from '../public/js/platforms.js';
+import { MONETIZATION } from '../public/js/monetization.js';
 
 const ROOT = join(import.meta.dirname, '..');
 
@@ -33,4 +34,9 @@ test('every issue-form link points at a template that exists', () => {
 test('the bug form offers every calculator platform, as labelled in platforms.js', () => {
   const form = readFileSync(join(ROOT, '.github', 'ISSUE_TEMPLATE', 'bug.yml'), 'utf8');
   for (const { label } of PLATFORM_DEFINITIONS) assert.ok(form.includes(`- ${label}\n`), label);
+});
+
+test('the support page links the same Sponsors page as the footer donation link', () => {
+  const page = readFileSync(join(ROOT, 'public', 'support', 'index.html'), 'utf8');
+  assert.ok(page.includes(`href="${MONETIZATION.donationUrl}"`));
 });

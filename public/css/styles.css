@@ -336,6 +336,15 @@ code {
 
 .intro-text a { color: var(--accent); }
 
+.support-heading {
+  margin: 28px 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.support-more { margin-top: 10px; }
+
 /* ---- landing page ---- */
 
 .landing-section { padding-top: 4px; padding-bottom: 56px; }
