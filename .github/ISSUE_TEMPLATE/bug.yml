@@ -22,6 +22,7 @@ body:
         - Google Cloud Run
         - Azure Functions
         - Redis maxmemory
+        - Couchbase memory quotas
         - Proxmox VE
         - Not platform-specific (landing page, nav, theme)
     validations:

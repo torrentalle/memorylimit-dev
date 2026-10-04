@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>How the Couchbase Memory Quota Calculator Works | MemoryLimit</title>
+<meta name="description" content="The formula, constants and checks behind the Couchbase memory quota calculator, step by step, with links to the Couchbase documentation and every assumption spelled out." />
+<link rel="canonical" href="https://memorylimit.dev/couchbase/how-it-works/" />
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="MemoryLimit" />
+<meta property="og:title" content="How the Couchbase Memory Quota Calculator Works" />
+<meta property="og:description" content="The formula, constants and checks behind the Couchbase memory quota calculator, step by step, with links to the Couchbase documentation and every assumption spelled out." />
+<meta property="og:url" content="https://memorylimit.dev/couchbase/how-it-works/" />
+<meta property="og:image" content="https://memorylimit.dev/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="How the Couchbase Memory Quota Calculator Works" />
+<meta name="twitter:description" content="The formula, constants and checks behind the Couchbase memory quota calculator, step by step, with links to the Couchbase documentation and every assumption spelled out." />
+<meta name="twitter:image" content="https://memorylimit.dev/og-image.png" />
+<link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/css/styles.css" />
+<script src="/js/theme-init.js"></script>
+</head>
+<body>
+
+<div class="skyline" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="brand" href="/" aria-label="MemoryLimit home">
+      <img class="brand__mark brand__mark--light" src="/brand/memorylimit-mark.svg" alt="" width="37" height="28" />
+      <img class="brand__mark brand__mark--dark" src="/brand/memorylimit-mark-on-dark.svg" alt="" width="37" height="28" />
+      <div><p class="brand__name">MemoryLimit</p><p class="brand__tagline">Memory request/limit sizing</p></div>
+    </a>
+    <!-- platform-nav:start -->
+    <nav class="site-nav" aria-label="Calculators">
+      <details class="site-nav__menu">
+        <summary class="site-nav__toggle">Calculators</summary>
+        <div class="site-nav__panel">
+          <div class="site-nav__group" data-platform-group="containers">
+            <p class="site-nav__group-title">Containers &amp; orchestration</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/kubernetes/" data-platform-link="kubernetes">Kubernetes</a></li>
+              <li><a class="site-nav__link" href="/docker-compose/" data-platform-link="dockerCompose">Docker Compose</a></li>
+              <li><a class="site-nav__link" href="/nomad/" data-platform-link="nomad">HashiCorp Nomad</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="serverless">
+            <p class="site-nav__group-title">Serverless</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/lambda/" data-platform-link="lambda">AWS Lambda</a></li>
+              <li><a class="site-nav__link" href="/cloud-run/" data-platform-link="cloudRun">Google Cloud Run</a></li>
+              <li><a class="site-nav__link" href="/azure-functions/" data-platform-link="azureFunctions">Azure Functions</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="vms">
+            <p class="site-nav__group-title">VMs &amp; bare metal</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/systemd/" data-platform-link="systemd">Systemd / Bare Metal / VM</a></li>
+              <li><a class="site-nav__link" href="/vmware/" data-platform-link="vmware">VMware vSphere</a></li>
+              <li><a class="site-nav__link" href="/proxmox/" data-platform-link="proxmox">Proxmox VE</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="datastores">
+            <p class="site-nav__group-title">Data stores</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/redis/" data-platform-link="redis">Redis maxmemory</a></li>
+              <li><a class="site-nav__link" href="/couchbase/" data-platform-link="couchbase">Couchbase memory quotas</a></li>
+            </ul>
+          </div>
+        </div>
+      </details>
+    </nav>
+    <!-- platform-nav:end -->
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Dark theme">
+      <span class="theme-toggle__icon" aria-hidden="true">◐</span><span class="theme-toggle__label">theme</span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <div class="wrap intro-section">
+    <p class="guide-back"><a href="/couchbase/">← Couchbase memory quota calculator</a></p>
+    <h1 class="intro-title">How the Couchbase calculator works</h1>
+    <p class="intro-text">
+      This page walks through every number the <a href="/couchbase/">Couchbase calculator</a> produces: the formula,
+      where each constant comes from, the checks behind each warning, and the commands it writes. Statements backed by
+      Couchbase's documentation link to it. Where the calculator has to fill a gap the documentation leaves, the
+      choice is marked as an <span class="guide-tag guide-tag--assumption">Assumption</span> and explained.
+    </p>
+  </div>
+
+  <div class="wrap guide">
+
+    <nav class="panel guide-toc" aria-labelledby="toc-heading">
+      <h2 id="toc-heading" class="panel__title panel__title--tight">On this page</h2>
+      <ol>
+        <li><a href="#two-levels">Two levels of quota</a></li>
+        <li><a href="#bucket-quota">Step 1 — each bucket's quota</a></li>
+        <li><a href="#data-quota">Step 2 — the Data quota per node</a></li>
+        <li><a href="#other-services">Step 3 — the other services</a></li>
+        <li><a href="#node-fit">Step 4 — do the quotas fit the node?</a></li>
+        <li><a href="#ejection">Value ejection and full ejection</a></li>
+        <li><a href="#warnings">Every warning, and why</a></li>
+        <li><a href="#paste">What a paste fills in</a></li>
+        <li><a href="#commands">The commands</a></li>
+        <li><a href="#assumptions">All assumptions in one place</a></li>
+        <li><a href="#references">References</a></li>
+      </ol>
+    </nav>
+
+    <section class="panel guide-section" id="two-levels" aria-labelledby="two-levels-heading">
+      <h2 id="two-levels-heading" class="panel__title"><span class="panel__index">01</span> Two levels of quota</h2>
+      <p>
+        Couchbase doesn't have one memory limit. It has two levels of quota, nested inside the node's RAM
+        (<a href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Memory</a>):
+      </p>
+      <ul>
+        <li>
+          <strong>Service quotas, per node.</strong> The Data, Index, Search, Eventing and Analytics services each
+          get a quota that applies on every node running that service. The Query service has no quota: it uses
+          whatever memory the operating system has left.
+        </li>
+        <li>
+          <strong>Bucket quotas, cluster-wide.</strong> Each bucket gets a quota taken out of the Data service's.
+          All bucket quotas together must fit in the Data quota of every Data node combined.
+        </li>
+      </ul>
+      <div class="guide-nesting" role="img" aria-label="Node RAM contains the OS and Query service, and the service quotas; the Data quota, across all Data nodes, contains the bucket quotas.">
+        <div class="guide-nesting__box">
+          <p class="guide-nesting__label">Node RAM</p>
+          <div class="guide-nesting__row">
+            <div class="guide-nesting__box guide-nesting__box--muted"><p class="guide-nesting__label">OS, file cache, Query service</p></div>
+            <div class="guide-nesting__box guide-nesting__box--accent">
+              <p class="guide-nesting__label">Service quotas</p>
+              <div class="guide-nesting__row">
+                <div class="guide-nesting__box">
+                  <p class="guide-nesting__label">Data quota (× Data nodes)</p>
+                  <div class="guide-nesting__row">
+                    <div class="guide-nesting__box guide-nesting__box--leaf"><p class="guide-nesting__label">Bucket A</p></div>
+                    <div class="guide-nesting__box guide-nesting__box--leaf"><p class="guide-nesting__label">Bucket B</p></div>
+                  </div>
+                </div>
+                <div class="guide-nesting__box guide-nesting__box--leaf"><p class="guide-nesting__label">Index, Search, Eventing, Analytics</p></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p>
+        The calculator works from the inside out: it sizes each bucket from its data (step 1), adds them up into
+        the Data quota (step 2), adds the other services (step 3), and checks the total against the node's RAM
+        (step 4).
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="bucket-quota" aria-labelledby="bucket-quota-heading">
+      <h2 id="bucket-quota-heading" class="panel__title"><span class="panel__index">02</span> Step 1 — each bucket's quota</h2>
+      <p>
+        <span class="guide-tag guide-tag--doc">Couchbase docs</span>
+        The bucket quota is Couchbase's own Data service sizing formula, from the
+        <a href="https://docs.couchbase.com/server/current/install/sizing-general.html" target="_blank" rel="noopener">Sizing Guidelines</a>,
+        applied to one bucket at a time:
+      </p>
+      <pre class="yaml-block guide-formula"><code>copies    = 1 + replicas
+metadata  = documents × (56 bytes + key length) × copies
+dataset   = documents × document size × copies
+working   = dataset × working set %
+quota     = (metadata + working) × (1 + 25%) ÷ 85%</code></pre>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Term</th><th scope="col">Value</th><th scope="col">Where it comes from</th></tr></thead>
+          <tbody>
+            <tr><td>Metadata per document</td><td>56 bytes</td><td><span class="guide-tag guide-tag--doc">Couchbase docs</span> Sizing Guidelines (<code>metadata_per_document</code>). Every document's key and metadata take this much plus the key itself.</td></tr>
+            <tr><td>Overhead</td><td>25%</td><td><span class="guide-tag guide-tag--doc">Couchbase docs</span> Sizing Guidelines (<code>overhead_percentage</code>): memory the bucket uses beyond the metadata and working set the formula counts. The guide gives one figure, so the calculator doesn't offer others.</td></tr>
+            <tr><td>High-water mark</td><td>85%</td><td><span class="guide-tag guide-tag--doc">Couchbase docs</span> Sizing Guidelines and <a href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Memory</a>: once a bucket's memory use reaches 85% of its quota, Couchbase starts ejecting items. Dividing by 0.85 keeps the working set below that line.</td></tr>
+            <tr><td>Replicas</td><td>0–3</td><td><span class="guide-tag guide-tag--doc">Couchbase docs</span> Every replica is a full extra copy of the bucket's data and metadata, held in the same cluster-wide quota. <code>bucket-edit</code> accepts 0 to 3.</td></tr>
+            <tr><td>Working set %</td><td>Your input</td><td>The share of the data you want served from RAM. Higher means fewer disk reads and a bigger quota.</td></tr>
+            <tr><td>Key length, document size</td><td>Your input</td><td><span class="guide-tag guide-tag--assumption">Assumption</span> Averages you supply from a sample of real documents. Nothing in the metrics or REST APIs gives them reliably, so the calculator never guesses them.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="guide-subheading">Rounding</h3>
+      <p>
+        <span class="guide-tag guide-tag--doc">Couchbase docs</span>
+        Couchbase takes quotas in whole MiB (<a href="https://docs.couchbase.com/server/current/cli/cbcli/couchbase-cli-bucket-edit.html" target="_blank" rel="noopener"><code>--bucket-ramsize</code></a>
+        is in mebibytes), so the result is rounded up to the next whole MiB and no further. A bucket can't have
+        less than 100 MiB, so smaller results are raised to 100 MiB.
+      </p>
+
+      <h3 class="guide-subheading">Worked example</h3>
+      <p>
+        One bucket with 1,000,000 documents, 36-byte keys (a UUID), 1 KiB documents, 1 replica, 20% working set and
+        value ejection:
+      </p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers">
+          <tbody>
+            <tr><th scope="row">copies</th><td>1 + 1</td><td>2</td></tr>
+            <tr><th scope="row">metadata</th><td>1,000,000 × (56 + 36) B × 2 = 184,000,000 B</td><td>175.48 MiB</td></tr>
+            <tr><th scope="row">dataset</th><td>1,000,000 × 1,024 B × 2 = 2,048,000,000 B</td><td>1,953.13 MiB</td></tr>
+            <tr><th scope="row">working</th><td>1,953.13 MiB × 20%</td><td>390.63 MiB</td></tr>
+            <tr><th scope="row">metadata + working</th><td>175.48 + 390.63</td><td>566.10 MiB</td></tr>
+            <tr><th scope="row">× (1 + 25%)</th><td>566.10 × 1.25</td><td>707.63 MiB</td></tr>
+            <tr><th scope="row">÷ 85%</th><td>707.63 ÷ 0.85</td><td>832.50 MiB</td></tr>
+            <tr class="guide-table__result"><th scope="row">bucket quota</th><td>rounded up to a whole MiB</td><td>833 MiB</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Notice that metadata is almost a third of what's in RAM here, even though it's under a tenth of the data.
+        With value ejection all of it stays in memory however small the working set is, which is why buckets with
+        many small documents need more RAM than their size suggests.
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="data-quota" aria-labelledby="data-quota-heading">
+      <h2 id="data-quota-heading" class="panel__title"><span class="panel__index">03</span> Step 2 — the Data quota per node</h2>
+      <pre class="yaml-block guide-formula"><code>Data quota per node = sum of bucket quotas ÷ Data nodes   (rounded up to a whole MiB, at least 256 MiB)</code></pre>
+      <p>
+        <span class="guide-tag guide-tag--doc">Couchbase docs</span>
+        Bucket quotas are cluster-wide while the Data quota is per node, so the bucket total is spread over the
+        Data nodes. The Sizing Guidelines do the same calculation the other way round: number of nodes = cluster
+        RAM quota required ÷ per-node RAM quota. The Data service needs at least 256 MiB
+        (<a href="https://docs.couchbase.com/server/current/rest-api/rest-configure-memory.html" target="_blank" rel="noopener">Configuring Memory</a>).
+      </p>
+      <p>
+        <span class="guide-tag guide-tag--assumption">Assumption</span>
+        This assumes a bucket's data spreads evenly over the Data nodes. Couchbase distributes a bucket's vBuckets
+        across them, so after a rebalance that holds closely; a cluster that hasn't been rebalanced may be uneven.
+      </p>
+      <p>Worked example, with 3 Data nodes: 833 MiB ÷ 3 = 277.67 → <strong>278 MiB</strong> per node.</p>
+    </section>
+
+    <section class="panel guide-section" id="other-services" aria-labelledby="other-services-heading">
+      <h2 id="other-services-heading" class="panel__title"><span class="panel__index">04</span> Step 3 — the other services</h2>
+      <p>
+        <span class="guide-tag guide-tag--assumption">Assumption</span>
+        The Index, Search, Eventing and Analytics quotas are the values you enter, not calculated. How much
+        memory an index needs depends on the index definitions and the shape of the documents, which a few form
+        fields can't describe; an estimate would look more authoritative than it is. 0 means the service doesn't run
+        on these nodes.
+      </p>
+      <p>
+        <span class="guide-tag guide-tag--doc">Couchbase docs</span>
+        A service that runs needs at least 256 MiB (Index, Search, Eventing) or 1024 MiB (Analytics); below that the
+        calculator shows an error
+        (<a href="https://docs.couchbase.com/server/current/rest-api/rest-configure-memory.html" target="_blank" rel="noopener">Configuring Memory</a>,
+        <a href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Memory</a>).
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="node-fit" aria-labelledby="node-fit-heading">
+      <h2 id="node-fit-heading" class="panel__title"><span class="panel__index">05</span> Step 4 — do the quotas fit the node?</h2>
+      <p>The quotas of every service on a node are added up and compared with the node's RAM, against two limits.</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Limit</th><th scope="col">Rule</th><th scope="col">Result in the calculator</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Firm limit</td>
+              <td><code>max(RAM − 1 GiB, 80% × RAM)</code></td>
+              <td>Error: Couchbase refuses quotas above this. <span class="guide-tag guide-tag--doc">Couchbase docs</span></td>
+            </tr>
+            <tr>
+              <td>Recommended share</td>
+              <td>90% of RAM, or 80% on nodes with little memory</td>
+              <td>Warning: it leaves too little for the OS, its file cache and the Query service. <span class="guide-tag guide-tag--doc">Couchbase docs</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Both rules come from <a href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Memory</a>.
+        <span class="guide-tag guide-tag--assumption">Assumption</span>
+        The documentation doesn't say what "little memory" means. The calculator uses under 5 GiB: below that,
+        80% of RAM is already more than RAM − 1 GiB, so the firm limit itself is 80% and the two rules agree.
+      </p>
+      <p>
+        Worked example, on a 16 GiB node with a 512 MiB Index quota: 278 + 512 = 790 MiB, 4.8% of 16,384 MiB. The firm
+        limit is 15,360 MiB and the recommended share 14,746 MiB, so there's no warning.
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="ejection" aria-labelledby="ejection-heading">
+      <h2 id="ejection-heading" class="panel__title"><span class="panel__index">06</span> Value ejection and full ejection</h2>
+      <p>
+        <span class="guide-tag guide-tag--doc">Couchbase docs</span>
+        When a bucket nears its quota, Couchbase ejects documents from memory
+        (<a href="https://docs.couchbase.com/server/current/manage/manage-buckets/change-ejection-policy.html" target="_blank" rel="noopener">Change the Ejection Policy</a>):
+      </p>
+      <ul>
+        <li><strong>Value ejection</strong> (the default) removes a document's value but keeps its key and metadata in memory.</li>
+        <li><strong>Full ejection</strong> removes the whole document, key and metadata included.</li>
+      </ul>
+      <p>
+        <span class="guide-tag guide-tag--assumption">Assumption</span>
+        The sizing formula has no separate case for full ejection. Since full ejection evicts a document's metadata
+        together with its value, the calculator counts metadata only for the documents that stay resident:
+        metadata × working set %, instead of all of it. That follows from the documented behaviour, but the
+        documentation doesn't spell it out as a formula.
+      </p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers">
+          <thead><tr><th scope="col">Same bucket, 10% working set</th><th scope="col">Metadata counted</th><th scope="col">Bucket quota</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Value ejection</th><td>175.48 MiB (all)</td><td>546 MiB</td></tr>
+            <tr><th scope="row">Full ejection</th><td>17.55 MiB (10%)</td><td>314 MiB</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        The smaller quota has a cost. With full ejection, reading a document that isn't in memory, or checking
+        whether a key exists, has to go to disk, where value ejection could answer from the metadata in RAM
+        (<a href="https://www.couchbase.com/blog/a-tale-of-two-ejection-methods-value-only-vs-full/" target="_blank" rel="noopener">Couchbase blog: Value-Only Ejection vs. Full Ejection</a>).
+        That's why the calculator warns when a full-ejection bucket keeps under 20% in RAM.
+        Changing a bucket's ejection policy restarts the bucket, so the calculator's commands never change it.
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="warnings" aria-labelledby="warnings-heading">
+      <h2 id="warnings-heading" class="panel__title"><span class="panel__index">07</span> Every warning, and why</h2>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Message about</th><th scope="col">Shown when</th><th scope="col">Basis</th></tr></thead>
+          <tbody>
+            <tr><td>Quotas above the firm limit <span class="guide-level guide-level--error">error</span></td><td>The node's quotas total more than max(RAM − 1 GiB, 80% × RAM)</td><td><span class="guide-tag guide-tag--doc">Couchbase docs</span> Couchbase refuses them.</td></tr>
+            <tr><td>Quotas above the recommended share <span class="guide-level">warning</span></td><td>Above 90% of RAM (80% under 5 GiB)</td><td><span class="guide-tag guide-tag--doc">Couchbase docs</span> recommendation; the 5 GiB line is an <span class="guide-tag guide-tag--assumption">Assumption</span></td></tr>
+            <tr><td>Service quota below its minimum <span class="guide-level guide-level--error">error</span></td><td>Index, Search or Eventing under 256 MiB, Analytics under 1024 MiB</td><td><span class="guide-tag guide-tag--doc">Couchbase docs</span></td></tr>
+            <tr><td>Bucket raised to the minimum <span class="guide-level">warning</span></td><td>A bucket's result is under 100 MiB</td><td><span class="guide-tag guide-tag--doc">Couchbase docs</span> <code>--bucket-ramsize</code> minimum.</td></tr>
+            <tr><td>Bucket quota under 10% of its dataset <span class="guide-level">warning</span></td><td>The quota is less than 10% of the bucket's data, replicas included</td><td><span class="guide-tag guide-tag--doc">Couchbase docs</span> recommend at least 10% for Couchstore, 1% for Magma. Comparing against the data <em>with</em> replicas is an <span class="guide-tag guide-tag--assumption">Assumption</span>: the docs say "dataset size" without defining it.</td></tr>
+            <tr><td>Full ejection with a small working set <span class="guide-level">warning</span></td><td>Full ejection and a working set under 20%</td><td>The disk reads are documented behaviour; the 20% threshold is an <span class="guide-tag guide-tag--assumption">Assumption</span>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="paste" aria-labelledby="paste-heading">
+      <h2 id="paste-heading" class="panel__title"><span class="panel__index">08</span> What a paste fills in</h2>
+      <p>
+        Paste mode reads three kinds of output, detects which it is, and fills in only what that output contains, so
+        you can paste one after another. Anything it can't know stays as you entered it.
+      </p>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Source</th><th scope="col">Fills in</th><th scope="col">Notes</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><a href="https://docs.couchbase.com/server/current/rest-api/rest-bucket-info.html" target="_blank" rel="noopener"><code>GET /pools/default/buckets</code></a></td>
+              <td>Bucket names, document count (<code>basicStats.itemCount</code>), replicas, ejection policy; shows the current quota</td>
+              <td>Ephemeral and Memcached buckets are skipped: they don't use this formula. <span class="guide-tag guide-tag--assumption">Assumption</span> <code>itemCount</code> is read as the number of documents without replicas; the documentation shows the field but doesn't define it.</td>
+            </tr>
+            <tr>
+              <td><a href="https://docs.couchbase.com/server/current/rest-api/rest-configure-memory.html" target="_blank" rel="noopener"><code>GET /pools/default</code></a></td>
+              <td>Data nodes, RAM per node, Index/Search/Eventing/Analytics quotas</td>
+              <td><span class="guide-tag guide-tag--assumption">Assumption</span> Data nodes are the nodes listing the <code>kv</code> service; RAM is the smallest Data node's <code>systemStats.mem_total</code>, so the result fits every node. A service no node runs gets 0.</td>
+            </tr>
+            <tr>
+              <td>Prometheus: <a href="https://docs.couchbase.com/server/current/metrics-reference/data-service-metrics.html" target="_blank" rel="noopener"><code>kv_curr_items</code></a>, from a node's <code>/metrics</code> or a Prometheus query</td>
+              <td>Document count per bucket; shows the current quota from <code>kv_ep_cache_size</code></td>
+              <td><span class="guide-tag guide-tag--doc">Couchbase docs</span> <code>kv_curr_items</code> counts items in <em>active</em> vBuckets, so one value per node is summed. <span class="guide-tag guide-tag--assumption">Assumption</span> For range data, each node's peak is used. Metrics don't include replicas or ejection policy.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="commands" aria-labelledby="commands-heading">
+      <h2 id="commands-heading" class="panel__title"><span class="panel__index">09</span> The commands</h2>
+      <p>For the worked example, the calculator writes:</p>
+      <pre class="yaml-block"><code>couchbase-cli setting-cluster -c localhost:8091 -u Administrator -p "$CB_PASSWORD" \
+  --cluster-ramsize 278 \
+  --cluster-index-ramsize 512
+couchbase-cli bucket-edit -c localhost:8091 -u Administrator -p "$CB_PASSWORD" --bucket orders --bucket-ramsize 833</code></pre>
+      <ul>
+        <li>
+          <a href="https://docs.couchbase.com/server/current/cli/cbcli/couchbase-cli-setting-cluster.html" target="_blank" rel="noopener"><code>setting-cluster</code></a>
+          sets the service quotas, in MiB. Only services that run get a flag: the CLI requires a quota for a service that's enabled.
+          The CLI reference describes <code>--cluster-ramsize</code> as the Data quota "for future nodes", so check on a running
+          cluster that it changed, or use the REST call below.
+        </li>
+        <li>
+          <a href="https://docs.couchbase.com/server/current/cli/cbcli/couchbase-cli-bucket-edit.html" target="_blank" rel="noopener"><code>bucket-edit</code></a>
+          sets each bucket's quota. It only changes buckets that already exist (create new ones with <code>bucket-create</code>), and
+          it can't lower a quota below what the bucket currently uses.
+        </li>
+        <li>
+          The same service quotas through the REST API,
+          <a href="https://docs.couchbase.com/server/current/rest-api/rest-configure-memory.html" target="_blank" rel="noopener"><code>POST /pools/default</code></a>
+          with <code>memoryQuota</code>, <code>indexMemoryQuota</code>, <code>ftsMemoryQuota</code>, <code>eventingMemoryQuota</code> and <code>cbasMemoryQuota</code>.
+        </li>
+      </ul>
+      <p>The password comes from a <code>$CB_PASSWORD</code> environment variable, so it never ends up in your shell history.</p>
+    </section>
+
+    <section class="panel guide-section" id="assumptions" aria-labelledby="assumptions-heading">
+      <h2 id="assumptions-heading" class="panel__title"><span class="panel__index">10</span> All assumptions in one place</h2>
+      <p>Everything the calculator decides that Couchbase's documentation doesn't, and what changes if it's wrong for you.</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Assumption</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
+          <tbody>
+            <tr><td>Full ejection counts only resident metadata</td><td>Full ejection evicts metadata with the document; the formula has no case for it</td><td>Quotas for full-ejection buckets are too small. Set the policy to value ejection in the form to get the formula's upper bound.</td></tr>
+            <tr><td>Key and document sizes are the averages you enter</td><td>No API gives them reliably</td><td>The quota scales with them; measure a real sample.</td></tr>
+            <tr><td>Index, Search, Eventing, Analytics quotas are entered, not calculated</td><td>They depend on index definitions and document shape</td><td>Size them from the services' own memory use.</td></tr>
+            <tr><td>Buckets spread evenly over the Data nodes</td><td>vBuckets are distributed across nodes</td><td>A node holding more than its share needs a larger Data quota; rebalance first.</td></tr>
+            <tr><td>"Little memory" means under 5 GiB</td><td>Where the firm limit itself drops to 80%</td><td>Only the warning threshold moves; the firm-limit error is exact.</td></tr>
+            <tr><td>The 10% check uses the data with replicas</td><td>The bucket quota also holds the replicas</td><td>Only the warning moves.</td></tr>
+            <tr><td>Full ejection warns under a 20% working set</td><td>A judgment call on when disk reads dominate</td><td>Only the warning moves.</td></tr>
+            <tr><td><code>itemCount</code> counts documents without replicas</td><td>The documentation shows the field without defining it</td><td>If it included replicas, pasted counts would be too high and quotas oversized.</td></tr>
+            <tr><td>Peak per node for Prometheus range data; smallest Data node's RAM</td><td>Size for the worst case</td><td>Quotas are a little larger than an average would give.</td></tr>
+            <tr><td>Couchstore, not Magma</td><td>The 10% guidance and the formula are written for it</td><td>Magma buckets can run with much less memory (1% of the dataset); this sizing is conservative for them.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Minimums and defaults can change between Couchbase Server versions; check yours before applying a result.</p>
+    </section>
+
+    <section class="panel guide-section" id="references" aria-labelledby="references-heading">
+      <h2 id="references-heading" class="panel__title"><span class="panel__index">11</span> References</h2>
+      <ul class="guide-references">
+        <li><a href="https://docs.couchbase.com/server/current/install/sizing-general.html" target="_blank" rel="noopener">Sizing Guidelines</a> — the Data service formula and its constants.</li>
+        <li><a href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Memory</a> — service quotas, minimums, the recommended share and firm limit, water marks, ejection, the 10%/1% dataset guidance.</li>
+        <li><a href="https://docs.couchbase.com/server/current/manage/manage-buckets/change-ejection-policy.html" target="_blank" rel="noopener">Change the Ejection Policy</a> — what each policy keeps in memory; changing it restarts the bucket.</li>
+        <li><a href="https://docs.couchbase.com/server/current/rest-api/rest-configure-memory.html" target="_blank" rel="noopener">Configuring Memory (REST)</a> — <code>POST /pools/default</code> and the quota parameters.</li>
+        <li><a href="https://docs.couchbase.com/server/current/rest-api/rest-bucket-info.html" target="_blank" rel="noopener">Getting Bucket Information (REST)</a> — <code>/pools/default/buckets</code> fields.</li>
+        <li><a href="https://docs.couchbase.com/server/current/metrics-reference/data-service-metrics.html" target="_blank" rel="noopener">Data Service Metrics</a> — <code>kv_curr_items</code>, <code>kv_ep_cache_size</code>.</li>
+        <li><a href="https://docs.couchbase.com/server/current/cli/cbcli/couchbase-cli-setting-cluster.html" target="_blank" rel="noopener"><code>couchbase-cli setting-cluster</code></a> and <a href="https://docs.couchbase.com/server/current/cli/cbcli/couchbase-cli-bucket-edit.html" target="_blank" rel="noopener"><code>couchbase-cli bucket-edit</code></a> — the commands and their units.</li>
+        <li><a href="https://www.couchbase.com/blog/a-tale-of-two-ejection-methods-value-only-vs-full/" target="_blank" rel="noopener">Value-Only Ejection vs. Full Ejection</a> (Couchbase blog) — the performance trade-off of full ejection.</li>
+      </ul>
+      <p class="guide-back"><a href="/couchbase/">← Back to the Couchbase calculator</a></p>
+    </section>
+
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div id="ethical-ads-slot" class="ethical-ads-slot"></div>
+    <div class="footer-row">
+      <!-- footer-links:start -->
+      <p class="footer-tagline">Your pasted metrics and results never leave the browser.</p>
+      <nav class="footer-links" aria-label="Project">
+        <a href="/privacy/" class="footer-link">Privacy</a>
+        <a href="/support/" class="footer-link">Support</a>
+        <a href="https://github.com/torrentalle/memorylimit-dev" class="footer-link" target="_blank" rel="noopener">★ Star on GitHub</a>
+        <a href="https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml" class="footer-link" target="_blank" rel="noopener">Report an issue</a>
+      </nav>
+      <!-- footer-links:end -->
+      <div id="donation-slot" class="donation-slot"></div>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="/js/site.js"></script>
+</body>
+</html>

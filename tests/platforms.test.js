@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as Platforms from '../public/js/platforms.js';
 
-const ALL_IDS = ['kubernetes', 'dockerCompose', 'nomad', 'lambda', 'cloudRun', 'azureFunctions', 'systemd', 'vmware', 'proxmox', 'redis'];
+const ALL_IDS = ['kubernetes', 'dockerCompose', 'nomad', 'lambda', 'cloudRun', 'azureFunctions', 'systemd', 'vmware', 'proxmox', 'redis', 'couchbase'];
 
 function withEnabled(overrides, fn) {
   const previous = { ...Platforms.ENABLED_PLATFORMS };
