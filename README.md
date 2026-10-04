@@ -11,9 +11,9 @@
 [![CI](https://github.com/torrentalle/memorylimit-dev/actions/workflows/ci.yml/badge.svg)](https://github.com/torrentalle/memorylimit-dev/actions/workflows/ci.yml)
 [![GitHub stars](https://img.shields.io/github/stars/torrentalle/memorylimit-dev?style=flat)](https://github.com/torrentalle/memorylimit-dev/stargazers)
 
-A memory sizing calculator for containers, serverless, VMs and Redis: **Kubernetes**, **Docker Compose**,
+A memory sizing calculator for containers, serverless, VMs, Redis and Couchbase: **Kubernetes**, **Docker Compose**,
 **HashiCorp Nomad**, **AWS Lambda**, **Google Cloud Run**, **Azure Functions**, **systemd** services on VMs or bare metal,
-**VMware vSphere**, **Proxmox VE** and **Redis `maxmemory`**. Paste real usage data — Prometheus output,
+**VMware vSphere**, **Proxmox VE**, **Redis `maxmemory`** and **Couchbase** memory quotas. Paste real usage data — Prometheus output,
 Grafana CSV, CloudWatch exports, `redis-cli INFO` — pick a workload profile, and get a ready-to-use
 configuration with a plain-English explanation and warnings for risky setups.
 
@@ -28,7 +28,7 @@ If MemoryLimit saved you time, a star helps others find it.
 
 ## Features
 
-- **Nine platforms, one engine.** A platform-agnostic core computes unrounded MiB figures; small formatters
+- **Eleven platforms, one engine.** A platform-agnostic core computes unrounded MiB figures; small formatters
   turn them into each platform's native settings and commands.
 - **Paste almost anything.** Prometheus/OpenMetrics exposition, the Prometheus UI range table (including
   PromQL expression results), HTTP API JSON, Grafana CSV (date or epoch columns), CloudWatch Logs Insights
@@ -73,6 +73,7 @@ platform's rules:
 | VMware vSphere | reservation ≤ limit | Reservation (average-based) rounds up to 128 MB, limit (peak-based) to 256 MB; shares stay Normal. vSphere Client steps plus a `govc vm.change` command. |
 | Proxmox VE | `balloon` ≤ `memory` | Minimum memory (average-based) rounds up to 128 MiB, memory (peak-based) to 256 MiB. `qm set` command plus web UI steps. |
 | Redis | `maxmemory` | Peak `used_memory` + margin, rounded up to 64 MB, with `allkeys-lru`. Recommends 2× `maxmemory` for the host or container to cover persistence forks. |
+| Couchbase | Data, Index, Search, Eventing, Analytics quotas per node; one quota per bucket | Sized from the dataset, not from usage samples: per bucket, (resident metadata + working set) × headroom ÷ 0.85 high-water mark, rounded up to 64 MiB. The Data quota per node is the bucket total ÷ Data nodes. Warns when the quotas pass 70% (error: 80%) of node RAM. `couchbase-cli` commands plus the REST equivalent. Paste mode reads Prometheus `kv_curr_items` (text or API JSON), `/pools/default/buckets` and `/pools/default` to fill in buckets, nodes and quotas. See [ADR 0012](docs/adr/0012-couchbase-sizing-from-buckets-and-service-quotas.md). |
 
 Rounding tolerates floating-point noise, so 200 × 1.12 = `224.00000000000003` still rounds to 224 Mi, not 256.
 
@@ -102,7 +103,7 @@ The feedback line reports how many samples were parsed, skipped (pause/pod-level
 public/                     deployed as-is
   index.html                landing page
   kubernetes/ docker-compose/ nomad/ lambda/ cloud-run/ azure-functions/
-  systemd/ vmware/ proxmox/ redis/        one calculator page per platform
+  systemd/ vmware/ proxmox/ redis/ couchbase/   one calculator page per platform
   privacy/ support/         what the site collects; where to get help (GitHub links)
   k8s/                      meta-refresh fallback for the /k8s/ alias
   css/styles.css
@@ -117,6 +118,9 @@ public/                     deployed as-is
     analytics.js            ANALYTICS config
     app.js                  calculator page wiring
     calculator-page.js      entry point of every calculator page (reads <body data-platform>)
+    couchbase-page.js       entry point of the Couchbase page (bucket list instead of average/peak)
+    couchbase-parser.js     pure paste parsing for Couchbase (Prometheus + REST JSON)
+    clipboard.js            copy-to-clipboard helper shared by both entry points
     site.js                 shared chrome: theme toggle, nav, analytics beacon, footer slots
     theme-init.js           applies the saved theme before first paint (blocking, in <head>)
     theme.js nav.js landing.js monetization-ui.js
@@ -171,6 +175,8 @@ pollutes real analytics or serves real ads.
 1. Add a flag to `ENABLED_PLATFORMS` and a definition (id, label, path, tagline) to `PLATFORM_DEFINITIONS` in
    `public/js/platforms.js`.
 2. Add `public/js/formatters/<name>.js` exporting `format(raw)`; copy the shape another formatter returns.
+   A platform whose input isn't an average/peak pair (Couchbase) also sets `entry` in its definition and
+   ships its own page script.
 3. Copy an existing calculator page to `public/<name>/index.html` and adjust its metadata, intro, paste hint,
    `<body data-platform>` and the formatter's `modulepreload` link.
 4. Run `npm run sync:pages && npm run generate:sitemap`, then add `tests/formatters/<name>.test.js`.

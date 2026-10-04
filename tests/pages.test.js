@@ -6,7 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { PLATFORM_DEFINITIONS, formatterUrl } from '../public/js/platforms.js';
+import { PLATFORM_DEFINITIONS, formatterUrl, entryUrl } from '../public/js/platforms.js';
 import { navPages, renderNav, syncedPage } from '../scripts/sync-pages.js';
 
 const PUBLIC = join(import.meta.dirname, '..', 'public');
@@ -27,16 +27,22 @@ const CONTENT_PAGES = [
 ];
 const SHAREABLE_PAGES = [{ path: '/', dir: '' }, ...CALCULATOR_PAGES];
 
-const REQUIRED_IDS = [...readFileSync(join(PUBLIC, 'js', 'app.js'), 'utf8').matchAll(/element\('([^']+)'\)/g)].map((m) => m[1]);
+// The ids a page script looks up with element('…'); each page must contain the ones its own entry script needs.
+const requiredIds = (script) =>
+  [...readFileSync(join(PUBLIC, script), 'utf8').matchAll(/element\('([^']+)'\)/g)].map((m) => m[1]);
+const REQUIRED_IDS = requiredIds('js/app.js');
 
 test('app.js declares the element ids it needs (sanity check for the extraction below)', () => {
   assert.ok(REQUIRED_IDS.length > 20);
 });
 
 for (const page of CALCULATOR_PAGES) {
-  test(`${page.path} contains every element id app.js requires`, () => {
+  const entry = entryUrl(page);
+  const ids = entry === '/js/calculator-page.js' ? REQUIRED_IDS : requiredIds(entry.slice(1));
+
+  test(`${page.path} contains every element id its page script requires`, () => {
     const html = read(page.dir);
-    const missing = REQUIRED_IDS.filter((id) => !html.includes(`id="${id}"`));
+    const missing = ids.filter((id) => !html.includes(`id="${id}"`));
     assert.deepEqual(missing, []);
   });
 
@@ -45,7 +51,7 @@ for (const page of CALCULATOR_PAGES) {
     assert.match(html, new RegExp(`<body data-platform="${page.id}">`));
     const preloads = [...html.matchAll(/<link rel="modulepreload" href="([^"]+)"/g)].map((m) => m[1]);
     assert.deepEqual(preloads, [formatterUrl(page)]);
-    assert.match(html, /<script type="module" src="\/js\/calculator-page\.js"><\/script>/);
+    assert.ok(html.includes(`<script type="module" src="${entry}"></script>`), `loads ${entry}`);
   });
 }
 
@@ -110,7 +116,7 @@ for (const page of CONTENT_PAGES) {
     const html = read(page.dir);
     const head = html.slice(0, html.indexOf('</head>'));
     assert.match(head, /<script src="\/js\/theme-init\.js"><\/script>/);
-    assert.match(html, /\/js\/(site|calculator-page)\.js/);
+    assert.match(html, /\/js\/(site|calculator-page|couchbase-page)\.js/);
     assert.match(html, /id="ethical-ads-slot"/);
     assert.match(html, /id="donation-slot"/);
   });

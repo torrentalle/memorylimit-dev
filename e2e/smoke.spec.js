@@ -9,7 +9,7 @@ const PROMETHEUS_PASTE = [
   '520192 @1727260000.123'
 ].join('\n');
 
-const PLATFORM_COUNT = 10;
+const PLATFORM_COUNT = 11;
 const K8S_REFERENCE_MANIFEST = 'resources:\n  requests:\n    memory: "608Mi"\n  limits:\n    memory: "832Mi"';
 
 const averageInput = (page) => page.getByRole('spinbutton', { name: /^Average usage/ });
@@ -192,6 +192,65 @@ test('Redis: a used_memory paste produces maxmemory and host sizing', async ({ p
   await expect(page.locator('#stat-row')).toContainText('1408 MB');
 });
 
+test('Couchbase: default bucket produces quotas and couchbase-cli commands, and buckets can be added and removed', async ({ page }) => {
+  await page.goto('/couchbase/');
+  await expect(currentNavLink(page)).toHaveText('Couchbase memory quotas');
+
+  // 1M docs × (92 B metadata+key, 1 KiB value) × 2 copies, 20% resident → 896 MiB; ÷ 3 Data nodes → 320 MiB per node.
+  await expect(page.locator('#snippet-code')).toContainText('--cluster-ramsize 320');
+  await expect(page.locator('#snippet-code')).toContainText('--cluster-index-ramsize 512');
+  await expect(page.locator('#snippet-code')).toContainText('--bucket default --bucket-ramsize 896');
+  await expect(page.locator('#stat-row')).toContainText('Bucket default');
+
+  await page.getByRole('button', { name: 'Add bucket' }).click();
+  await expect(page.locator('[data-bucket-row]')).toHaveCount(2);
+  await expect(page.locator('#snippet-code')).toContainText('--bucket bucket2');
+
+  await page.getByRole('button', { name: 'Remove bucket 2' }).click();
+  await expect(page.locator('[data-bucket-row]')).toHaveCount(1);
+  await expect(page.locator('#snippet-code')).not.toContainText('bucket2');
+});
+
+test('Couchbase: quotas above the node RAM raise an error warning', async ({ page }) => {
+  await page.goto('/couchbase/');
+  await page.getByLabel('RAM per node').fill('1');
+  await expect(page.locator('#warnings .is-error')).toContainText('crowd out the OS');
+});
+
+test('Couchbase: pasted bucket API and cluster API output fill in the form', async ({ page }) => {
+  await page.goto('/couchbase/');
+  await expect(page.locator('#mode-paste')).toBeHidden();
+  await page.locator('#mode-paste-btn').click();
+
+  await page.getByLabel('Prometheus metrics or Couchbase REST output').fill(
+    JSON.stringify([{ name: 'orders', bucketType: 'membase', replicaNumber: 2, evictionPolicy: 'fullEviction', quota: { ram: 536870912 }, basicStats: { itemCount: 2500000 } }])
+  );
+  await expect(page.locator('#metrics-feedback')).toContainText('Bucket API: 1 bucket');
+  await expect(page.locator('[data-bucket-row]')).toHaveCount(1);
+  await expect(page.getByLabel('Bucket name')).toHaveValue('orders');
+  await expect(page.getByLabel('Documents')).toHaveValue('2500000');
+  await expect(page.getByLabel('Replicas')).toHaveValue('2');
+  await expect(page.getByLabel('Eviction policy')).toHaveValue('full');
+
+  await page.getByLabel('Prometheus metrics or Couchbase REST output').fill(
+    JSON.stringify({ memoryQuota: 4096, indexMemoryQuota: 1024, nodes: [{ services: ['kv', 'index'], systemStats: { mem_total: 34359738368 } }, { services: ['kv'], systemStats: { mem_total: 34359738368 } }] })
+  );
+  await expect(page.locator('#metrics-feedback')).toContainText('Cluster info read');
+  await expect(page.getByLabel('Data nodes')).toHaveValue('2');
+  await expect(page.getByLabel('RAM per node')).toHaveValue('32');
+  await expect(page.getByLabel('Index quota')).toHaveValue('1024');
+});
+
+test('Couchbase: a Prometheus paste sets the document count and keeps the sizes you entered', async ({ page }) => {
+  await page.goto('/couchbase/');
+  await page.getByLabel('Average document size').fill('2048');
+  await page.locator('#mode-paste-btn').click();
+  await page.getByLabel('Prometheus metrics or Couchbase REST output').fill('kv_curr_items{bucket="default",instance="a"} 300000\nkv_curr_items{bucket="default",instance="b"} 200000');
+  await expect(page.locator('#metrics-feedback')).toContainText('Prometheus: 1 bucket');
+  await expect(page.getByLabel('Documents')).toHaveValue('500000');
+  await expect(page.getByLabel('Average document size')).toHaveValue('2048');
+});
+
 test('Proxmox VE: produces a qm command and web UI steps', async ({ page }) => {
   await page.goto('/proxmox/');
   await expect(currentNavLink(page)).toHaveText('Proxmox VE');
@@ -211,6 +270,7 @@ for (const [id, path] of [
   ['cloudRun', '/cloud-run/'],
   ['azureFunctions', '/azure-functions/'],
   ['redis', '/redis/'],
+  ['couchbase', '/couchbase/'],
   ['proxmox', '/proxmox/']
 ]) {
   test(`turning ${id} off removes it everywhere without affecting the other calculators`, async ({ page }) => {

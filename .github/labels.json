@@ -13,6 +13,7 @@
   {"name": "platform: cloud-run", "color": "c5def5"},
   {"name": "platform: azure-functions", "color": "c5def5"},
   {"name": "platform: redis", "color": "c5def5"},
+  {"name": "platform: couchbase", "color": "c5def5"},
   {"name": "platform: proxmox", "color": "c5def5"},
   {"name": "platform: prometheus-parser", "color": "c5def5", "description": "Paste parsing, any platform"},
   {"name": "status: needs-triage", "color": "fbca04", "description": "Not reviewed yet"},

@@ -3,7 +3,8 @@
  * ENABLED_PLATFORMS to turn a platform on or off; nav links, landing-page
  * cards and the sitemap generator all read from here. Each platform belongs
  * to a category (PLATFORM_CATEGORIES), which groups it in the nav and on the
- * landing page.
+ * landing page. A platform whose input isn't an average/peak pair declares its
+ * own page script in `entry`; the rest share calculator-page.js.
  */
 
 export const ENABLED_PLATFORMS = {
@@ -16,6 +17,7 @@ export const ENABLED_PLATFORMS = {
   cloudRun: true,
   azureFunctions: true,
   redis: true,
+  couchbase: true,
   proxmox: true
 };
 
@@ -98,6 +100,14 @@ export const PLATFORM_DEFINITIONS = [
     label: 'Redis maxmemory',
     path: '/redis/',
     tagline: 'Size maxmemory for a Redis cache — and the host memory it needs around it.'
+  },
+  {
+    id: 'couchbase',
+    category: 'datastores',
+    label: 'Couchbase memory quotas',
+    path: '/couchbase/',
+    entry: '/js/couchbase-page.js',
+    tagline: 'Set Data, Index and Search service quotas and each bucket’s quota from the dataset.'
   }
 ];
 
@@ -119,6 +129,11 @@ export function getPlatformGroups(defs = PLATFORM_DEFINITIONS) {
 
 export function getPlatform(id) {
   return PLATFORM_DEFINITIONS.find((def) => def.id === id) ?? null;
+}
+
+/** The module a platform's page loads: its own `entry`, or the shared calculator page. */
+export function entryUrl(def) {
+  return def.entry ?? '/js/calculator-page.js';
 }
 
 /** Each platform's formatter module is named after its page path, e.g. /cloud-run/ → cloud-run.js. */
