@@ -9,7 +9,7 @@ const PROMETHEUS_PASTE = [
   '520192 @1727260000.123'
 ].join('\n');
 
-const PLATFORM_COUNT = 9;
+const PLATFORM_COUNT = 10;
 const K8S_REFERENCE_MANIFEST = 'resources:\n  requests:\n    memory: "608Mi"\n  limits:\n    memory: "832Mi"';
 
 const averageInput = (page) => page.getByRole('spinbutton', { name: /^Average usage/ });
@@ -169,6 +169,15 @@ test('Google Cloud Run: produces a gcloud command with the memory limit', async 
   await expect(page.locator('#stat-row')).toContainText('1 vCPU');
 });
 
+test('Azure Functions: produces a Flex Consumption instance size command', async ({ page }) => {
+  await page.goto('/azure-functions/');
+  await expect(currentNavLink(page)).toHaveText('Azure Functions');
+  await fillUsage(page, 400, 629.4);
+
+  await expect(page.locator('#snippet-code')).toContainText('--instance-memory 2048');
+  await expect(page.locator('#stat-row')).toContainText('2048 MB');
+});
+
 test('Redis: a used_memory paste produces maxmemory and host sizing', async ({ page }) => {
   await page.goto('/redis/');
   await expect(currentNavLink(page)).toHaveText('Redis maxmemory');
@@ -197,6 +206,7 @@ for (const [id, path] of [
   ['vmware', '/vmware/'],
   ['nomad', '/nomad/'],
   ['cloudRun', '/cloud-run/'],
+  ['azureFunctions', '/azure-functions/'],
   ['redis', '/redis/'],
   ['proxmox', '/proxmox/']
 ]) {
