@@ -39,7 +39,7 @@ test('landing page links to every calculator without relying on JavaScript', asy
 test('nav dropdown opens, navigates, and closes on Escape or an outside click', async ({ page }) => {
   await page.goto('/kubernetes/');
   const toggle = page.locator('.site-nav__toggle');
-  const list = page.locator('.site-nav__list');
+  const list = page.locator('.site-nav__panel');
   await expect(toggle).toContainText('Kubernetes');
   await expect(list).toBeHidden();
 
