@@ -4,7 +4,7 @@ Canonical: [Kubernetes Memory Limit Calculator](https://memorylimit.dev/kubernet
 
 Locale: en
 
-Purpose: Calculate Kubernetes memory requests and limits from real Prometheus usage data. Avoid OOMKilled pods and over-provisioned clusters with workload-aware, environment-aware sizing.
+Purpose: Calculate Kubernetes memory requests and limits from real Prometheus usage data. Avoid OOMKilled pods and over-provisioned clusters. Free, in your browser.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 

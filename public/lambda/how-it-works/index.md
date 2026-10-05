@@ -4,7 +4,7 @@ Canonical: [How the AWS Lambda calculator works](https://memorylimit.dev/lambda/
 
 Locale: en
 
-Purpose: How the Lambda calculator sets MemorySize: why it's peak-based, the MiB to MB conversion, Lambda's range, how CPU and cost follow memory, and what to paste, with links to the AWS docs.
+Purpose: How the Lambda calculator sets MemorySize: why it's peak-based, the MiB to MB conversion, Lambda's range, and how CPU and cost follow memory, with docs links.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 

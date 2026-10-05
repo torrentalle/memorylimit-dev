@@ -1,10 +1,10 @@
-# Right-sized memory, wherever you deploy
+# Right-sized memory limits, wherever you deploy
 
-Canonical: [Right-sized memory, wherever you deploy](https://memorylimit.dev/)
+Canonical: [Right-sized memory limits, wherever you deploy](https://memorylimit.dev/)
 
 Locale: en
 
-Purpose: Turn observed Prometheus usage data into right-sized memory settings for Kubernetes, Docker Compose, Nomad, Lambda, Cloud Run, Azure Functions, systemd, vSphere, Proxmox and Redis — no signup, runs entirely in your browser.
+Purpose: Right-size memory limits for Kubernetes, Docker, Lambda, Redis and more from Prometheus usage data. Free, no signup, and it runs entirely in your browser.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 

@@ -4,7 +4,7 @@ Canonical: [Azure Functions Memory Calculator](https://memorylimit.dev/azure-fun
 
 Locale: en
 
-Purpose: Pick the right Azure Functions instance size from real usage: the Flex Consumption memory setting, or the Elastic Premium SKU when you need more. Avoid out-of-memory restarts without overpaying.
+Purpose: Pick the right Azure Functions instance size from real usage: Flex Consumption memory or Elastic Premium SKU. Avoid out-of-memory restarts without overpaying.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 

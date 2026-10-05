@@ -4,7 +4,7 @@ Canonical: [VMware vSphere Memory Sizing Calculator](https://memorylimit.dev/vmw
 
 Locale: en
 
-Purpose: Right-size a vSphere VM's memory and reservation from real usage data, the way VMware advises: no limit, the configured memory as the cap. Outputs vSphere Client steps and a govc command.
+Purpose: Right-size a vSphere VM's memory and reservation from real usage data, the way VMware advises. Outputs vSphere Client steps and a govc command.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 

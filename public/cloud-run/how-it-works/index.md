@@ -4,7 +4,7 @@ Canonical: [How the Cloud Run calculator works](https://memorylimit.dev/cloud-ru
 
 Locale: en
 
-Purpose: How the Cloud Run calculator sets an instance's memory limit and CPU: Google's concurrency formula, the CPU each size needs, the range and what to paste, with links to the Cloud Run docs.
+Purpose: How the Cloud Run calculator sets an instance's memory limit and CPU: Google's concurrency formula, the CPU each size needs and what to paste, with docs links.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 

@@ -4,7 +4,7 @@ Canonical: [How the Docker Compose calculator works](https://memorylimit.dev/doc
 
 Locale: en
 
-Purpose: How the Docker Compose calculator sets deploy.resources memory limits and reservations: rounding, the reservation rule, swap, every warning and what to paste, with links to the Docker docs.
+Purpose: How the Docker Compose calculator sets deploy.resources memory limits and reservations: rounding, the reservation rule, swap and warnings, with docs links.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 

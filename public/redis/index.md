@@ -4,7 +4,7 @@ Canonical: [Redis maxmemory Calculator](https://memorylimit.dev/redis/)
 
 Locale: en
 
-Purpose: Size Redis maxmemory from observed used_memory, with an eviction policy and the host or container memory Redis needs around it for fragmentation and persistence.
+Purpose: Size Redis maxmemory from observed used_memory, with an eviction policy and the host or container memory Redis needs around it for fragmentation, persistence.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 

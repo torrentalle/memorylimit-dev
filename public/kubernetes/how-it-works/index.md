@@ -4,7 +4,7 @@ Canonical: [How the Kubernetes calculator works](https://memorylimit.dev/kuberne
 
 Locale: en
 
-Purpose: How the Kubernetes calculator sets memory requests and limits: rounding, the limit floor, Guaranteed QoS, every warning, and how it compares with the Vertical Pod Autoscaler, with links to the Kubernetes docs.
+Purpose: How the Kubernetes calculator sets memory requests and limits: rounding, the limit floor, Guaranteed QoS and how it compares with the VPA, with docs links.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 

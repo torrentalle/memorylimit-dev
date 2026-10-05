@@ -4,7 +4,7 @@ Canonical: [Docker Compose Memory Limits Calculator](https://memorylimit.dev/doc
 
 Locale: en
 
-Purpose: Right-size Docker Compose container memory reservations and limits from observed usage. Generates a deploy.resources snippet plus the legacy mem_limit equivalent.
+Purpose: Right-size Docker Compose container memory reservations and limits from observed usage. Generates a deploy.resources snippet and the legacy mem_limit.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 

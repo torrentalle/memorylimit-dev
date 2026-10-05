@@ -4,7 +4,7 @@ Canonical: [How the systemd calculator works](https://memorylimit.dev/systemd/ho
 
 Locale: en
 
-Purpose: How the systemd calculator sets MemoryHigh and MemoryMax: systemd's own advice, the 1.25× gap, cgroup v2, the drop-in and set-property, and what to paste, with links to the systemd and kernel docs.
+Purpose: How the systemd calculator sets MemoryHigh and MemoryMax: systemd's own advice, the 1.25× gap, cgroup v2, the drop-in and set-property, with systemd docs links.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 

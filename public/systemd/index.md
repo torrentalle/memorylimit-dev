@@ -4,7 +4,7 @@ Canonical: [Systemd Memory Limits Calculator](https://memorylimit.dev/systemd/)
 
 Locale: en
 
-Purpose: Right-size memory for services running directly on a VM or bare-metal Linux host under systemd, without a container runtime. Generates a MemoryHigh / MemoryMax drop-in from real usage data.
+Purpose: Right-size memory for systemd services on a VM or bare-metal Linux host. Generates a MemoryHigh / MemoryMax drop-in from real usage data. Free, in your browser.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 

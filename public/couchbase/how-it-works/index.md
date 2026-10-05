@@ -4,7 +4,7 @@ Canonical: [How the Couchbase calculator works](https://memorylimit.dev/couchbas
 
 Locale: en
 
-Purpose: The formula, constants and checks behind the Couchbase memory quota calculator, step by step, with links to the Couchbase documentation and every assumption spelled out.
+Purpose: The formula, constants and checks behind the Couchbase memory quota calculator, step by step, with every assumption spelled out and links to the Couchbase docs.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 

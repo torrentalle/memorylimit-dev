@@ -4,7 +4,7 @@ Canonical: [How the Azure Functions calculator works](https://memorylimit.dev/az
 
 Locale: en
 
-Purpose: How the Azure Functions calculator picks a Flex Consumption instance size or Premium SKU: the sizes and their CPU, Microsoft's 2,048 MB default, concurrency, and what to paste, with links to the Azure docs.
+Purpose: How the Azure Functions calculator picks a Flex Consumption instance size or Premium SKU: sizes, CPU, the 2,048 MB default and concurrency, with docs links.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 

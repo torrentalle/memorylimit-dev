@@ -4,7 +4,7 @@ Canonical: [Google Cloud Run Memory Limit Calculator](https://memorylimit.dev/cl
 
 Locale: en
 
-Purpose: Pick the right Google Cloud Run memory limit from real instance usage, with the minimum CPU Cloud Run requires for it. Avoid out-of-memory instance restarts without overpaying.
+Purpose: Pick the right Google Cloud Run memory limit from real usage, with the minimum CPU it requires. Avoid out-of-memory restarts without overpaying.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 

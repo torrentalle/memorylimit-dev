@@ -4,7 +4,7 @@ Canonical: [How the VMware vSphere calculator works](https://memorylimit.dev/vmw
 
 Locale: en
 
-Purpose: How the vSphere calculator sets a VM's memory size, reservation and shares the way VMware advises, with no limit: rounding, govc, hot add, and what to paste, with links to the vSphere docs.
+Purpose: How the vSphere calculator sets a VM's memory size, reservation and shares the way VMware advises, with no limit: rounding, govc and hot add, with docs links.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 

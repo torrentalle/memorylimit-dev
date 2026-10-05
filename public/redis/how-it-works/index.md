@@ -4,7 +4,7 @@ Canonical: [How the Redis calculator works](https://memorylimit.dev/redis/how-it
 
 Locale: en
 
-Purpose: How the Redis calculator sets maxmemory and the memory to provision: the eviction policy, the 2× fork overhead Redis documents, units, CONFIG SET, and what to paste, with links to the Redis docs.
+Purpose: How the Redis calculator sets maxmemory and the memory to provision: the eviction policy, the 2× fork overhead, units and CONFIG SET, with docs links.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 

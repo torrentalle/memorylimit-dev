@@ -4,7 +4,7 @@ Canonical: [How the Proxmox VE calculator works](https://memorylimit.dev/proxmox
 
 Locale: en
 
-Purpose: How the Proxmox VE calculator sets a VM's memory and ballooning minimum: rounding, the balloon rule, auto-ballooning, qm and the web UI, and what to paste, with links to the Proxmox docs and source.
+Purpose: How the Proxmox VE calculator sets a VM's memory and ballooning minimum: rounding, the balloon rule, auto-ballooning, qm and the web UI, with docs links.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 

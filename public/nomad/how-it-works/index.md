@@ -4,7 +4,7 @@ Canonical: [How the Nomad calculator works](https://memorylimit.dev/nomad/how-it
 
 Locale: en
 
-Purpose: How the Nomad calculator sets a task's memory and memory_max: Nomad's own guidance, rounding, minimums, memory oversubscription and what to paste, with links to the Nomad docs and source.
+Purpose: How the Nomad calculator sets a task's memory and memory_max: Nomad's guidance, rounding, minimums and memory oversubscription, with links to the Nomad docs.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 

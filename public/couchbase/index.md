@@ -4,7 +4,7 @@ Canonical: [Couchbase Memory Quota Calculator](https://memorylimit.dev/couchbase
 
 Locale: en
 
-Purpose: Size Couchbase Data, Index, Search, Eventing and Analytics service quotas and each bucket’s memory quota from document count, size, replicas and working set, with ready-to-run couchbase-cli commands.
+Purpose: Size Couchbase service and bucket memory quotas from document count, size, replicas and working set, with ready-to-run couchbase-cli commands.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 

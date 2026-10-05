@@ -4,7 +4,7 @@ Canonical: [How the sizing model works](https://memorylimit.dev/sizing-model/)
 
 Locale: en
 
-Purpose: How the MemoryLimit calculators turn average and peak memory usage into a request and a limit: the formula, the margin tables, a worked example, and which values are assumptions.
+Purpose: How MemoryLimit turns average and peak memory usage into a request and a limit: the formula, the margin tables, a worked example, and the assumptions.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
