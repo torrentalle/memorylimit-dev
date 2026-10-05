@@ -1,6 +1,6 @@
 # MemoryLimit
 
-> Memory sizing calculators and guides for Kubernetes, Docker Compose, Nomad, AWS Lambda, Cloud Run, Azure Functions, systemd, VMware vSphere, Proxmox VE, Redis and Couchbase. Paste observed usage, get ready-to-use configuration; everything runs in the browser.
+> Memory sizing calculators and guides for Kubernetes, Docker Compose, HashiCorp Nomad, AWS Lambda, Google Cloud Run, Azure Functions, Systemd / Bare Metal / VM, VMware vSphere, Proxmox VE, Redis maxmemory and Couchbase memory quotas. Paste observed usage, get ready-to-use configuration; everything runs in the browser.
 
 Inventory scope: complete. Content is maintained by MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev).
 
@@ -14,8 +14,8 @@ Use that document's cited sources and canonical page; if the requested informati
 ## Topics
 
 - [containers](https://memorylimit.dev/llm/topics/containers.md): All public containers documents in this inventory.
-- [data-stores](https://memorylimit.dev/llm/topics/data-stores.md): All public data-stores documents in this inventory.
+- [datastores](https://memorylimit.dev/llm/topics/datastores.md): All public datastores documents in this inventory.
 - [guides](https://memorylimit.dev/llm/topics/guides.md): All public guides documents in this inventory.
 - [serverless](https://memorylimit.dev/llm/topics/serverless.md): All public serverless documents in this inventory.
 - [site](https://memorylimit.dev/llm/topics/site.md): All public site documents in this inventory.
-- [vms-bare-metal](https://memorylimit.dev/llm/topics/vms-bare-metal.md): All public vms-bare-metal documents in this inventory.
+- [vms](https://memorylimit.dev/llm/topics/vms.md): All public vms documents in this inventory.

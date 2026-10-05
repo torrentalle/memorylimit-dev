@@ -4,11 +4,7 @@ Canonical: [How the Redis calculator works](https://memorylimit.dev/redis/how-it
 
 Locale: en
 
-Purpose: How the Redis calculator sets maxmemory and the memory to provision: the eviction policy, the 2× fork overhead, units and CONFIG SET, with docs links.
-
-Content updated: 2026-10-06
-
-Source revision: main@b4e7405 + seo/meta-and-schema
+Purpose: How the Redis calculator sets maxmemory and the memory to provision: the eviction policy, the 2× fork overhead Redis documents, units, CONFIG SET, and what to paste, with links to the Redis docs.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
@@ -16,13 +12,12 @@ Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-d
 
 [← Redis maxmemory calculator](https://memorylimit.dev/redis/index.md)
 
-
 This page walks through how the [Redis calculator](https://memorylimit.dev/redis/index.md) turns your `used_memory` into `maxmemory` and the memory to give the Redis process. It starts from the [shared sizing model](https://memorylimit.dev/sizing-model/index.md); this page covers what happens after that. Statements backed by the Redis documentation end with a Redis docs link to it. Choices the documentation doesn't make for us are explained and marked Assumption, which links to its row in the table of all of them.
 
 ## maxmemory and the eviction policy
 
 - `maxmemory` is the most memory Redis uses for data; past it Redis applies the eviction policy. 0 means no limit, the default on 64-bit systems. [Redis docs](https://redis.io/docs/latest/develop/reference/eviction/)
-- `allkeys-lru` evicts the least recently used keys, and Redis calls it a good default when you have no reason to prefer another. `noeviction` instead returns errors for writes at the limit. [Redis docs](https://redis.io/docs/latest/develop/reference/eviction/) The calculator writes `allkeys-lru`, taking this Redis to be a cache. [Assumption](#all-assumptions-in-one-place)
+- `allkeys-lru` evicts the least recently used keys, and Redis calls it a good default when you have no reason to prefer another. `noeviction` instead returns errors for writes at the limit. [Redis docs](https://redis.io/docs/latest/develop/reference/eviction/) The calculator writes `allkeys-lru`, taking this Redis to be a cache. [Assumption](https://memorylimit.dev/redis/how-it-works/index.md#all-assumptions-in-one-place)
 - Buffers for replication and the AOF don't count towards `maxmemory`, so Redis can use somewhat more. [Redis docs](https://redis.io/docs/latest/develop/reference/eviction/)
 
 ## From used_memory to maxmemory
@@ -34,7 +29,7 @@ memory to provision = 2 × maxmemory
 
 The margins come from the sensitivity, workload type and environment you choose; the [sizing model](https://memorylimit.dev/sizing-model/index.md) explains them, and they are assumptions too. In Redis's configuration, `mb` is 1024 × 1024 bytes, so MiB pass through unconverted. [Redis docs](https://github.com/redis/redis/blob/unstable/redis.conf)
 
-The samples are `used_memory`, which includes Redis's own overhead and not only the data, so a `maxmemory` sized from them is on the generous side. [Assumption](#all-assumptions-in-one-place)
+The samples are `used_memory`, which includes Redis's own overhead and not only the data, so a `maxmemory` sized from them is on the generous side. [Assumption](https://memorylimit.dev/redis/how-it-works/index.md#all-assumptions-in-one-place)
 
 ### Worked example
 
@@ -42,13 +37,13 @@ A cache peaking at 630 MiB of `used_memory`, medium sensitivity, production:
 
 | maxmemory | 630 MiB × 1.30 = 819 MiB | 819mb |
 | --- | --- | --- |
-| memory to provision | 2 × 819 | 1638 MB |
+| memory to provision | 2 × 819 | 1638 MiB |
 
 A steady cache, averaging 1000 MiB with a 1010 MiB peak at high sensitivity, where the average decides:
 
 | maxmemory | 1000 MiB × 1.55 = 1550 MiB, above 1010 × 1.40 = 1414 | 1550mb |
 | --- | --- | --- |
-| memory to provision | 2 × 1550 | 3100 MB |
+| memory to provision | 2 × 1550 | 3100 MiB |
 
 ## Memory for the process
 
@@ -56,7 +51,7 @@ A steady cache, averaging 1000 MiB with a 1010 MiB peak at high sensitivity, whe
 - With replication, Redis makes RDB saves even with persistence off, unless replication is diskless. [Redis docs](https://redis.io/docs/latest/operate/oss_and_stack/management/admin/)
 - Redis also advises setting `maxmemory` below the free memory, to leave room for its overhead and fragmentation: with 10 GB free, set it to 8 or 9 GB. [Redis docs](https://redis.io/docs/latest/operate/oss_and_stack/management/admin/)
 
-So the calculator provisions the worst case, 2 × `maxmemory`. [Assumption](#all-assumptions-in-one-place) Without persistence or replication, the note suggests about 1.25 × `maxmemory`, which is Redis's 10-to-8 ratio turned around. [Assumption](#all-assumptions-in-one-place)
+So the calculator provisions the worst case, 2 × `maxmemory`. [Assumption](https://memorylimit.dev/redis/how-it-works/index.md#all-assumptions-in-one-place) Without persistence or replication, the note suggests about 1.25 × `maxmemory`, which is Redis's 10-to-8 ratio turned around. [Assumption](https://memorylimit.dev/redis/how-it-works/index.md#all-assumptions-in-one-place)
 
 ## What the calculator writes
 
@@ -104,7 +99,7 @@ The calculator’s **Advanced: margins and defaults** section, closed by default
 | --- | --- | --- | --- |
 | Request margin | from the profile | 0–200% | MemoryLimit’s default, from sensitivity, workload type and environment ([sizing model](https://memorylimit.dev/sizing-model/index.md#the-margins)); sizes the floor of `maxmemory` |
 | Limit margin | from the profile | 0–200% | MemoryLimit’s default, from sensitivity, workload type and environment ([sizing model](https://memorylimit.dev/sizing-model/index.md#the-margins)); sizes `maxmemory` |
-| Provisioning factor | 2 × maxmemory | 1–3× | Redis documents up to 2× during RDB saves and AOF rewrites, [assumption 1](#all-assumptions-in-one-place); about 1.25× without persistence or replication, [assumption 2](#all-assumptions-in-one-place) |
+| Provisioning factor | 2 × maxmemory | 1–3× | Redis documents up to 2× during RDB saves and AOF rewrites, [assumption 1](https://memorylimit.dev/redis/how-it-works/index.md#all-assumptions-in-one-place); about 1.25× without persistence or replication, [assumption 2](https://memorylimit.dev/redis/how-it-works/index.md#all-assumptions-in-one-place) |
 
 ## References
 

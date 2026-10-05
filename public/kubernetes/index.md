@@ -4,11 +4,7 @@ Canonical: [Kubernetes Memory Limit Calculator](https://memorylimit.dev/kubernet
 
 Locale: en
 
-Purpose: Calculate Kubernetes memory requests and limits from real Prometheus usage data. Avoid OOMKilled pods and over-provisioned clusters. Free, in your browser.
-
-Content updated: 2026-10-06
-
-Source revision: main@b4e7405 + seo/meta-and-schema
+Purpose: Calculate Kubernetes memory requests and limits from real Prometheus usage data. Avoid OOMKilled pods and over-provisioned clusters with workload-aware, environment-aware sizing.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
@@ -17,6 +13,8 @@ Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-d
 Pods that request too little memory get OOMKilled the moment usage spikes; Pods that request too much sit idle and hurt cluster bin-packing. This calculator turns real usage data — pasted straight from a Prometheus or Grafana query, or entered by hand — into a `resources.requests.memory` / `resources.limits.memory` pair sized for your workload type, environment, and OOMKill tolerance.
 
 ## Usage data
+
+Paste box: Raw query output / scrape.
 
 **Which query should I paste?**
 
@@ -61,4 +59,4 @@ Values the result relies on that are our own defaults, or vendor defaults your s
 
 The calculator shows the result and a step-by-step derivation after you enter usage data. Everything is calculated in your browser; nothing you enter is sent anywhere.
 
-How every number is calculated, with sources and assumptions: [guide](https://memorylimit.dev/kubernetes/how-it-works/index.md). Wrong result? [Report it](https://github.com/torrentalle/memorylimit-dev/issues/new/choose).
+How every number is calculated, with sources and assumptions: [guide](https://memorylimit.dev/kubernetes/how-it-works/index.md). Wrong result? [Report it](https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml&platform=Kubernetes&title=%5BBug%5D%20Kubernetes%3A%20).

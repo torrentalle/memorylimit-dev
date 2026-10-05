@@ -1,14 +1,10 @@
-# Right-sized memory limits, wherever you deploy
+# Right-sized memory, wherever you deploy
 
-Canonical: [Right-sized memory limits, wherever you deploy](https://memorylimit.dev/)
+Canonical: [Right-sized memory, wherever you deploy](https://memorylimit.dev/)
 
 Locale: en
 
-Purpose: Right-size memory limits for Kubernetes, Docker, Lambda, Redis and more from Prometheus usage data. Free, no signup, and it runs entirely in your browser.
-
-Content updated: 2026-10-06
-
-Source revision: main@b4e7405 + seo/meta-and-schema
+Purpose: Turn observed Prometheus usage data into right-sized memory settings for Kubernetes, Docker Compose, Nomad, Lambda, Cloud Run, Azure Functions, systemd, vSphere, Proxmox and Redis — no signup, runs entirely in your browser.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
@@ -18,26 +14,26 @@ MemoryLimit turns observed container or function memory usage — pasted straigh
 
 ## Containers & orchestration
 
-- [Kubernetes](https://memorylimit.dev/kubernetes/index.md): right-size Pod memory requests and limits from real usage data.
-- [Docker Compose](https://memorylimit.dev/docker-compose/index.md): size deploy.resources memory reservations and limits for Compose services.
-- [HashiCorp Nomad](https://memorylimit.dev/nomad/index.md): set a task's memory and memory_max for Nomad's memory oversubscription.
+- [Kubernetes](https://memorylimit.dev/kubernetes/index.md): Right-size Pod memory requests and limits from real usage data.
+- [Docker Compose](https://memorylimit.dev/docker-compose/index.md): Size deploy.resources memory reservations and limits for Compose services.
+- [HashiCorp Nomad](https://memorylimit.dev/nomad/index.md): Set a task’s memory and memory_max for Nomad’s memory oversubscription.
 
 ## Serverless
 
-- [AWS Lambda](https://memorylimit.dev/lambda/index.md): find the MemorySize that balances cost per invocation against duration.
-- [Google Cloud Run](https://memorylimit.dev/cloud-run/index.md): pick a Cloud Run memory limit, with the CPU it needs, from real instance usage.
-- [Azure Functions](https://memorylimit.dev/azure-functions/index.md): pick the Flex Consumption instance size, or the Premium SKU, a function app needs.
+- [AWS Lambda](https://memorylimit.dev/lambda/index.md): Size a function’s MemorySize from the peak memory its invocations use.
+- [Google Cloud Run](https://memorylimit.dev/cloud-run/index.md): Pick a Cloud Run memory limit, with the CPU it needs, from real instance usage.
+- [Azure Functions](https://memorylimit.dev/azure-functions/index.md): Pick the Flex Consumption instance size, or the Premium SKU, a function app needs.
 
 ## VMs & bare metal
 
-- [Systemd / Bare Metal / VM](https://memorylimit.dev/systemd/index.md): set MemoryHigh and MemoryMax for services running directly on a Linux host.
-- [VMware vSphere](https://memorylimit.dev/vmware/index.md): size a VM's memory reservation and limit without ballooning or wasted host capacity.
-- [Proxmox VE](https://memorylimit.dev/proxmox/index.md): set a VM's memory and ballooning minimum, handy when migrating from VMware.
+- [Systemd / Bare Metal / VM](https://memorylimit.dev/systemd/index.md): Set MemoryHigh and MemoryMax for services running directly on a Linux host.
+- [VMware vSphere](https://memorylimit.dev/vmware/index.md): Size a VM’s memory and reservation, with no limit, as VMware advises.
+- [Proxmox VE](https://memorylimit.dev/proxmox/index.md): Set a VM’s memory and ballooning minimum — handy when migrating from VMware.
 
 ## Data stores
 
-- [Redis maxmemory](https://memorylimit.dev/redis/index.md): size maxmemory for a Redis cache and the host memory it needs around it.
-- [Couchbase memory quotas](https://memorylimit.dev/couchbase/index.md): set Data, Index and Search service quotas and each bucket's quota from the dataset.
+- [Redis maxmemory](https://memorylimit.dev/redis/index.md): Size maxmemory for a Redis cache — and the host memory it needs around it.
+- [Couchbase memory quotas](https://memorylimit.dev/couchbase/index.md): Set Data, Index and Search service quotas and each bucket’s quota from the dataset.
 
 ## How the numbers are calculated
 

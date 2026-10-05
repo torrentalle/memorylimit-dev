@@ -4,18 +4,13 @@ Canonical: [How the Cloud Run calculator works](https://memorylimit.dev/cloud-ru
 
 Locale: en
 
-Purpose: How the Cloud Run calculator sets an instance's memory limit and CPU: Google's concurrency formula, the CPU each size needs and what to paste, with docs links.
-
-Content updated: 2026-10-06
-
-Source revision: main@b4e7405 + seo/meta-and-schema
+Purpose: How the Cloud Run calculator sets an instance's memory limit and CPU: Google's concurrency formula, the CPU each size needs, the range and what to paste, with links to the Cloud Run docs.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
 [Topic map](https://memorylimit.dev/llm/topics/guides.md) · [Complete scoped map](https://memorylimit.dev/sitemap.md)
 
 [← Google Cloud Run memory limit calculator](https://memorylimit.dev/cloud-run/index.md)
-
 
 This page walks through how the [Cloud Run calculator](https://memorylimit.dev/cloud-run/index.md) turns your usage data into an instance's memory limit and the CPU it needs. It starts from the peak side of the [shared sizing model](https://memorylimit.dev/sizing-model/index.md); this page covers what happens after that. Statements backed by Google's documentation end with a Cloud Run docs link to it. Choices the documentation doesn't make for us are explained and marked Assumption, which links to its row in the table of all of them.
 
@@ -66,7 +61,7 @@ planned peak       = idle memory + memory per request × concurrency planned
 memory             = planned peak × (1 + limit margin)
 ```
 
-With the same concurrency, the planned peak is the measured peak, so nothing changes. The measured peak is taken to have happened at the current maximum concurrency; if it happened with fewer requests in flight, memory per request comes out low. [Assumption](#all-assumptions-in-one-place) Without the idle memory, the whole peak counts as per-request memory, and a warning says the result is an upper bound when concurrency goes up, a lower one when it goes down.
+With the same concurrency, the planned peak is the measured peak, so nothing changes. The measured peak is taken to have happened at the current maximum concurrency; if it happened with fewer requests in flight, memory per request comes out low. [Assumption](https://memorylimit.dev/cloud-run/how-it-works/index.md#all-assumptions-in-one-place) Without the idle memory, the whole peak counts as per-request memory, and a warning says the result is an upper bound when concurrency goes up, a lower one when it goes down.
 
 Peak 630 MiB at a concurrency of 80, with 120 MiB idle, planning for 160:
 
@@ -90,16 +85,21 @@ Peak 630 MiB at a concurrency of 80, with 120 MiB idle, planning for 160:
 
 Instances get 1 vCPU by default. Less than 1 vCPU is possible, but only with a concurrency of 1, request-based billing and the first generation environment. [Cloud Run docs](https://docs.cloud.google.com/run/docs/configuring/services/cpu)
 
-So up to 4 GiB the calculator leaves CPU at the default and doesn't suggest a fraction; above it, it adds the fewest vCPU the memory needs. [Assumption](#all-assumptions-in-one-place)
+So up to 4 GiB the calculator leaves CPU at the default and doesn't suggest a fraction; above it, it adds the fewest vCPU the memory needs. [Assumption](https://memorylimit.dev/cloud-run/how-it-works/index.md#all-assumptions-in-one-place)
 
 ## What the calculator writes
 
 ```
 gcloud run services update <service> --memory 6500Mi --cpu 2
 
-spec.template.spec.containers[0].resources.limits:
-  memory: 6500Mi
-  cpu: 2
+spec:
+  template:
+    spec:
+      containers:
+      - resources:
+          limits:
+            memory: 6500Mi
+            cpu: 2
 ```
 
 `gcloud run services update SERVICE --memory SIZE` is the documented command, and the service YAML takes the same values under each container's `resources.limits`. [Cloud Run docs](https://docs.cloud.google.com/run/docs/reference/yaml/v1) `--cpu` only appears when the memory needs more than the default.
@@ -114,7 +114,7 @@ spec.template.spec.containers[0].resources.limits:
 
 ## Where the numbers come from
 
-Cloud Run's built-in metrics include "Container memory utilization". [Cloud Run docs](https://docs.cloud.google.com/run/docs/monitoring) The documentation lists it without its unit; we read it as a share of the instance's current limit, as the console charts it. So multiply its p99 over a representative period by the current limit to get the peak in MiB, and its p50 for the average, which doesn't change the result. [Assumption](#all-assumptions-in-one-place)
+Cloud Run's built-in metrics include "Container memory utilization". [Cloud Run docs](https://docs.cloud.google.com/run/docs/monitoring) The documentation lists it without its unit; we read it as a share of the instance's current limit, as the console charts it. So multiply its p99 over a representative period by the current limit to get the peak in MiB, and its p50 for the average, which doesn't change the result. [Assumption](https://memorylimit.dev/cloud-run/how-it-works/index.md#all-assumptions-in-one-place)
 
 ## All assumptions in one place
 

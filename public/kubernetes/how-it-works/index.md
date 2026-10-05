@@ -4,18 +4,13 @@ Canonical: [How the Kubernetes calculator works](https://memorylimit.dev/kuberne
 
 Locale: en
 
-Purpose: How the Kubernetes calculator sets memory requests and limits: rounding, the limit floor, Guaranteed QoS and how it compares with the VPA, with docs links.
-
-Content updated: 2026-10-06
-
-Source revision: main@b4e7405 + seo/meta-and-schema
+Purpose: How the Kubernetes calculator sets memory requests and limits: rounding, the limit floor, Guaranteed QoS, every warning, and how it compares with the Vertical Pod Autoscaler, with links to the Kubernetes docs.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
 [Topic map](https://memorylimit.dev/llm/topics/guides.md) · [Complete scoped map](https://memorylimit.dev/sitemap.md)
 
 [← Kubernetes memory limit calculator](https://memorylimit.dev/kubernetes/index.md)
-
 
 This page walks through how the [Kubernetes calculator](https://memorylimit.dev/kubernetes/index.md) turns your usage data into `resources.requests.memory` and `resources.limits.memory`. The request and limit start from the [shared sizing model](https://memorylimit.dev/sizing-model/index.md); this page covers what happens after that. Statements backed by the documentation end with a Kubernetes docs link to the page that says so. Choices the documentation doesn't make for us are explained and marked Assumption, which links to the table of all of them.
 
@@ -63,7 +58,7 @@ request = limit = max(peak × (1 + limit margin),
 
 A Pod is Guaranteed only if every container has a memory request equal to its memory limit *and* a CPU request equal to its CPU limit. The calculator only writes memory, so the note under the result reminds you to set CPU the same way; without it the Pod stays Burstable. [Kubernetes docs](https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/)
 
-Google's GKE guidance recommends the same amount of memory for the request and the limit, because memory can't be compressed: when it runs out, the Pod has to be taken down. [GKE docs](https://docs.cloud.google.com/architecture/best-practices-for-running-cost-effective-kubernetes-applications-on-gke) The calculator still defaults to Burstable, which packs more Pods per node; choose Guaranteed for workloads that mustn't be evicted. [Assumption](#all-assumptions-in-one-place)
+Google's GKE guidance recommends the same amount of memory for the request and the limit, because memory can't be compressed: when it runs out, the Pod has to be taken down. [GKE docs](https://docs.cloud.google.com/architecture/best-practices-for-running-cost-effective-kubernetes-applications-on-gke) The calculator still defaults to Burstable, which packs more Pods per node; choose Guaranteed for workloads that mustn't be evicted. [Assumption](https://memorylimit.dev/kubernetes/how-it-works/index.md#all-assumptions-in-one-place)
 
 | request = limit | 630 MiB × 1.30 = 819 MiB, the larger of 819 and 533 MiB | 819Mi |
 | --- | --- | --- |
@@ -73,7 +68,7 @@ Google's GKE guidance recommends the same amount of memory for the request and t
 
 | Message about | Shown when | Basis |
 | --- | --- | --- |
-| Limit far above the request warning | The limit is more than 4× the request | The scheduler places Pods by their requests, and under node memory pressure Pods above their requests are evicted first. [Kubernetes docs](https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/) A LimitRange can cap the ratio (`maxLimitRequestRatio`) but has no default. [Kubernetes docs](https://kubernetes.io/docs/reference/kubernetes-api/policy-resources/limit-range-v1/) The 4× threshold is ours. [Assumption](#all-assumptions-in-one-place) |
+| Limit far above the request warning | The limit is more than 4× the request | The scheduler places Pods by their requests, and under node memory pressure Pods above their requests are evicted first. [Kubernetes docs](https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/) A LimitRange can cap the ratio (`maxLimitRequestRatio`) but has no default. [Kubernetes docs](https://kubernetes.io/docs/reference/kubernetes-api/policy-resources/limit-range-v1/) The 4× threshold is ours. [Assumption](https://memorylimit.dev/kubernetes/how-it-works/index.md#all-assumptions-in-one-place) |
 | Peak below average error | The peak you entered is lower than the average | Impossible with real samples; it usually means two different series. See the [sizing model](https://memorylimit.dev/sizing-model/index.md#average-and-peak). |
 
 For example, a worker averaging 100 MiB with a 600 MiB peak, at high sensitivity:
@@ -97,7 +92,7 @@ Kubernetes itself doesn't publish a formula for memory requests. Its [Vertical P
 
 When VPA also sets limits, it keeps each container's limit-to-request ratio. [Kubernetes docs](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/features.md)
 
-The difference that matters: VPA sizes the **request from daily peaks**, while this calculator sizes it from the **average**. So VPA would recommend a higher request, and a Pod sized here spends more of its time above its request, where it can be evicted under node memory pressure. The calculator keeps the average because it works from as few as one or two samples; reproducing VPA needs at least a day of samples with timestamps. If eviction is a concern, choose a higher sensitivity or Guaranteed QoS, or let VPA size the request once the workload has history. [Assumption](#all-assumptions-in-one-place)
+The difference that matters: VPA sizes the **request from daily peaks**, while this calculator sizes it from the **average**. So VPA would recommend a higher request, and a Pod sized here spends more of its time above its request, where it can be evicted under node memory pressure. The calculator keeps the average because it works from as few as one or two samples; reproducing VPA needs at least a day of samples with timestamps. If eviction is a concern, choose a higher sensitivity or Guaranteed QoS, or let VPA size the request once the workload has history. [Assumption](https://memorylimit.dev/kubernetes/how-it-works/index.md#all-assumptions-in-one-place)
 
 ### Request basis: VPA-style
 
@@ -108,7 +103,7 @@ request = max(peak × 1.15, 250 MiB)    rounded up to a whole Mi
 limit   = max(peak × (1 + limit margin), request)
 ```
 
-VPA's target is the 90th percentile of daily peaks; with only a peak to go on, the calculator uses the peak, which is at least as high, so the request comes out at or above what VPA would set. [Assumption](#all-assumptions-in-one-place) The sensitivity, workload and environment margins don't apply to the request in this mode, only to the limit. The 250 MiB minimum is applied in full, as if the Pod had one container. [Assumption](#all-assumptions-in-one-place)
+VPA's target is the 90th percentile of daily peaks; with only a peak to go on, the calculator uses the peak, which is at least as high, so the request comes out at or above what VPA would set. [Assumption](https://memorylimit.dev/kubernetes/how-it-works/index.md#all-assumptions-in-one-place) The sensitivity, workload and environment margins don't apply to the request in this mode, only to the limit. The 250 MiB minimum is applied in full, as if the Pod had one container. [Assumption](https://memorylimit.dev/kubernetes/how-it-works/index.md#all-assumptions-in-one-place)
 
 | request | 630 MiB × 1.15 = 724.5 MiB | 725Mi |
 | --- | --- | --- |
@@ -123,7 +118,7 @@ container_memory_working_set_bytes{namespace="prod", container="api"}
 
 - `container_memory_working_set_bytes` is a gauge of the container's current working set, in bytes. [cAdvisor docs](https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md)
 - The working set is what the kubelet measures to decide when a node is short of memory, which is why it's the metric to size from. [Kubernetes docs](https://kubernetes.io/docs/concepts/scheduling-eviction/node-pressure-eviction/) `container_memory_usage_bytes` instead counts all memory "regardless of when it was accessed", as cAdvisor puts it.
-- A range query over a representative period (a week is a good default) gives the best average and peak. Series with `container=""` (the whole Pod) and `container="POD"` (the pause container) are skipped. These are the label values cAdvisor commonly exports for them; we haven't found them documented. [Assumption](#all-assumptions-in-one-place)
+- A range query over a representative period (a week is a good default) gives the best average and peak. Series with `container=""` (the whole Pod) and `container="POD"` (the pause container) are skipped. These are the label values cAdvisor commonly exports for them; we haven't found them documented. [Assumption](https://memorylimit.dev/kubernetes/how-it-works/index.md#all-assumptions-in-one-place)
 
 ## All assumptions in one place
 
@@ -148,7 +143,7 @@ The calculator’s **Advanced: margins and defaults** section, closed by default
 | --- | --- | --- | --- |
 | Request margin | from the profile | 0–200% | MemoryLimit’s default, from sensitivity, workload type and environment ([sizing model](https://memorylimit.dev/sizing-model/index.md#the-margins)); sizes the request |
 | Limit margin | from the profile | 0–200% | MemoryLimit’s default, from sensitivity, workload type and environment ([sizing model](https://memorylimit.dev/sizing-model/index.md#the-margins)); sizes the limit |
-| Overcommit warning above | 4× the request | 1–20× | Our default, [assumption 1](#all-assumptions-in-one-place); only moves the warning |
+| Overcommit warning above | 4× the request | 1–20× | Our default, [assumption 1](https://memorylimit.dev/kubernetes/how-it-works/index.md#all-assumptions-in-one-place); only moves the warning |
 | VPA margin (VPA-style only) | 15% | 0–100% | The VPA recommender’s `recommendation-margin-fraction` default ([flags](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/flags.md)); set your cluster’s value if it changes it |
 | VPA minimum (VPA-style only) | 250 MiB | 0–4,096 MiB | The VPA recommender’s `pod-recommendation-min-memory-mb` default ([flags](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/flags.md)) |
 

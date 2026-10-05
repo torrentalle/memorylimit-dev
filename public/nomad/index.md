@@ -6,10 +6,6 @@ Locale: en
 
 Purpose: Right-size HashiCorp Nomad task memory reservations and memory_max limits from real usage data, for clusters using memory oversubscription.
 
-Content updated: 2026-10-06
-
-Source revision: main@b4e7405 + seo/meta-and-schema
-
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
 [Topic map](https://memorylimit.dev/llm/topics/containers.md) · [Complete scoped map](https://memorylimit.dev/sitemap.md)
@@ -18,7 +14,7 @@ Nomad places tasks according to their `memory` reservation. With memory oversubs
 
 ## Usage data
 
-Paste box: Raw query output or samples.
+Paste box: Raw query output / samples.
 
 **Which query should I paste?**
 
@@ -56,4 +52,4 @@ Values the result relies on that are our own defaults, or vendor defaults your s
 
 The calculator shows the result and a step-by-step derivation after you enter usage data. Everything is calculated in your browser; nothing you enter is sent anywhere.
 
-How every number is calculated, with sources and assumptions: [guide](https://memorylimit.dev/nomad/how-it-works/index.md). Wrong result? [Report it](https://github.com/torrentalle/memorylimit-dev/issues/new/choose).
+How every number is calculated, with sources and assumptions: [guide](https://memorylimit.dev/nomad/how-it-works/index.md). Wrong result? [Report it](https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml&platform=HashiCorp%20Nomad&title=%5BBug%5D%20HashiCorp%20Nomad%3A%20).

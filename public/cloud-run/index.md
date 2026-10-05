@@ -4,11 +4,7 @@ Canonical: [Google Cloud Run Memory Limit Calculator](https://memorylimit.dev/cl
 
 Locale: en
 
-Purpose: Pick the right Google Cloud Run memory limit from real usage, with the minimum CPU it requires. Avoid out-of-memory restarts without overpaying.
-
-Content updated: 2026-10-06
-
-Source revision: main@b4e7405 + seo/meta-and-schema
+Purpose: Pick the right Google Cloud Run memory limit from real instance usage, with the minimum CPU Cloud Run requires for it. Avoid out-of-memory instance restarts without overpaying.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
@@ -53,4 +49,4 @@ Values the result relies on that are our own defaults, or vendor defaults your s
 
 The calculator shows the result and a step-by-step derivation after you enter usage data. Everything is calculated in your browser; nothing you enter is sent anywhere.
 
-How every number is calculated, with sources and assumptions: [guide](https://memorylimit.dev/cloud-run/how-it-works/index.md). Wrong result? [Report it](https://github.com/torrentalle/memorylimit-dev/issues/new/choose).
+How every number is calculated, with sources and assumptions: [guide](https://memorylimit.dev/cloud-run/how-it-works/index.md). Wrong result? [Report it](https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml&platform=Google%20Cloud%20Run&title=%5BBug%5D%20Google%20Cloud%20Run%3A%20).

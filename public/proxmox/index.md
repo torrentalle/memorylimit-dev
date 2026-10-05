@@ -6,19 +6,15 @@ Locale: en
 
 Purpose: Set a Proxmox VE VM's memory and ballooning minimum from real usage data. Outputs the qm command and web UI steps — useful when migrating VMs from VMware.
 
-Content updated: 2026-10-06
-
-Source revision: main@b4e7405 + seo/meta-and-schema
-
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
-[Topic map](https://memorylimit.dev/llm/topics/vms-bare-metal.md) · [Complete scoped map](https://memorylimit.dev/sitemap.md)
+[Topic map](https://memorylimit.dev/llm/topics/vms.md) · [Complete scoped map](https://memorylimit.dev/sitemap.md)
 
 Proxmox VE sizes a VM with two numbers: the **memory** it can grow to, and a **minimum** the balloon driver never takes away. Between the two, the host lends the VM memory while it has RAM to spare and reclaims it when it doesn't — the VM slows down rather than crashing, much like vSphere. This calculator sizes both from real usage, which helps when moving VMs over from VMware.
 
 ## Usage data
 
-Paste box: Raw query output or samples.
+Paste box: Raw query output / samples.
 
 **Where do I get these numbers?**
 
@@ -56,4 +52,4 @@ Values the result relies on that are our own defaults, or vendor defaults your s
 
 The calculator shows the result and a step-by-step derivation after you enter usage data. Everything is calculated in your browser; nothing you enter is sent anywhere.
 
-How every number is calculated, with sources and assumptions: [guide](https://memorylimit.dev/proxmox/how-it-works/index.md). Wrong result? [Report it](https://github.com/torrentalle/memorylimit-dev/issues/new/choose).
+How every number is calculated, with sources and assumptions: [guide](https://memorylimit.dev/proxmox/how-it-works/index.md). Wrong result? [Report it](https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml&platform=Proxmox%20VE&title=%5BBug%5D%20Proxmox%20VE%3A%20).

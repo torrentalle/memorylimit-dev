@@ -4,18 +4,13 @@ Canonical: [How the Proxmox VE calculator works](https://memorylimit.dev/proxmox
 
 Locale: en
 
-Purpose: How the Proxmox VE calculator sets a VM's memory and ballooning minimum: rounding, the balloon rule, auto-ballooning, qm and the web UI, with docs links.
-
-Content updated: 2026-10-06
-
-Source revision: main@b4e7405 + seo/meta-and-schema
+Purpose: How the Proxmox VE calculator sets a VM's memory and ballooning minimum: rounding, the balloon rule, auto-ballooning, qm and the web UI, and what to paste, with links to the Proxmox docs and source.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
 [Topic map](https://memorylimit.dev/llm/topics/guides.md) · [Complete scoped map](https://memorylimit.dev/sitemap.md)
 
 [← Proxmox VE memory calculator](https://memorylimit.dev/proxmox/index.md)
-
 
 This page walks through how the [Proxmox VE calculator](https://memorylimit.dev/proxmox/index.md) turns your usage data into a VM's memory and ballooning minimum. Both start from the [shared sizing model](https://memorylimit.dev/sizing-model/index.md); this page covers what happens after that. Statements backed by the Proxmox documentation or source end with a Proxmox docs link to it. Choices the documentation doesn't make for us are explained and marked Assumption, which links to its row in the table of all of them.
 
@@ -56,7 +51,7 @@ A steady cache, averaging 1000 MiB with a 1020 MiB peak, where the minimum decid
 - While host RAM usage is below a target, 80% by default, Proxmox adds memory to the guest up to its maximum. When the host needs memory back, the guest's balloon driver gives it up, which can make the guest swap or, as a last resort, run its OOM killer. [Proxmox docs](https://pve.proxmox.com/pve-docs/chapter-qm.html)
 - Linux distributions released after 2010 include the balloon driver. On Windows it has to be installed, can slow the guest down, and isn't recommended for critical systems. Leave about 1 GB of RAM for the host itself. [Proxmox docs](https://pve.proxmox.com/pve-docs/chapter-qm.html)
 
-So the minimum is what the VM can count on, and the memory above it is only there while the host has room. The calculator assumes ballooning is on; with it off, set both values to the memory result. [Assumption](#all-assumptions-in-one-place)
+So the minimum is what the VM can count on, and the memory above it is only there while the host has room. The calculator assumes ballooning is on; with it off, set both values to the memory result. [Assumption](https://memorylimit.dev/proxmox/how-it-works/index.md#all-assumptions-in-one-place)
 
 ## What the calculator writes
 
@@ -82,7 +77,7 @@ node_memory_MemTotal_bytes{instance="vm1:9100"}
 ```
 
 - Measured inside the guest with node_exporter: total memory minus `MemAvailable`, the kernel's estimate of memory available for new applications without swapping. [Kernel docs](https://docs.kernel.org/filesystems/proc.html)
-- With ballooning active, the host's view shows what Proxmox lent the VM rather than what it needed, so the calculator asks for the guest's own numbers. [Assumption](#all-assumptions-in-one-place)
+- With ballooning active, the host's view shows what Proxmox lent the VM rather than what it needed, so the calculator asks for the guest's own numbers. [Assumption](https://memorylimit.dev/proxmox/how-it-works/index.md#all-assumptions-in-one-place)
 
 ## All assumptions in one place
 

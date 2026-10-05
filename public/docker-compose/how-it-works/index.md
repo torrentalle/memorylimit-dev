@@ -4,18 +4,13 @@ Canonical: [How the Docker Compose calculator works](https://memorylimit.dev/doc
 
 Locale: en
 
-Purpose: How the Docker Compose calculator sets deploy.resources memory limits and reservations: rounding, the reservation rule, swap and warnings, with docs links.
-
-Content updated: 2026-10-06
-
-Source revision: main@b4e7405 + seo/meta-and-schema
+Purpose: How the Docker Compose calculator sets deploy.resources memory limits and reservations: rounding, the reservation rule, swap, every warning and what to paste, with links to the Docker docs.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
 [Topic map](https://memorylimit.dev/llm/topics/guides.md) · [Complete scoped map](https://memorylimit.dev/sitemap.md)
 
 [← Docker Compose memory limits calculator](https://memorylimit.dev/docker-compose/index.md)
-
 
 This page walks through how the [Docker Compose calculator](https://memorylimit.dev/docker-compose/index.md) turns your usage data into a service's memory limit and reservation. Both start from the [shared sizing model](https://memorylimit.dev/sizing-model/index.md); this page covers what happens after that. Statements backed by Docker's documentation or source code end with a Docker docs link to it. Choices the documentation doesn't make for us are explained and marked Assumption, which links to the table of all of them.
 
@@ -73,7 +68,7 @@ deploy:
 
 If the host has swap and `memswap_limit` isn't set, a container with a memory limit can use as much swap as that limit, so a 819M limit allows 1638M in total. Setting `memswap_limit` equal to the limit prevents any swap. [Docker docs](https://docs.docker.com/engine/containers/resource_constraints/)
 
-The calculator leaves swap as Docker sets it: whether a service should swap or fail fast depends on the service, and the note under the result points it out. [Assumption](#all-assumptions-in-one-place)
+The calculator leaves swap as Docker sets it: whether a service should swap or fail fast depends on the service, and the note under the result points it out. [Assumption](https://memorylimit.dev/docker-compose/how-it-works/index.md#all-assumptions-in-one-place)
 
 ## Every warning, and why
 
@@ -89,8 +84,8 @@ container_memory_working_set_bytes{name=~"myproject-api-[0-9]+"}
 ```
 
 - This is cAdvisor's working set metric, a gauge in bytes. [cAdvisor docs](https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md) Its `name` label is the container's name. [cAdvisor source](https://github.com/google/cadvisor/blob/master/lib/metrics/prometheus.go)
-- Compose names a service's containers `<project>-<service>-<number>`, so the regex above matches every replica of the `api` service in the `myproject` project. [Docker source](https://github.com/docker/compose/blob/main/pkg/compose/service_containers.go) A service with its own `container_name` needs that name instead. [Assumption](#all-assumptions-in-one-place)
-- The working set leaves out file cache the kernel can reclaim, so it's closer to what the container really needs than total usage. [Assumption](#all-assumptions-in-one-place) A range query over a representative period (a week is a good default) gives the best average and peak.
+- Compose names a service's containers `<project>-<service>-<number>`, so the regex above matches every replica of the `api` service in the `myproject` project. [Docker source](https://github.com/docker/compose/blob/main/pkg/compose/service_containers.go) A service with its own `container_name` needs that name instead. [Assumption](https://memorylimit.dev/docker-compose/how-it-works/index.md#all-assumptions-in-one-place)
+- The working set leaves out file cache the kernel can reclaim, so it's closer to what the container really needs than total usage. [Assumption](https://memorylimit.dev/docker-compose/how-it-works/index.md#all-assumptions-in-one-place) A range query over a representative period (a week is a good default) gives the best average and peak.
 
 ## All assumptions in one place
 

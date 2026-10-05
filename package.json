@@ -14,7 +14,8 @@
     "generate:sitemap": "node scripts/generate-sitemap.js",
     "sync:pages": "node scripts/sync-pages.js",
     "generate-og-image": "node scripts/generate-og-image.js",
-    "generate:brand": "node scripts/generate-brand.js"
+    "generate:brand": "node scripts/generate-brand.js",
+    "generate:markdown": "node scripts/generate-markdown.js"
   },
   "license": "MIT",
   "devDependencies": {

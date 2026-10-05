@@ -4,11 +4,7 @@ Canonical: [Azure Functions Memory Calculator](https://memorylimit.dev/azure-fun
 
 Locale: en
 
-Purpose: Pick the right Azure Functions instance size from real usage: Flex Consumption memory or Elastic Premium SKU. Avoid out-of-memory restarts without overpaying.
-
-Content updated: 2026-10-06
-
-Source revision: main@b4e7405 + seo/meta-and-schema
+Purpose: Pick the right Azure Functions instance size from real usage: the Flex Consumption memory setting, or the Elastic Premium SKU when you need more. Avoid out-of-memory restarts without overpaying.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
@@ -51,4 +47,4 @@ Values the result relies on that are our own defaults, or vendor defaults your s
 
 The calculator shows the result and a step-by-step derivation after you enter usage data. Everything is calculated in your browser; nothing you enter is sent anywhere.
 
-How every number is calculated, with sources and assumptions: [guide](https://memorylimit.dev/azure-functions/how-it-works/index.md). Wrong result? [Report it](https://github.com/torrentalle/memorylimit-dev/issues/new/choose).
+How every number is calculated, with sources and assumptions: [guide](https://memorylimit.dev/azure-functions/how-it-works/index.md). Wrong result? [Report it](https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml&platform=Azure%20Functions&title=%5BBug%5D%20Azure%20Functions%3A%20).

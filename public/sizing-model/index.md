@@ -4,18 +4,13 @@ Canonical: [How the sizing model works](https://memorylimit.dev/sizing-model/)
 
 Locale: en
 
-Purpose: How MemoryLimit turns average and peak memory usage into a request and a limit: the formula, the margin tables, a worked example, and the assumptions.
-
-Content updated: 2026-10-06
-
-Source revision: main@b4e7405 + seo/meta-and-schema
+Purpose: How the MemoryLimit calculators turn average and peak memory usage into a request and a limit: the formula, the margin tables, a worked example, and which values are assumptions.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
 [Topic map](https://memorylimit.dev/llm/topics/guides.md) · [Complete scoped map](https://memorylimit.dev/sitemap.md)
 
 [← All calculators](https://memorylimit.dev/index.md)
-
 
 Ten of the calculators start the same way: from the average and peak memory you observed, they work out two values, a **request** and a **limit**, and only then apply their platform's own rules. This page explains that shared step. The margins it adds are MemoryLimit's own defaults, not figures from any vendor, so each one is explained and marked Assumption, which links to the table of all of them. Statements backed by vendor documentation end with a link to it, such as Kubernetes docs. What each platform does next is on its own calculator page.
 
@@ -30,9 +25,9 @@ So the request should cover normal running, and the limit the worst moment. Sizi
 
 ## Average and peak
 
-You can type the two numbers, in MiB, or paste monitoring output and let the calculator read them. A paste is turned into a list of samples: the average is their mean and the peak is the largest. [Assumption](#all-assumptions-in-one-place) Values in bytes are converted to MiB. Numbers without a unit are read as bytes, unless every one of them is below 1,000,000: no process runs in less than a megabyte, so those are read as MiB. [Assumption](#all-assumptions-in-one-place) Kubernetes exports a series for the whole Pod and one for its pause container next to each real container; those are skipped, because averaging them in would skew the result.
+You can type the two numbers, in MiB, or paste monitoring output and let the calculator read them. A paste is turned into a list of samples: the average is their mean and the peak is the largest. [Assumption](https://memorylimit.dev/sizing-model/index.md#all-assumptions-in-one-place) Values in bytes are converted to MiB. Numbers without a unit are read as bytes, unless every one of them is below 1,000,000: no process runs in less than a megabyte, so those are read as MiB. [Assumption](https://memorylimit.dev/sizing-model/index.md#all-assumptions-in-one-place) Kubernetes exports a series for the whole Pod and one for its pause container next to each real container; those are skipped, because averaging them in would skew the result.
 
-The samples cover a representative period, busiest times included, and each one is the memory of a single instance (one container, task, function or process), not a total across replicas. The model can't tell either from the numbers. [Assumption](#all-assumptions-in-one-place)
+The samples cover a representative period, busiest times included, and each one is the memory of a single instance (one container, task, function or process), not a total across replicas. The model can't tell either from the numbers. [Assumption](https://memorylimit.dev/sizing-model/index.md#all-assumptions-in-one-place)
 
 A peak below the average can't happen with real samples, so the calculator still shows a result but flags it as an error: it usually means two different series were pasted or typed.
 
@@ -49,7 +44,7 @@ The two margins are worked out the same way, each from its own table. The base c
 
 ## The margins
 
-No vendor publishes a general safety margin for memory, so every value below is a MemoryLimit default: round figures that give clearly different results for each choice. They aren't measured, they're the same on every platform, and changing one changes every calculator's output. [Assumption](#all-assumptions-in-one-place)
+No vendor publishes a general safety margin for memory, so every value below is a MemoryLimit default: round figures that give clearly different results for each choice. They aren't measured, they're the same on every platform, and changing one changes every calculator's output. [Assumption](https://memorylimit.dev/sizing-model/index.md#all-assumptions-in-one-place)
 
 If you know the headroom your service needs, you don't have to go through the tables: every calculator has an **Advanced: margins and defaults** section, closed by default, where a request margin and a limit margin (0–200%) replace the ones the profile gives. Left empty, each shows the profile's margin greyed out. Where a platform has values of its own that you can change, the same section holds them, and its guide lists them.
 
@@ -69,9 +64,9 @@ Percentage points added to the base, before the environment scales it.
 
 | Workload type | Request | Limit | Why |
 | --- | --- | --- | --- |
-| JVM | +15 | +30 | A JVM's heap can keep growing toward its maximum until garbage collection reclaims it, so samples may not have caught how much it will take. [Assumption](#all-assumptions-in-one-place) |
-| Worker / batch | −10 | +35 | Memory is spiky: small between jobs, large during one. Less is reserved and more room is left above the peak. [Assumption](#all-assumptions-in-one-place) |
-| Cache | +5 | 0 | A cache tends to fill whatever it's given, so its usual level sits close to its peak. [Assumption](#all-assumptions-in-one-place) |
+| JVM | +15 | +30 | A JVM's heap can keep growing toward its maximum until garbage collection reclaims it, so samples may not have caught how much it will take. [Assumption](https://memorylimit.dev/sizing-model/index.md#all-assumptions-in-one-place) |
+| Worker / batch | −10 | +35 | Memory is spiky: small between jobs, large during one. Less is reserved and more room is left above the peak. [Assumption](https://memorylimit.dev/sizing-model/index.md#all-assumptions-in-one-place) |
+| Cache | +5 | 0 | A cache tends to fill whatever it's given, so its usual level sits close to its peak. [Assumption](https://memorylimit.dev/sizing-model/index.md#all-assumptions-in-one-place) |
 | API service, Node.js, Python, generic | 0 | 0 | The base margins as they are. |
 
 ### Environment: the multiplier
@@ -82,7 +77,7 @@ Percentage points added to the base, before the environment scales it.
 | Staging | 85% |
 | Production | 100% |
 
-An OOM kill costs less outside production, so less memory is set aside for it there. If a staging environment has to behave exactly like production, choose Production. [Assumption](#all-assumptions-in-one-place)
+An OOM kill costs less outside production, so less memory is set aside for it there. If a staging environment has to behave exactly like production, choose Production. [Assumption](https://memorylimit.dev/sizing-model/index.md#all-assumptions-in-one-place)
 
 ## Worked example
 

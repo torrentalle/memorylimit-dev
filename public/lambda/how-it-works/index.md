@@ -4,18 +4,13 @@ Canonical: [How the AWS Lambda calculator works](https://memorylimit.dev/lambda/
 
 Locale: en
 
-Purpose: How the Lambda calculator sets MemorySize: why it's peak-based, the MiB to MB conversion, Lambda's range, and how CPU and cost follow memory, with docs links.
-
-Content updated: 2026-10-06
-
-Source revision: main@b4e7405 + seo/meta-and-schema
+Purpose: How the Lambda calculator sets MemorySize: why it's peak-based, the MiB to MB conversion, Lambda's range, how CPU and cost follow memory, and what to paste, with links to the AWS docs.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
 [Topic map](https://memorylimit.dev/llm/topics/guides.md) · [Complete scoped map](https://memorylimit.dev/sitemap.md)
 
 [← AWS Lambda memory size calculator](https://memorylimit.dev/lambda/index.md)
-
 
 This page walks through how the [Lambda calculator](https://memorylimit.dev/lambda/index.md) turns your usage data into a function's `MemorySize`. It starts from the peak side of the [shared sizing model](https://memorylimit.dev/sizing-model/index.md); this page covers what happens after that. Statements backed by AWS's documentation end with an AWS docs link to it. Choices the documentation doesn't make for us are explained and marked Assumption, which links to its row in the table of all of them.
 
@@ -37,7 +32,7 @@ MemorySize = memory × 1,048,576 ÷ 1,000,000                   in MB, rounded u
 
 The limit margin comes from the sensitivity, workload type and environment you choose; the [sizing model](https://memorylimit.dev/sizing-model/index.md) explains it, and it's an assumption too.
 
-AWS's own Logs Insights queries turn Lambda's memory figures into MB by dividing the bytes by 1000 twice, so Lambda's MB are decimal megabytes: 1 MiB is 1.048576 MB. [AWS docs](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax-examples.html) The documentation never defines the unit outright, so this is how we read it. [Assumption](#all-assumptions-in-one-place)
+AWS's own Logs Insights queries turn Lambda's memory figures into MB by dividing the bytes by 1000 twice, so Lambda's MB are decimal megabytes: 1 MiB is 1.048576 MB. [AWS docs](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax-examples.html) The documentation never defines the unit outright, so this is how we read it. [Assumption](https://memorylimit.dev/lambda/how-it-works/index.md#all-assumptions-in-one-place)
 
 ### Worked example
 
@@ -57,7 +52,7 @@ A small function, peaking at 60 MiB, lands below Lambda's minimum and is raised 
 
 Because CPU comes with memory, AWS calls memory the principal lever for a function's performance: a CPU-, network- or memory-bound function can run much faster with more. AWS suggests watching memory and duration in CloudWatch, trying the open-source Lambda Power Tuning tool, or accepting Compute Optimizer's recommendations. [AWS docs](https://docs.aws.amazon.com/lambda/latest/dg/configuration-memory.html)
 
-This calculator only answers the memory question: how much the function needs so it doesn't run out. It doesn't measure duration, so it can't tell whether more memory would make a function faster or cheaper; run Power Tuning for that. [Assumption](#all-assumptions-in-one-place)
+This calculator only answers the memory question: how much the function needs so it doesn't run out. It doesn't measure duration, so it can't tell whether more memory would make a function faster or cheaper; run Power Tuning for that. [Assumption](https://memorylimit.dev/lambda/how-it-works/index.md#all-assumptions-in-one-place)
 
 ## What the calculator writes
 
@@ -84,7 +79,7 @@ fields @maxMemoryUsed
 ```
 
 - Run it in CloudWatch Logs Insights on the function's log group. Lambda's `REPORT` lines, one per invocation, carry the discovered fields `@maxMemoryUsed` and `@memorySize`. [AWS docs](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_AnalyzeLogData-discoverable-fields.html) AWS's sample query divides them by 1000 twice to get MB, so they are bytes, and the calculator reads them as such. [AWS docs](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax-examples.html)
-- Each value is the most one invocation used, so the calculator's "average" is the average of those maximums and its peak the largest of them. Only the peak sets the result. [Assumption](#all-assumptions-in-one-place)
+- Each value is the most one invocation used, so the calculator's "average" is the average of those maximums and its peak the largest of them. Only the peak sets the result. [Assumption](https://memorylimit.dev/lambda/how-it-works/index.md#all-assumptions-in-one-place)
 
 ## All assumptions in one place
 

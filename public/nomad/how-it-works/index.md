@@ -4,18 +4,13 @@ Canonical: [How the Nomad calculator works](https://memorylimit.dev/nomad/how-it
 
 Locale: en
 
-Purpose: How the Nomad calculator sets a task's memory and memory_max: Nomad's guidance, rounding, minimums and memory oversubscription, with links to the Nomad docs.
-
-Content updated: 2026-10-06
-
-Source revision: main@b4e7405 + seo/meta-and-schema
+Purpose: How the Nomad calculator sets a task's memory and memory_max: Nomad's own guidance, rounding, minimums, memory oversubscription and what to paste, with links to the Nomad docs and source.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
 [Topic map](https://memorylimit.dev/llm/topics/guides.md) · [Complete scoped map](https://memorylimit.dev/sitemap.md)
 
 [← HashiCorp Nomad memory calculator](https://memorylimit.dev/nomad/index.md)
-
 
 This page walks through how the [Nomad calculator](https://memorylimit.dev/nomad/index.md) turns your usage data into a task's `memory` and `memory_max`. Both start from the [shared sizing model](https://memorylimit.dev/sizing-model/index.md); this page covers what happens after that. Statements backed by HashiCorp's documentation or Nomad's source end with a Nomad docs link to it. Choices the documentation doesn't make for us are explained and marked Assumption, which links to its row in the table of all of them.
 
@@ -61,7 +56,7 @@ When the peak is close to the average, `memory` can decide `memory_max`. Average
 nomad operator scheduler set-config -memory-oversubscription=true
 ```
 
-Without it, `memory` is the hard limit, so a task sized here would be killed at its average-based value. The note under the result says to set `memory` to the `memory_max` value in that case. [Assumption](#all-assumptions-in-one-place)
+Without it, `memory` is the hard limit, so a task sized here would be killed at its average-based value. The note under the result says to set `memory` to the `memory_max` value in that case. [Assumption](https://memorylimit.dev/nomad/how-it-works/index.md#all-assumptions-in-one-place)
 
 Nomad also advises keeping an eye on memory use and leaving enough reserved memory on each client, because oversubscribed tasks can run a client out of memory. [Nomad docs](https://developer.hashicorp.com/nomad/docs/job-specification/resources)
 
@@ -79,7 +74,7 @@ nomad_client_allocs_memory_usage{job="web", task="api"}
 
 - Nomad publishes allocation metrics when telemetry has `publish_allocation_metrics` on, and serves them in Prometheus format at `/v1/metrics?format=prometheus` with `prometheus_metrics` on. [Nomad docs](https://developer.hashicorp.com/nomad/docs/configuration/telemetry)
 - `nomad.client.allocs.memory.usage` is a gauge of the total memory a task uses, in bytes, labelled with `job`, `task_group`, `task` and `alloc_id`, among others. Filtering by both job and task keeps another job's task of the same name out. [Nomad docs](https://developer.hashicorp.com/nomad/docs/reference/metrics)
-- Total usage includes file cache. Nomad also reports `rss` and `cache` separately, but RSS leaves out memory the task does need, so the calculator sizes from total usage and errs on the high side. [Assumption](#all-assumptions-in-one-place)
+- Total usage includes file cache. Nomad also reports `rss` and `cache` separately, but RSS leaves out memory the task does need, so the calculator sizes from total usage and errs on the high side. [Assumption](https://memorylimit.dev/nomad/how-it-works/index.md#all-assumptions-in-one-place)
 
 ## All assumptions in one place
 

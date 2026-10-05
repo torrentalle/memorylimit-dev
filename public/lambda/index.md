@@ -6,10 +6,6 @@ Locale: en
 
 Purpose: Find the right AWS Lambda MemorySize for your function. Balance cost per invocation against execution duration, sized from peak usage rather than average.
 
-Content updated: 2026-10-06
-
-Source revision: main@b4e7405 + seo/meta-and-schema
-
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
 [Topic map](https://memorylimit.dev/llm/topics/serverless.md) · [Complete scoped map](https://memorylimit.dev/sitemap.md)
@@ -55,4 +51,4 @@ Values the result relies on that are our own defaults, or vendor defaults your s
 
 The calculator shows the result and a step-by-step derivation after you enter usage data. Everything is calculated in your browser; nothing you enter is sent anywhere.
 
-How every number is calculated, with sources and assumptions: [guide](https://memorylimit.dev/lambda/how-it-works/index.md). Wrong result? [Report it](https://github.com/torrentalle/memorylimit-dev/issues/new/choose).
+How every number is calculated, with sources and assumptions: [guide](https://memorylimit.dev/lambda/how-it-works/index.md). Wrong result? [Report it](https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml&platform=AWS%20Lambda&title=%5BBug%5D%20AWS%20Lambda%3A%20).

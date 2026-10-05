@@ -4,21 +4,17 @@ Canonical: [VMware vSphere Memory Sizing Calculator](https://memorylimit.dev/vmw
 
 Locale: en
 
-Purpose: Right-size a vSphere VM's memory and reservation from real usage data, the way VMware advises. Outputs vSphere Client steps and a govc command.
-
-Content updated: 2026-10-06
-
-Source revision: main@b4e7405 + seo/meta-and-schema
+Purpose: Right-size a vSphere VM's memory and reservation from real usage data, the way VMware advises: no limit, the configured memory as the cap. Outputs vSphere Client steps and a govc command.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
-[Topic map](https://memorylimit.dev/llm/topics/vms-bare-metal.md) · [Complete scoped map](https://memorylimit.dev/sitemap.md)
+[Topic map](https://memorylimit.dev/llm/topics/vms.md) · [Complete scoped map](https://memorylimit.dev/sitemap.md)
 
 vSphere gives each VM a configured memory size and three controls: the **reservation** the host guarantees, a **limit** it can't use more than, and **shares** that decide who wins when VMs compete for memory. VMware advises against limits, since they can waste idle memory, so this calculator follows that: it sizes the VM's **memory** from the peak, as the cap, and the **reservation** from the average, with the limit left unlimited.
 
 ## Usage data
 
-Paste box: Raw query output or samples.
+Paste box: Raw query output / samples.
 
 **Where do I get these numbers?**
 
@@ -56,4 +52,4 @@ Values the result relies on that are our own defaults, or vendor defaults your s
 
 The calculator shows the result and a step-by-step derivation after you enter usage data. Everything is calculated in your browser; nothing you enter is sent anywhere.
 
-How every number is calculated, with sources and assumptions: [guide](https://memorylimit.dev/vmware/how-it-works/index.md). Wrong result? [Report it](https://github.com/torrentalle/memorylimit-dev/issues/new/choose).
+How every number is calculated, with sources and assumptions: [guide](https://memorylimit.dev/vmware/how-it-works/index.md). Wrong result? [Report it](https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml&platform=VMware%20vSphere&title=%5BBug%5D%20VMware%20vSphere%3A%20).

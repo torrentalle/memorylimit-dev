@@ -4,21 +4,17 @@ Canonical: [Systemd Memory Limits Calculator](https://memorylimit.dev/systemd/)
 
 Locale: en
 
-Purpose: Right-size memory for systemd services on a VM or bare-metal Linux host. Generates a MemoryHigh / MemoryMax drop-in from real usage data. Free, in your browser.
-
-Content updated: 2026-10-06
-
-Source revision: main@b4e7405 + seo/meta-and-schema
+Purpose: Right-size memory for services running directly on a VM or bare-metal Linux host under systemd, without a container runtime. Generates a MemoryHigh / MemoryMax drop-in from real usage data.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
-[Topic map](https://memorylimit.dev/llm/topics/vms-bare-metal.md) · [Complete scoped map](https://memorylimit.dev/sitemap.md)
+[Topic map](https://memorylimit.dev/llm/topics/vms.md) · [Complete scoped map](https://memorylimit.dev/sitemap.md)
 
 Services that run directly on a VM or bare-metal host have no scheduler reserving memory for them, but systemd can still fence them in with two cgroup settings. `MemoryHigh` is a soft ceiling: above it the service is slowed down and its memory reclaimed aggressively. `MemoryMax` is the hard one: cross it and the kernel OOM-kills the service. This calculator sizes both from real usage and gives you a drop-in file to install.
 
 ## Usage data
 
-Paste box: Raw query output or samples.
+Paste box: Raw query output / samples.
 
 **Where do I get these numbers?**
 
@@ -60,4 +56,4 @@ Values the result relies on that are our own defaults, or vendor defaults your s
 
 The calculator shows the result and a step-by-step derivation after you enter usage data. Everything is calculated in your browser; nothing you enter is sent anywhere.
 
-How every number is calculated, with sources and assumptions: [guide](https://memorylimit.dev/systemd/how-it-works/index.md). Wrong result? [Report it](https://github.com/torrentalle/memorylimit-dev/issues/new/choose).
+How every number is calculated, with sources and assumptions: [guide](https://memorylimit.dev/systemd/how-it-works/index.md). Wrong result? [Report it](https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml&platform=Systemd%20%2F%20Bare%20Metal%20%2F%20VM&title=%5BBug%5D%20Systemd%20%2F%20Bare%20Metal%20%2F%20VM%3A%20).

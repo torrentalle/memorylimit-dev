@@ -4,18 +4,13 @@ Canonical: [How the systemd calculator works](https://memorylimit.dev/systemd/ho
 
 Locale: en
 
-Purpose: How the systemd calculator sets MemoryHigh and MemoryMax: systemd's own advice, the 1.25× gap, cgroup v2, the drop-in and set-property, with systemd docs links.
-
-Content updated: 2026-10-06
-
-Source revision: main@b4e7405 + seo/meta-and-schema
+Purpose: How the systemd calculator sets MemoryHigh and MemoryMax: systemd's own advice, the 1.25× gap, cgroup v2, the drop-in and set-property, and what to paste, with links to the systemd and kernel docs.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
 [Topic map](https://memorylimit.dev/llm/topics/guides.md) · [Complete scoped map](https://memorylimit.dev/sitemap.md)
 
 [← Systemd memory limits calculator](https://memorylimit.dev/systemd/index.md)
-
 
 This page walks through how the [systemd calculator](https://memorylimit.dev/systemd/index.md) turns your usage data into a service's `MemoryHigh` and `MemoryMax`. Both start from the [shared sizing model](https://memorylimit.dev/sizing-model/index.md); this page covers what happens after that. Statements backed by the systemd or kernel documentation end with a systemd docs link to it. Choices the documentation doesn't make for us are explained and marked Assumption, which links to its row in the table of all of them.
 
@@ -38,8 +33,8 @@ MemoryMax      = 1.25 × MemoryHigh                                   rounded up
 
 The margins come from the sensitivity, workload type and environment you choose; the [sizing model](https://memorylimit.dev/sizing-model/index.md) explains them, and they are assumptions too. systemd reads the `M` suffix with base 1024, so `M` is MiB. [systemd docs](https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html)
 
-- `MemoryHigh` sits just above the observed peak, so normal peaks run unthrottled and throttling only starts when usage grows past anything seen so far, typically a leak. It never goes below expected usage, so a steady service isn't throttled at its normal level. [Assumption](#all-assumptions-in-one-place)
-- `MemoryMax` is 25% above `MemoryHigh`, so `MemoryHigh` sits 20% below it. The gap is warning time: a leak slows the service down before the kernel kills it. Neither systemd nor the cgroup v2 memory controller's own documentation gives a ratio: both treat the high limit as the main control and the max as a final safety net, which by default isn't set at all. [cgroup2 docs](https://facebookmicrosites.github.io/cgroup2/docs/memory-controller.html) 1.25× is ours, at the low end of what guides outside the official documentation commonly suggest: the high limit 20–30% below the max (1.25–1.43×). [Assumption](#all-assumptions-in-one-place)
+- `MemoryHigh` sits just above the observed peak, so normal peaks run unthrottled and throttling only starts when usage grows past anything seen so far, typically a leak. It never goes below expected usage, so a steady service isn't throttled at its normal level. [Assumption](https://memorylimit.dev/systemd/how-it-works/index.md#all-assumptions-in-one-place)
+- `MemoryMax` is 25% above `MemoryHigh`, so `MemoryHigh` sits 20% below it. The gap is warning time: a leak slows the service down before the kernel kills it. Neither systemd nor the cgroup v2 memory controller's own documentation gives a ratio: both treat the high limit as the main control and the max as a final safety net, which by default isn't set at all. [cgroup2 docs](https://facebookmicrosites.github.io/cgroup2/docs/memory-controller.html) 1.25× is ours, at the low end of what guides outside the official documentation commonly suggest: the high limit 20–30% below the max (1.25–1.43×). [Assumption](https://memorylimit.dev/systemd/how-it-works/index.md#all-assumptions-in-one-place)
 
 ### Worked example
 
@@ -85,7 +80,7 @@ container_memory_working_set_bytes{id="/system.slice/myapp.service"}
 ```
 
 - With cAdvisor on the host, its `id` label is the cgroup path, so a service is `/system.slice/<name>.service`. [cAdvisor source](https://github.com/google/cadvisor/blob/master/lib/metrics/prometheus.go)
-- Without Prometheus, sample `systemctl show -P MemoryCurrent myapp.service` every minute and paste the bytes. `MemoryCurrent` reports the unit's `memory.current`, the cgroup's total usage, which counts page cache too; so it reads a little higher than the working set. [Kernel docs](https://docs.kernel.org/admin-guide/cgroup-v2.html) systemd's documentation lists the property without describing it. [Assumption](#all-assumptions-in-one-place)
+- Without Prometheus, sample `systemctl show -P MemoryCurrent myapp.service` every minute and paste the bytes. `MemoryCurrent` reports the unit's `memory.current`, the cgroup's total usage, which counts page cache too; so it reads a little higher than the working set. [Kernel docs](https://docs.kernel.org/admin-guide/cgroup-v2.html) systemd's documentation lists the property without describing it. [Assumption](https://memorylimit.dev/systemd/how-it-works/index.md#all-assumptions-in-one-place)
 
 ## All assumptions in one place
 
@@ -107,7 +102,7 @@ The calculator’s **Advanced: margins and defaults** section, closed by default
 | --- | --- | --- | --- |
 | Request margin | from the profile | 0–200% | MemoryLimit’s default, from sensitivity, workload type and environment ([sizing model](https://memorylimit.dev/sizing-model/index.md#the-margins)); sizes expected usage |
 | Limit margin | from the profile | 0–200% | MemoryLimit’s default, from sensitivity, workload type and environment ([sizing model](https://memorylimit.dev/sizing-model/index.md#the-margins)); sizes `MemoryHigh` |
-| MemoryMax ratio | 1.25 × MemoryHigh | 1–2× | Our default, [assumption 1](#all-assumptions-in-one-place); guides outside the official documentation suggest 1.25–1.43 |
+| MemoryMax ratio | 1.25 × MemoryHigh | 1–2× | Our default, [assumption 1](https://memorylimit.dev/systemd/how-it-works/index.md#all-assumptions-in-one-place); guides outside the official documentation suggest 1.25–1.43 |
 
 ## References
 

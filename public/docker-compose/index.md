@@ -4,11 +4,7 @@ Canonical: [Docker Compose Memory Limits Calculator](https://memorylimit.dev/doc
 
 Locale: en
 
-Purpose: Right-size Docker Compose container memory reservations and limits from observed usage. Generates a deploy.resources snippet and the legacy mem_limit.
-
-Content updated: 2026-10-06
-
-Source revision: main@b4e7405 + seo/meta-and-schema
+Purpose: Right-size Docker Compose container memory reservations and limits from observed usage. Generates a deploy.resources snippet plus the legacy mem_limit equivalent.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
@@ -17,6 +13,8 @@ Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-d
 Docker Compose's `deploy.resources` block controls how much memory a service reserves and how much it's allowed to use before it gets killed. This calculator sizes both values — plus the service-level `mem_limit` / `mem_reservation` equivalent — from your service's observed average and peak memory usage.
 
 ## Usage data
+
+Paste box: Raw query output / scrape.
 
 **Which query should I paste?**
 
@@ -56,4 +54,4 @@ Values the result relies on that are our own defaults, or vendor defaults your s
 
 The calculator shows the result and a step-by-step derivation after you enter usage data. Everything is calculated in your browser; nothing you enter is sent anywhere.
 
-How every number is calculated, with sources and assumptions: [guide](https://memorylimit.dev/docker-compose/how-it-works/index.md). Wrong result? [Report it](https://github.com/torrentalle/memorylimit-dev/issues/new/choose).
+How every number is calculated, with sources and assumptions: [guide](https://memorylimit.dev/docker-compose/how-it-works/index.md). Wrong result? [Report it](https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml&platform=Docker%20Compose&title=%5BBug%5D%20Docker%20Compose%3A%20).

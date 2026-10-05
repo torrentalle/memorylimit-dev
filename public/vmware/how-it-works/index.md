@@ -4,18 +4,13 @@ Canonical: [How the VMware vSphere calculator works](https://memorylimit.dev/vmw
 
 Locale: en
 
-Purpose: How the vSphere calculator sets a VM's memory size, reservation and shares the way VMware advises, with no limit: rounding, govc and hot add, with docs links.
-
-Content updated: 2026-10-06
-
-Source revision: main@b4e7405 + seo/meta-and-schema
+Purpose: How the vSphere calculator sets a VM's memory size, reservation and shares the way VMware advises, with no limit: rounding, govc, hot add, and what to paste, with links to the vSphere docs.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
 [Topic map](https://memorylimit.dev/llm/topics/guides.md) · [Complete scoped map](https://memorylimit.dev/sitemap.md)
 
 [← VMware vSphere memory calculator](https://memorylimit.dev/vmware/index.md)
-
 
 This page walks through how the [vSphere calculator](https://memorylimit.dev/vmware/index.md) turns your usage data into a VM's memory size, reservation and shares, following VMware's own advice. The values start from the [shared sizing model](https://memorylimit.dev/sizing-model/index.md); this page covers what happens after that. Statements backed by VMware's documentation end with a vSphere docs link to it. Choices the documentation doesn't make for us are explained and marked Assumption, which links to its row in the table of all of them.
 
@@ -33,7 +28,7 @@ VMware's resource-management guidance: [vSphere docs](https://techdocs.broadcom.
 - Reserve the *minimum acceptable* amount of memory, not the amount you'd like to have available.
 - Leave at least 10% of the host unreserved, so later changes still fit.
 
-So the calculator sets no limit and sizes the VM's **configured memory** from the peak instead: that becomes the cap. The reservation comes from the average plus its margin, the memory the VM needs under normal load, which is how the calculator reads "minimum acceptable". [Assumption](#all-assumptions-in-one-place)
+So the calculator sets no limit and sizes the VM's **configured memory** from the peak instead: that becomes the cap. The reservation comes from the average plus its margin, the memory the VM needs under normal load, which is how the calculator reads "minimum acceptable". [Assumption](https://memorylimit.dev/vmware/how-it-works/index.md#all-assumptions-in-one-place)
 
 ## From usage to memory and reservation
 
@@ -44,7 +39,7 @@ limit       = Unlimited (−1)
 shares      = Normal
 ```
 
-The margins come from the sensitivity, workload type and environment you choose; the [sizing model](https://memorylimit.dev/sizing-model/index.md) explains them, and they are assumptions too. vSphere's MB are taken as MiB, so values pass through unconverted. [Assumption](#all-assumptions-in-one-place) A reservation can't exceed the configured memory, so when the peak is so close to the average that the peak-based memory falls below the reservation, the memory is raised to it. The memory size must be a multiple of 4 MB, so it is rounded up to the next one; the reservation takes any whole MB. [vSphere docs](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-virtual-machine-administration/configuring-virtual-machine-hardwarevsphere-vm-admin/virtual-memory-configurationvsphere-vm-admin/change-the-memory-configurationvsphere-vm-admin.html)
+The margins come from the sensitivity, workload type and environment you choose; the [sizing model](https://memorylimit.dev/sizing-model/index.md) explains them, and they are assumptions too. vSphere's MB are taken as MiB, so values pass through unconverted. [Assumption](https://memorylimit.dev/vmware/how-it-works/index.md#all-assumptions-in-one-place) A reservation can't exceed the configured memory, so when the peak is so close to the average that the peak-based memory falls below the reservation, the memory is raised to it. The memory size must be a multiple of 4 MB, so it is rounded up to the next one; the reservation takes any whole MB. [vSphere docs](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-virtual-machine-administration/configuring-virtual-machine-hardwarevsphere-vm-admin/virtual-memory-configurationvsphere-vm-admin/change-the-memory-configurationvsphere-vm-admin.html)
 
 ### Worked example
 
@@ -68,8 +63,8 @@ govc vm.change -vm "<vm-name>" -m 912 -mem.reservation 507 -mem.limit -1 -mem.sh
 ```
 
 - `govc vm.change` takes the memory size with `-m`, and the reservation and limit with `-mem.reservation` and `-mem.limit`, all in MB; shares as a level or a number. [govc docs](https://github.com/vmware/govmomi/blob/main/govc/USAGE.md) The same values go in the vSphere Client under Edit Settings → Virtual Hardware → Memory.
-- Memory hot add lets you add memory to a powered-on VM; turning it on needs the VM powered off. [vSphere docs](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/7-0/vsphere-virtual-machine-administration/configuring-virtual-machine-hardwarevm-admin/virtual-memory-configurationvm-admin/change-memory-hot-add-settingsvm-admin.html) Lowering a VM's memory isn't covered by hot add, so it needs the VM off. [Assumption](#all-assumptions-in-one-place)
-- Shares stay at Normal: the calculator has no way to know how this VM should rank against its neighbours, and doesn't claim Normal is vSphere's default. [Assumption](#all-assumptions-in-one-place)
+- Memory hot add lets you add memory to a powered-on VM; turning it on needs the VM powered off. [vSphere docs](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/7-0/vsphere-virtual-machine-administration/configuring-virtual-machine-hardwarevm-admin/virtual-memory-configurationvm-admin/change-memory-hot-add-settingsvm-admin.html) Lowering a VM's memory isn't covered by hot add, so it needs the VM off. [Assumption](https://memorylimit.dev/vmware/how-it-works/index.md#all-assumptions-in-one-place)
+- Shares stay at Normal: the calculator has no way to know how this VM should rank against its neighbours, and doesn't claim Normal is vSphere's default. [Assumption](https://memorylimit.dev/vmware/how-it-works/index.md#all-assumptions-in-one-place)
 
 ## Every warning, and why
 
@@ -86,7 +81,7 @@ node_memory_MemTotal_bytes{instance="vm1:9100"}
 ```
 
 - Measured inside the guest with node_exporter: total memory minus `MemAvailable`, the kernel's estimate of memory available for new applications without swapping. [Kernel docs](https://docs.kernel.org/filesystems/proc.html)
-- The calculator asks for guest-side numbers rather than vSphere's own "active" or "consumed" memory, which describe the host's view of the VM rather than what the guest needs. [Assumption](#all-assumptions-in-one-place)
+- The calculator asks for guest-side numbers rather than vSphere's own "active" or "consumed" memory, which describe the host's view of the VM rather than what the guest needs. [Assumption](https://memorylimit.dev/vmware/how-it-works/index.md#all-assumptions-in-one-place)
 
 ## All assumptions in one place
 
