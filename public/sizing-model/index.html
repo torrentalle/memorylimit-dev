@@ -144,14 +144,14 @@
       <h2 id="inputs-heading" class="panel__title"><span class="panel__index">02</span> Average and peak</h2>
       <p>
         You can type the two numbers, in MiB, or paste monitoring output and let the calculator read them. A paste
-        is turned into a list of samples: the average is their mean and the peak is the largest. Values in bytes are
+        is turned into a list of samples: the average is their mean and the peak is the largest. <a class="guide-tag guide-tag--assumption" id="assumption-6-ref" href="#assumption-6">Assumption</a> Values in bytes are
         converted to MiB. Kubernetes exports a series for the whole Pod and one for its pause container next to each
         real container; those are skipped, because averaging them in would skew the result.
       </p>
       <p>
         The samples cover a representative period, busiest times included, and each one is the memory of a single
         instance (one container, task, function or process), not a total across replicas. The model can't tell
-        either from the numbers. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a>
+        either from the numbers. <a class="guide-tag guide-tag--assumption" id="assumption-4-ref" href="#assumption-4">Assumption</a>
       </p>
       <p>
         A peak below the average can't happen with real samples, so the calculator still shows a result but flags
@@ -177,7 +177,7 @@ margin  = (sensitivity base + workload adjustment) × environment multiplier</co
       <p>
         No vendor publishes a general safety margin for memory, so every value below is a MemoryLimit default: round
         figures that give clearly different results for each choice. They aren't measured, they're the same on every
-        platform, and changing one changes every calculator's output. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a>
+        platform, and changing one changes every calculator's output. <a class="guide-tag guide-tag--assumption" id="assumption-1-ref" href="#assumption-1">Assumption</a>
       </p>
 
       <h3 class="guide-subheading">Sensitivity: the base</h3>
@@ -199,9 +199,9 @@ margin  = (sensitivity base + workload adjustment) × environment multiplier</co
         <table class="guide-table">
           <thead><tr><th scope="col">Workload type</th><th scope="col">Request</th><th scope="col">Limit</th><th scope="col">Why</th></tr></thead>
           <tbody>
-            <tr><td>JVM</td><td>+15</td><td>+30</td><td>A JVM's heap can keep growing toward its maximum until garbage collection reclaims it, so samples may not have caught how much it will take. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a></td></tr>
-            <tr><td>Worker / batch</td><td>−10</td><td>+35</td><td>Memory is spiky: small between jobs, large during one. Less is reserved and more room is left above the peak. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a></td></tr>
-            <tr><td>Cache</td><td>+5</td><td>0</td><td>A cache tends to fill whatever it's given, so its usual level sits close to its peak. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a></td></tr>
+            <tr><td>JVM</td><td>+15</td><td>+30</td><td>A JVM's heap can keep growing toward its maximum until garbage collection reclaims it, so samples may not have caught how much it will take. <a class="guide-tag guide-tag--assumption" id="assumption-2-ref" href="#assumption-2">Assumption</a></td></tr>
+            <tr><td>Worker / batch</td><td>−10</td><td>+35</td><td>Memory is spiky: small between jobs, large during one. Less is reserved and more room is left above the peak. <a class="guide-tag guide-tag--assumption" href="#assumption-2">Assumption</a></td></tr>
+            <tr><td>Cache</td><td>+5</td><td>0</td><td>A cache tends to fill whatever it's given, so its usual level sits close to its peak. <a class="guide-tag guide-tag--assumption" href="#assumption-2">Assumption</a></td></tr>
             <tr><td>API service, Node.js, Python, generic</td><td>0</td><td>0</td><td>The base margins as they are.</td></tr>
           </tbody>
         </table>
@@ -220,7 +220,7 @@ margin  = (sensitivity base + workload adjustment) × environment multiplier</co
       </div>
       <p>
         An OOM kill costs less outside production, so less memory is set aside for it there. If a staging
-        environment has to behave exactly like production, choose Production. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a>
+        environment has to behave exactly like production, choose Production. <a class="guide-tag guide-tag--assumption" id="assumption-3-ref" href="#assumption-3">Assumption</a>
       </p>
     </section>
 
@@ -299,12 +299,12 @@ margin  = (sensitivity base + workload adjustment) × environment multiplier</co
         <table class="guide-table">
           <thead><tr><th scope="col">Assumption</th><th scope="col">Kind</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
           <tbody>
-            <tr><td>Sensitivity base margins: 15/30/50% on the request, 20/30/40% on the limit</td><td class="guide-kind">Our default</td><td>No vendor publishes a general memory margin; these are round defaults</td><td>Too small and you'll see OOM kills or evictions; too large and memory sits unused. Pick another sensitivity, or adjust the result.</td></tr>
-            <tr><td>Workload adjustments for JVM, worker/batch and cache</td><td class="guide-kind">Our default</td><td>How these runtimes typically use memory beyond what samples show</td><td>If your service doesn't behave like its type, choose Generic.</td></tr>
-            <tr><td>Development keeps 60% of the margins, staging 85%</td><td class="guide-kind">Our default</td><td>An OOM kill costs less outside production</td><td>Choose Production for an environment that must not fail.</td></tr>
-            <tr><td>The samples cover a representative period, busiest times included</td><td class="guide-kind">About your setup</td><td>The average and the peak are only as good as the window</td><td>A missed peak gives a limit that's too low.</td></tr>
-            <tr><td>Each sample is one instance's memory</td><td class="guide-kind">About your setup</td><td>Every value is per replica, task or process</td><td>A series summed across replicas makes every value too large by the replica count.</td></tr>
-            <tr><td>Average and maximum, not percentiles</td><td class="guide-kind">Our default</td><td>They work with as few as one or two samples</td><td>One outlier spike raises the limit; remove it from the paste if it isn't real.</td></tr>
+            <tr id="assumption-1"><td>Sensitivity base margins: 15/30/50% on the request, 20/30/40% on the limit <a class="guide-backref" href="#assumption-1-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>No vendor publishes a general memory margin; these are round defaults</td><td>Too small and you'll see OOM kills or evictions; too large and memory sits unused. Pick another sensitivity, or adjust the result.</td></tr>
+            <tr id="assumption-2"><td>Workload adjustments for JVM, worker/batch and cache <a class="guide-backref" href="#assumption-2-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>How these runtimes typically use memory beyond what samples show</td><td>If your service doesn't behave like its type, choose Generic.</td></tr>
+            <tr id="assumption-3"><td>Development keeps 60% of the margins, staging 85% <a class="guide-backref" href="#assumption-3-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>An OOM kill costs less outside production</td><td>Choose Production for an environment that must not fail.</td></tr>
+            <tr id="assumption-4"><td>The samples cover a representative period, busiest times included <a class="guide-backref" href="#assumption-4-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">About your setup</td><td>The average and the peak are only as good as the window</td><td>A missed peak gives a limit that's too low.</td></tr>
+            <tr id="assumption-5"><td>Each sample is one instance's memory <a class="guide-backref" href="#assumption-4-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">About your setup</td><td>Every value is per replica, task or process</td><td>A series summed across replicas makes every value too large by the replica count.</td></tr>
+            <tr id="assumption-6"><td>Average and maximum, not percentiles <a class="guide-backref" href="#assumption-6-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>They work with as few as one or two samples</td><td>One outlier spike raises the limit; remove it from the paste if it isn't real.</td></tr>
           </tbody>
         </table>
       </div>

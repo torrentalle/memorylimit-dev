@@ -48,7 +48,9 @@ Every calculator gets the same three layers of explanation.
 **Source labels** go at the end of the sentence they back, as small links:
 
 - `<a class="guide-tag guide-tag--doc" href="…">Kubernetes docs</a>` links the vendor document that says it;
-- `<a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a>` links the page's table.
+- `<a class="guide-tag guide-tag--assumption" href="#assumption-N">Assumption</a>` links its own row in the
+  table of assumptions (`<tr id="assumption-N">`), and the row ends with a ↩ link back to the label
+  (`id="assumption-N-ref"`). Every row has a label somewhere in the text.
 
 Obvious calculations carry no label. A constant with no documentation behind it is raised with the maintainer
 before it ships: it gets a documented value, becomes a labelled assumption, or is dropped. Every command, flag,
