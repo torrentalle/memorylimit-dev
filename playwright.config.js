@@ -3,7 +3,7 @@ import { defineConfig } from '@playwright/test';
 const PORT = 4173;
 
 export default defineConfig({
-  testDir: './e2e',
+  testDir: './tests/e2e',
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   reporter: process.env.CI ? 'github' : 'list',
