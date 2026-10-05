@@ -22,33 +22,6 @@ const PAGES = [
   ...getGuidePages().map((guide) => guide.path)
 ];
 
-const GIF = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
-
-// Mimics what the real EthicalAds client does (read from ethicalads.min.js):
-// injects a <style>, requests the ad decision as a JSONP <script> from
-// server.ethicalads.io, probes for ad blockers with an image from
-// media.ethicalads.io and records the view with an image from server.ethicalads.io.
-const ETHICALADS_STUB = `
-  const style = document.createElement('style');
-  style.textContent = '.ea-text { outline: 0; }';
-  document.head.append(style);
-
-  const loaded = (what) => () => { (window.__thirdParty ??= []).push(what); };
-  window.__eaDecision = loaded('ethicalads-decision');
-  const decision = document.createElement('script');
-  decision.src = 'https://server.ethicalads.io/api/v1/decision/?callback=__eaDecision';
-  document.head.append(decision);
-
-  for (const [what, src] of [
-    ['ethicalads-probe', 'https://media.ethicalads.io/abp/px.gif'],
-    ['ethicalads-view', 'https://server.ethicalads.io/proxy/view/csp-test/']
-  ]) {
-    const img = new Image();
-    img.onload = loaded(what);
-    img.src = src;
-  }
-`;
-
 // Mimics the Cloudflare beacon: reports to cloudflareinsights.com.
 const BEACON_STUB = `
   fetch('https://cloudflareinsights.com/cdn-cgi/rum', { method: 'POST', mode: 'no-cors', body: '{}' })
@@ -76,18 +49,12 @@ async function configureThirdParties(page) {
       const body = (await response.text()).replace(from, to);
       await route.fulfill({ response, body });
     });
-  await patch('**/js/monetization.js', 'REPLACE_WITH_ETHICALADS_PUBLISHER_ID', 'csp-test');
   await patch('**/js/analytics.js', 'cloudflareBeaconToken: PLACEHOLDER_TOKEN', "cloudflareBeaconToken: 'csp-test'");
-  // ./env.js keeps ads/analytics silent off the production host; the test
+  // ./env.js keeps analytics silent off the production host; the test
   // server runs on localhost, so this test stands in for that host.
   await patch('**/js/env.js', 'return hostname === PRODUCTION_HOST;', 'return true;');
 
   const js = (body) => (route) => route.fulfill({ contentType: 'text/javascript', body });
-  await page.route('https://media.ethicalads.io/media/client/ethicalads.min.js', js(ETHICALADS_STUB));
-  await page.route('https://server.ethicalads.io/api/v1/decision/**', js('__eaDecision();'));
-  await page.route(/^https:\/\/(media|server)\.ethicalads\.io\/(abp|proxy)\//, (route) =>
-    route.fulfill({ contentType: 'image/gif', body: GIF })
-  );
   await page.route('https://static.cloudflareinsights.com/beacon.min.js', js(BEACON_STUB));
   await page.route('https://cloudflareinsights.com/**', (route) => route.fulfill({ status: 204 }));
 }
@@ -130,30 +97,29 @@ for (const path of PAGES) {
   });
 }
 
-test('EthicalAds and Cloudflare Web Analytics, once configured, run under the CSP', async ({ page }) => {
+test('Cloudflare Web Analytics, once configured, runs under the CSP', async ({ page }) => {
   await configureThirdParties(page);
   await page.goto('/kubernetes/');
   await expect
     .poll(() => page.evaluate(() => (window.__thirdParty ?? []).toSorted()))
-    .toEqual(['cloudflare-beacon', 'ethicalads-decision', 'ethicalads-probe', 'ethicalads-view']);
+    .toEqual(['cloudflare-beacon']);
   expect(await violations(page)).toEqual([]);
 });
 
-// Real ads/analytics only ever run on the production host, so any other
-// host the site might be served from never pollutes real analytics or
-// serves real ads, even once real IDs are configured.
-test('off the production host, EthicalAds and Cloudflare Analytics stay dormant even when configured', async ({ page }) => {
+// Real analytics only ever run on the production host, so any other
+// host the site might be served from never pollutes real
+// analytics, even once a real token is configured.
+test('off the production host, Cloudflare Analytics stays dormant even when configured', async ({ page }) => {
   const patch = (pattern, from, to) =>
     page.route(pattern, async (route) => {
       const response = await route.fetch();
       const body = (await response.text()).replace(from, to);
       await route.fulfill({ response, body });
     });
-  await patch('**/js/monetization.js', 'REPLACE_WITH_ETHICALADS_PUBLISHER_ID', 'csp-test');
   await patch('**/js/analytics.js', 'cloudflareBeaconToken: PLACEHOLDER_TOKEN', "cloudflareBeaconToken: 'csp-test'");
   const thirdPartyRequests = [];
   page.on('request', (req) => {
-    if (/\.ethicalads\.io|cloudflareinsights\.com/.test(req.url())) thirdPartyRequests.push(req.url());
+    if (/cloudflareinsights\.com/.test(req.url())) thirdPartyRequests.push(req.url());
   });
   await page.goto('/kubernetes/'); // served from localhost in this test run — never the production host
   await page.waitForTimeout(500);

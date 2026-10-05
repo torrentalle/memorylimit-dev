@@ -50,3 +50,7 @@ XSS, and the pages originally had inline scripts: the theme bootstrap and each p
   `tests/e2e/csp.spec.js` injects it into every HTML response in tests. It fails on any `securitypolicyviolation`,
   on every page and with both third parties switched on (stubbed to behave like the real scripts).
 - `'unsafe-inline'` in `style-src` stays until EthicalAds supports nonces, or the ad integration changes.
+
+## Update
+
+The EthicalAds integration was removed before it was ever enabled (kept on the `feat/ethicalads` branch). The policy now has the Cloudflare beacon as its only third party, and `style-src` is `'self'` with no `'unsafe-inline'`. The text above describes the original design.

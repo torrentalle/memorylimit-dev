@@ -1,18 +1,10 @@
 /**
- * Config for the two passive monetization elements (an EthicalAds text ad
- * and a donation link). ./monetization-ui.js renders them.
+ * Config for the passive monetization element (a donation link).
+ * ./monetization-ui.js renders it.
  */
-import { isProductionHost } from './env.js';
-
 const PLACEHOLDER_PREFIX = 'REPLACE_WITH_';
 
 export const MONETIZATION = {
-  ethicalAds: true,
-  // EthicalAds requires a one-time manual application at
-  // https://www.ethicalads.io/. Nothing renders (and no third-party script
-  // loads) while this is still a placeholder.
-  ethicalAdsPublisherId: 'REPLACE_WITH_ETHICALADS_PUBLISHER_ID',
-
   donationLink: true,
   donationProvider: 'github-sponsors', // 'github-sponsors' | 'buy-me-a-coffee'
   // Must be an absolute https:// URL; the link stays hidden until it is.
@@ -26,12 +18,6 @@ export const DONATION_PROVIDERS = {
 
 function isConfigured(value) {
   return typeof value === 'string' && value.trim() !== '' && !value.startsWith(PLACEHOLDER_PREFIX);
-}
-
-/** @param {string} [hostname] - see ./env.js; the ad (and its tracking pixels) only ever loads on the production host. */
-export function getEthicalAdsConfig(hostname) {
-  if (!MONETIZATION.ethicalAds || !isConfigured(MONETIZATION.ethicalAdsPublisherId) || !isProductionHost(hostname)) return null;
-  return { publisherId: MONETIZATION.ethicalAdsPublisherId };
 }
 
 export function getDonationConfig() {

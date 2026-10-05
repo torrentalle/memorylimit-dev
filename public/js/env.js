@@ -1,9 +1,9 @@
 /**
- * The one hostname third-party scripts (ads, analytics) are allowed to run
+ * The one hostname third-party scripts (analytics) are allowed to run
  * on. Every other hostname — a Cloudflare Pages preview, `npm run dev` on
  * localhost, anywhere else the site might be served from — stays silent
- * even when a real ID is configured in ./monetization.js or ./analytics.js,
- * so testing never pollutes real analytics or serves real ads.
+ * even when a real ID is configured in ./analytics.js,
+ * so testing never pollutes real analytics.
  */
 export const PRODUCTION_HOST = 'memorylimit.dev';
 

@@ -131,7 +131,6 @@ for (const page of CONTENT_PAGES) {
     const head = html.slice(0, html.indexOf('</head>'));
     assert.match(head, /<script src="\/js\/theme-init\.js"><\/script>/);
     assert.match(html, /\/js\/(site|calculator-page|couchbase-page)\.js/);
-    assert.match(html, /id="ethical-ads-slot"/);
     assert.match(html, /id="donation-slot"/);
   });
 
