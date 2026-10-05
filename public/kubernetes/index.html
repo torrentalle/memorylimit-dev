@@ -119,6 +119,7 @@
           <summary>Which query should I paste?</summary>
           <p>Use a <strong>range</strong> query over a representative period (a week is a good default) for one container. Every sample is averaged, and the highest becomes the peak — an instant query only gives one value per pod.</p>
           <pre>container_memory_working_set_bytes{namespace="prod", container="api"}</pre>
+          <p>The working set is what the kubelet measures to decide when a node is short of memory, so it’s the metric to size from.</p>
           <p>Paste the Prometheus UI table output, the HTTP API JSON, or a Grafana CSV export. Pod-level (<code>container=""</code>) and pause-container (<code>container="POD"</code>) series are skipped automatically.</p>
         </details>
       </div>
@@ -224,7 +225,7 @@
           <div class="explanation" id="explanation">Enter usage data to see the calculation.</div>
           <p class="explanation-note is-hidden" id="explanation-note"></p>
           <!-- guide-link:start -->
-          <p class="guide-link"><a href="/sizing-model/" target="_blank" rel="noopener">How the request and limit margins work, and which values are assumptions<span class="visually-hidden"> (opens in a new tab)</span> ↗</a></p>
+          <p class="guide-link"><a href="/kubernetes/how-it-works/" target="_blank" rel="noopener">How every number is calculated, with sources and assumptions<span class="visually-hidden"> (opens in a new tab)</span> ↗</a></p>
           <!-- guide-link:end -->
           <!-- report-result:start -->
           <p class="report-link">Result looks wrong? <a href="https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml&amp;platform=Kubernetes&amp;title=%5BBug%5D%20Kubernetes%3A%20" target="_blank" rel="noopener">Report it</a></p>

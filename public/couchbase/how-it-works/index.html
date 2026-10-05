@@ -389,20 +389,21 @@ couchbase-cli bucket-edit -c localhost:8091 -u Administrator -p "$CB_PASSWORD" -
     <section class="panel guide-section" id="assumptions" aria-labelledby="assumptions-heading">
       <h2 id="assumptions-heading" class="panel__title"><span class="panel__index">10</span> All assumptions in one place</h2>
       <p>Everything the calculator decides that Couchbase's documentation doesn't, and what changes if it's wrong for you.</p>
+      <p class="guide-kind-legend"><strong>Our default</strong>: a value we chose. <strong>Our reading</strong>: how we read documentation that isn't explicit. <strong>About your setup</strong>: something we take for granted about your data or cluster.</p>
       <div class="guide-table-wrap">
         <table class="guide-table">
-          <thead><tr><th scope="col">Assumption</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
+          <thead><tr><th scope="col">Assumption</th><th scope="col">Kind</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
           <tbody>
-            <tr><td>Full ejection counts only resident metadata</td><td>Full ejection evicts metadata with the document; the formula has no case for it</td><td>Quotas for full-ejection buckets are too small. Set the policy to value ejection in the form to get the formula's upper bound.</td></tr>
-            <tr><td>Key and document sizes are the averages you enter</td><td>No API gives them reliably</td><td>The quota scales with them; measure a real sample.</td></tr>
-            <tr><td>Index, Search, Eventing, Analytics quotas are entered, not calculated</td><td>They depend on index definitions and document shape</td><td>Size them from the services' own memory use.</td></tr>
-            <tr><td>Buckets spread evenly over the Data nodes</td><td>vBuckets are distributed across nodes</td><td>A node holding more than its share needs a larger Data quota; rebalance first.</td></tr>
-            <tr><td>"Little memory" means under 5 GiB</td><td>Where the firm limit itself drops to 80%</td><td>Only the warning threshold moves; the firm-limit error is exact.</td></tr>
-            <tr><td>The 10% check uses the data with replicas</td><td>The bucket quota also holds the replicas</td><td>Only the warning moves.</td></tr>
-            <tr><td>Full ejection warns under a 20% working set</td><td>A judgment call on when disk reads dominate</td><td>Only the warning moves.</td></tr>
-            <tr><td><code>itemCount</code> counts documents without replicas</td><td>The documentation shows the field without defining it</td><td>If it included replicas, pasted counts would be too high and quotas oversized.</td></tr>
-            <tr><td>Peak per node for Prometheus range data; smallest Data node's RAM</td><td>Size for the worst case</td><td>Quotas are a little larger than an average would give.</td></tr>
-            <tr><td>Couchstore, not Magma</td><td>The 10% guidance and the formula are written for it</td><td>Magma buckets can run with much less memory (1% of the dataset); this sizing is conservative for them.</td></tr>
+            <tr><td>Full ejection counts only resident metadata</td><td class="guide-kind">Our reading</td><td>Full ejection evicts metadata with the document; the formula has no case for it</td><td>Quotas for full-ejection buckets are too small. Set the policy to value ejection in the form to get the formula's upper bound.</td></tr>
+            <tr><td>Key and document sizes are the averages you enter</td><td class="guide-kind">About your setup</td><td>No API gives them reliably</td><td>The quota scales with them; measure a real sample.</td></tr>
+            <tr><td>Index, Search, Eventing, Analytics quotas are entered, not calculated</td><td class="guide-kind">Our default</td><td>They depend on index definitions and document shape</td><td>Size them from the services' own memory use.</td></tr>
+            <tr><td>Buckets spread evenly over the Data nodes</td><td class="guide-kind">About your setup</td><td>vBuckets are distributed across nodes</td><td>A node holding more than its share needs a larger Data quota; rebalance first.</td></tr>
+            <tr><td>"Little memory" means under 5 GiB</td><td class="guide-kind">Our reading</td><td>Where the firm limit itself drops to 80%</td><td>Only the warning threshold moves; the firm-limit error is exact.</td></tr>
+            <tr><td>The 10% check uses the data with replicas</td><td class="guide-kind">Our reading</td><td>The bucket quota also holds the replicas</td><td>Only the warning moves.</td></tr>
+            <tr><td>Full ejection warns under a 20% working set</td><td class="guide-kind">Our default</td><td>A judgment call on when disk reads dominate</td><td>Only the warning moves.</td></tr>
+            <tr><td><code>itemCount</code> counts documents without replicas</td><td class="guide-kind">Our reading</td><td>The documentation shows the field without defining it</td><td>If it included replicas, pasted counts would be too high and quotas oversized.</td></tr>
+            <tr><td>Peak per node for Prometheus range data; smallest Data node's RAM</td><td class="guide-kind">Our default</td><td>Size for the worst case</td><td>Quotas are a little larger than an average would give.</td></tr>
+            <tr><td>Couchstore, not Magma</td><td class="guide-kind">About your setup</td><td>The 10% guidance and the formula are written for it</td><td>Magma buckets can run with much less memory (1% of the dataset); this sizing is conservative for them.</td></tr>
           </tbody>
         </table>
       </div>

@@ -14,7 +14,7 @@ export const DEFAULT_FIELD_TIPS = {
   sensitivity: 'Sets the base margins: the higher the sensitivity, the more headroom above the average and the peak.',
   environment: 'Scales the margins down to 60% in development and 85% in staging; production keeps them in full.',
   replicas: 'Only the total changes: it’s the per-replica value times this.',
-  qos: 'Guaranteed sets the request equal to the limit; Burstable keeps the request at the average plus its margin.'
+  qos: 'Guaranteed sets the request equal to the limit (the Pod also needs equal CPU request and limit); Burstable keeps the request at the average plus its margin.'
 };
 
 /** The tooltips for a page: the defaults with the formatter's `fieldTips` applied, minus the ones set to null. */

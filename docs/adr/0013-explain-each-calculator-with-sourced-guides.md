@@ -34,7 +34,10 @@ Every calculator gets the same three layers of explanation.
    - every warning, when it shows and its basis;
    - how the result compares with the vendor's own sizing guidance or tool, when there is one;
    - what to paste;
-   - all assumptions in one table (assumption, why, what happens if it doesn't hold), with `id="assumptions"`;
+   - all assumptions in one table (assumption, kind, why, what happens if it doesn't hold), with
+     `id="assumptions"`. The kind is one of **Our default** (a value we chose), **Our reading** (how we read
+     documentation that isn't explicit) or **About your setup** (something we take for granted about the user's
+     data or cluster);
    - references.
 
    Pages that use the average/peak model link `/sizing-model/` instead of repeating it.
@@ -63,6 +66,8 @@ formatter test recomputes them. `tests/pages.test.js` checks every guide's label
   don't fit.
 - **One long page for all platforms.** One place to look, but readers come for one platform and the page would
   be mostly irrelevant to them.
+- **One inline label per kind of assumption.** More precise in the text, but three more labels make it noisy
+  again. The kind lives in the table instead, one click away.
 - **Labels at the start of the sentence.** That was the first version. They dominated the text, and readers had
   to look elsewhere for the source.
 

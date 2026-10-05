@@ -238,7 +238,7 @@ margin  = (sensitivity base + workload adjustment) × environment multiplier</co
         </table>
       </div>
       <p>
-        On the Kubernetes calculator these become a 576Mi request and a 960Mi limit once rounded up to its steps;
+        On the Kubernetes calculator these become a 567Mi request and a 952Mi limit once rounded up to a whole Mi;
         another platform would round them its own way.
       </p>
     </section>
@@ -294,16 +294,17 @@ margin  = (sensitivity base + workload adjustment) × environment multiplier</co
 
     <section class="panel guide-section" id="assumptions" aria-labelledby="assumptions-heading">
       <h2 id="assumptions-heading" class="panel__title"><span class="panel__index">08</span> All assumptions in one place</h2>
+      <p class="guide-kind-legend"><strong>Our default</strong>: a value we chose. <strong>Our reading</strong>: how we read documentation that isn't explicit. <strong>About your setup</strong>: something we take for granted about your data or cluster.</p>
       <div class="guide-table-wrap">
         <table class="guide-table">
-          <thead><tr><th scope="col">Assumption</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
+          <thead><tr><th scope="col">Assumption</th><th scope="col">Kind</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
           <tbody>
-            <tr><td>Sensitivity base margins: 15/30/50% on the request, 20/30/40% on the limit</td><td>No vendor publishes a general memory margin; these are round defaults</td><td>Too small and you'll see OOM kills or evictions; too large and memory sits unused. Pick another sensitivity, or adjust the result.</td></tr>
-            <tr><td>Workload adjustments for JVM, worker/batch and cache</td><td>How these runtimes typically use memory beyond what samples show</td><td>If your service doesn't behave like its type, choose Generic.</td></tr>
-            <tr><td>Development keeps 60% of the margins, staging 85%</td><td>An OOM kill costs less outside production</td><td>Choose Production for an environment that must not fail.</td></tr>
-            <tr><td>The samples cover a representative period, busiest times included</td><td>The average and the peak are only as good as the window</td><td>A missed peak gives a limit that's too low.</td></tr>
-            <tr><td>Each sample is one instance's memory</td><td>Every value is per replica, task or process</td><td>A series summed across replicas makes every value too large by the replica count.</td></tr>
-            <tr><td>Average and maximum, not percentiles</td><td>They work with as few as one or two samples</td><td>One outlier spike raises the limit; remove it from the paste if it isn't real.</td></tr>
+            <tr><td>Sensitivity base margins: 15/30/50% on the request, 20/30/40% on the limit</td><td class="guide-kind">Our default</td><td>No vendor publishes a general memory margin; these are round defaults</td><td>Too small and you'll see OOM kills or evictions; too large and memory sits unused. Pick another sensitivity, or adjust the result.</td></tr>
+            <tr><td>Workload adjustments for JVM, worker/batch and cache</td><td class="guide-kind">Our default</td><td>How these runtimes typically use memory beyond what samples show</td><td>If your service doesn't behave like its type, choose Generic.</td></tr>
+            <tr><td>Development keeps 60% of the margins, staging 85%</td><td class="guide-kind">Our default</td><td>An OOM kill costs less outside production</td><td>Choose Production for an environment that must not fail.</td></tr>
+            <tr><td>The samples cover a representative period, busiest times included</td><td class="guide-kind">About your setup</td><td>The average and the peak are only as good as the window</td><td>A missed peak gives a limit that's too low.</td></tr>
+            <tr><td>Each sample is one instance's memory</td><td class="guide-kind">About your setup</td><td>Every value is per replica, task or process</td><td>A series summed across replicas makes every value too large by the replica count.</td></tr>
+            <tr><td>Average and maximum, not percentiles</td><td class="guide-kind">Our default</td><td>They work with as few as one or two samples</td><td>One outlier spike raises the limit; remove it from the paste if it isn't real.</td></tr>
           </tbody>
         </table>
       </div>

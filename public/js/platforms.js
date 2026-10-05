@@ -36,6 +36,7 @@ export const PLATFORM_DEFINITIONS = [
     category: 'containers',
     label: 'Kubernetes',
     path: '/kubernetes/',
+    guide: '/kubernetes/how-it-works/',
     tagline: 'Right-size Pod memory requests and limits from real usage data.'
   },
   {
