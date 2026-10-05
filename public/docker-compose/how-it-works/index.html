@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>How the Docker Compose Memory Limits Calculator Works | MemoryLimit</title>
+<meta name="description" content="How the Docker Compose calculator sets deploy.resources memory limits and reservations: rounding, the reservation rule, swap, every warning and what to paste, with links to the Docker docs." />
+<link rel="canonical" href="https://memorylimit.dev/docker-compose/how-it-works/" />
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="MemoryLimit" />
+<meta property="og:title" content="How the Docker Compose Memory Limits Calculator Works" />
+<meta property="og:description" content="How the Docker Compose calculator sets deploy.resources memory limits and reservations: rounding, the reservation rule, swap, every warning and what to paste, with links to the Docker docs." />
+<meta property="og:url" content="https://memorylimit.dev/docker-compose/how-it-works/" />
+<meta property="og:image" content="https://memorylimit.dev/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="How the Docker Compose Memory Limits Calculator Works" />
+<meta name="twitter:description" content="How the Docker Compose calculator sets deploy.resources memory limits and reservations: rounding, the reservation rule, swap, every warning and what to paste, with links to the Docker docs." />
+<meta name="twitter:image" content="https://memorylimit.dev/og-image.png" />
+<link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/css/styles.css" />
+<script src="/js/theme-init.js"></script>
+</head>
+<body>
+
+<div class="skyline" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="brand" href="/" aria-label="MemoryLimit home">
+      <img class="brand__mark brand__mark--light" src="/brand/memorylimit-mark.svg" alt="" width="37" height="28" />
+      <img class="brand__mark brand__mark--dark" src="/brand/memorylimit-mark-on-dark.svg" alt="" width="37" height="28" />
+      <div><p class="brand__name">MemoryLimit</p><p class="brand__tagline">Memory request/limit sizing</p></div>
+    </a>
+    <!-- platform-nav:start -->
+    <nav class="site-nav" aria-label="Calculators">
+      <details class="site-nav__menu">
+        <summary class="site-nav__toggle">Calculators</summary>
+        <div class="site-nav__panel">
+          <div class="site-nav__group" data-platform-group="containers">
+            <p class="site-nav__group-title">Containers &amp; orchestration</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/kubernetes/" data-platform-link="kubernetes">Kubernetes</a></li>
+              <li><a class="site-nav__link" href="/docker-compose/" data-platform-link="dockerCompose">Docker Compose</a></li>
+              <li><a class="site-nav__link" href="/nomad/" data-platform-link="nomad">HashiCorp Nomad</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="serverless">
+            <p class="site-nav__group-title">Serverless</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/lambda/" data-platform-link="lambda">AWS Lambda</a></li>
+              <li><a class="site-nav__link" href="/cloud-run/" data-platform-link="cloudRun">Google Cloud Run</a></li>
+              <li><a class="site-nav__link" href="/azure-functions/" data-platform-link="azureFunctions">Azure Functions</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="vms">
+            <p class="site-nav__group-title">VMs &amp; bare metal</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/systemd/" data-platform-link="systemd">Systemd / Bare Metal / VM</a></li>
+              <li><a class="site-nav__link" href="/vmware/" data-platform-link="vmware">VMware vSphere</a></li>
+              <li><a class="site-nav__link" href="/proxmox/" data-platform-link="proxmox">Proxmox VE</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="datastores">
+            <p class="site-nav__group-title">Data stores</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/redis/" data-platform-link="redis">Redis maxmemory</a></li>
+              <li><a class="site-nav__link" href="/couchbase/" data-platform-link="couchbase">Couchbase memory quotas</a></li>
+            </ul>
+          </div>
+        </div>
+      </details>
+    </nav>
+    <!-- platform-nav:end -->
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Dark theme">
+      <span class="theme-toggle__icon" aria-hidden="true">◐</span><span class="theme-toggle__label">theme</span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <div class="wrap intro-section">
+    <p class="guide-back"><a href="/docker-compose/">← Docker Compose memory limits calculator</a></p>
+    <h1 class="intro-title">How the Docker Compose calculator works</h1>
+    <p class="intro-text">
+      This page walks through how the <a href="/docker-compose/">Docker Compose calculator</a> turns your usage data
+      into a service's memory limit and reservation. Both start from the <a href="/sizing-model/">shared sizing model</a>;
+      this page covers what happens after that. Statements backed by Docker's documentation or source code end with a
+      <span class="guide-tag guide-tag--doc">Docker docs</span> link to it. Choices the documentation doesn't make for
+      us are explained and marked <span class="guide-tag guide-tag--assumption">Assumption</span>, which links to the
+      table of all of them.
+    </p>
+  </div>
+
+  <div class="wrap guide">
+
+    <nav class="panel guide-toc" aria-labelledby="toc-heading">
+      <h2 id="toc-heading" class="panel__title panel__title--tight">On this page</h2>
+      <ol>
+        <li><a href="#settings">What the two settings do</a></li>
+        <li><a href="#steps">Reservation and limit</a></li>
+        <li><a href="#output">What the calculator writes</a></li>
+        <li><a href="#swap">Swap</a></li>
+        <li><a href="#warnings">Every warning, and why</a></li>
+        <li><a href="#paste">What to paste</a></li>
+        <li><a href="#assumptions">All assumptions in one place</a></li>
+        <li><a href="#references">References</a></li>
+      </ol>
+    </nav>
+
+    <section class="panel guide-section" id="settings" aria-labelledby="settings-heading">
+      <h2 id="settings-heading" class="panel__title"><span class="panel__index">01</span> What the two settings do</h2>
+      <p>
+        The Compose file sets both under <code>deploy.resources</code>: the platform must stop the container from
+        allocating more than the limit, and must guarantee it can allocate at least the reservation.
+        <a class="guide-tag guide-tag--doc" href="https://docs.docker.com/reference/compose-file/deploy/" target="_blank" rel="noopener">Docker docs</a>
+      </p>
+      <ul>
+        <li>
+          <strong>The limit</strong> becomes the container's hard memory limit (<code>--memory</code>).
+          <code>docker compose up</code> applies it, and it takes precedence over a service-level <code>mem_limit</code>.
+          <a class="guide-tag guide-tag--doc" href="https://github.com/docker/compose/blob/main/pkg/compose/create.go" target="_blank" rel="noopener">Docker source</a>
+        </li>
+        <li>
+          <strong>The reservation</strong> becomes <code>--memory-reservation</code>: a soft limit, lower than the
+          limit, that Docker enforces only when it detects contention or low memory on the host.
+          <a class="guide-tag guide-tag--doc" href="https://docs.docker.com/engine/containers/resource_constraints/" target="_blank" rel="noopener">Docker docs</a>
+        </li>
+        <li>
+          <strong>In Swarm</strong>, a service is only placed on a node with that much memory available to reserve, and
+          a node's reservations can't add up to more than its memory.
+          <a class="guide-tag guide-tag--doc" href="https://docs.docker.com/reference/cli/docker/service/create/" target="_blank" rel="noopener">Docker docs</a>
+        </li>
+      </ul>
+      <p>
+        Docker's own advice is to test your application's memory needs before production; it publishes no formula.
+        <a class="guide-tag guide-tag--doc" href="https://docs.docker.com/engine/containers/resource_constraints/" target="_blank" rel="noopener">Docker docs</a>
+        That's what the average and peak you enter stand for.
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="steps" aria-labelledby="steps-heading">
+      <h2 id="steps-heading" class="panel__title"><span class="panel__index">02</span> Reservation and limit</h2>
+      <pre class="yaml-block guide-formula"><code>reservation = average × (1 + request margin)                   rounded up to a whole M
+limit       = max(peak × (1 + limit margin), reservation, 6M)   rounded up to a whole M</code></pre>
+      <p>
+        The margins come from the sensitivity, workload type and environment you choose; the
+        <a href="/sizing-model/">sizing model</a> explains them, and they are assumptions too.
+      </p>
+      <p>
+        Docker rejects a container whose memory limit is below its reservation, or below 6 MiB. So when the peak is so
+        close to the average that the peak-based limit falls below the reservation, the limit is raised to the
+        reservation.
+        <a class="guide-tag guide-tag--doc" href="https://github.com/moby/moby/blob/master/daemon/daemon_unix.go" target="_blank" rel="noopener">Docker source</a>
+      </p>
+
+      <h3 class="guide-subheading">Worked example</h3>
+      <p>Average 410 MiB, peak 630 MiB, generic workload, medium sensitivity, production, 3 replicas:</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-example="410 630 generic medium production 3">
+          <tbody>
+            <tr><th scope="row">reservation</th><td>410 MiB × 1.30 = 533 MiB</td><td data-check="reservation">533M</td></tr>
+            <tr><th scope="row">limit</th><td>630 MiB × 1.30 = 819 MiB, above the reservation</td><td data-check="limit">819M</td></tr>
+            <tr class="guide-table__result"><th scope="row">total reservation</th><td>533M × 3 replicas</td><td data-check="totalReservation">1599M</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>A cache averaging 1000 MiB with a 1020 MiB peak, medium sensitivity, where the reservation decides the limit:</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-example="1000 1020 cache medium production 1">
+          <tbody>
+            <tr><th scope="row">reservation</th><td>1000 MiB × 1.35 = 1350 MiB</td><td data-check="reservation">1350M</td></tr>
+            <tr><th scope="row">limit</th><td>1020 MiB × 1.30 = 1326 MiB, below the reservation</td><td data-check="limit">1350M</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="output" aria-labelledby="output-heading">
+      <h2 id="output-heading" class="panel__title"><span class="panel__index">03</span> What the calculator writes</h2>
+      <pre class="yaml-block"><code>deploy:
+  resources:
+    limits:
+      memory: 819M
+    reservations:
+      memory: 533M</code></pre>
+      <ul>
+        <li>
+          Memory is a byte value with a unit: <code>b</code>, <code>k</code>, <code>m</code> or <code>g</code>, with an
+          optional <code>b</code>.
+          <a class="guide-tag guide-tag--doc" href="https://docs.docker.com/reference/compose-file/extension/" target="_blank" rel="noopener">Docker docs</a>
+          Compose reads it with Docker's RAM parser, which ignores case and counts in powers of 1024, so
+          <code>819M</code> is 819 MiB.
+          <a class="guide-tag guide-tag--doc" href="https://github.com/docker/go-units/blob/master/size.go" target="_blank" rel="noopener">Docker source</a>
+        </li>
+        <li>
+          The same values can go at service level, as <code>mem_limit</code> and <code>mem_reservation</code>. If both
+          forms are set, they must agree.
+          <a class="guide-tag guide-tag--doc" href="https://docs.docker.com/reference/compose-file/services/" target="_blank" rel="noopener">Docker docs</a>
+        </li>
+      </ul>
+    </section>
+
+    <section class="panel guide-section" id="swap" aria-labelledby="swap-heading">
+      <h2 id="swap-heading" class="panel__title"><span class="panel__index">04</span> Swap</h2>
+      <p>
+        If the host has swap and <code>memswap_limit</code> isn't set, a container with a memory limit can use as much swap
+        as that limit, so a 819M limit allows 1638M in total. Setting <code>memswap_limit</code> equal to the limit
+        prevents any swap.
+        <a class="guide-tag guide-tag--doc" href="https://docs.docker.com/engine/containers/resource_constraints/" target="_blank" rel="noopener">Docker docs</a>
+      </p>
+      <p>
+        The calculator leaves swap as Docker sets it: whether a service should swap or fail fast depends on the service,
+        and the note under the result points it out.
+        <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a>
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="warnings" aria-labelledby="warnings-heading">
+      <h2 id="warnings-heading" class="panel__title"><span class="panel__index">05</span> Every warning, and why</h2>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Message about</th><th scope="col">Shown when</th><th scope="col">Basis</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Limit raised to the reservation <span class="guide-level">warning</span></td>
+              <td>The peak-based limit came out below the reservation</td>
+              <td>Docker rejects a limit below the reservation. <a class="guide-tag guide-tag--doc" href="https://github.com/moby/moby/blob/master/daemon/daemon_unix.go" target="_blank" rel="noopener">Docker source</a></td>
+            </tr>
+            <tr>
+              <td>Peak below average <span class="guide-level guide-level--error">error</span></td>
+              <td>The peak you entered is lower than the average</td>
+              <td>Impossible with real samples; it usually means two different series. See the <a href="/sizing-model/#inputs">sizing model</a>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="paste" aria-labelledby="paste-heading">
+      <h2 id="paste-heading" class="panel__title"><span class="panel__index">06</span> What to paste</h2>
+      <pre class="yaml-block"><code>container_memory_working_set_bytes{name=~"myproject-api-[0-9]+"}</code></pre>
+      <ul>
+        <li>
+          This is cAdvisor's working set metric, a gauge in bytes.
+          <a class="guide-tag guide-tag--doc" href="https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md" target="_blank" rel="noopener">cAdvisor docs</a>
+          Its <code>name</code> label is the container's name.
+          <a class="guide-tag guide-tag--doc" href="https://github.com/google/cadvisor/blob/master/lib/metrics/prometheus.go" target="_blank" rel="noopener">cAdvisor source</a>
+        </li>
+        <li>
+          Compose names a service's containers <code>&lt;project&gt;-&lt;service&gt;-&lt;number&gt;</code>, so the regex
+          above matches every replica of the <code>api</code> service in the <code>myproject</code> project.
+          <a class="guide-tag guide-tag--doc" href="https://github.com/docker/compose/blob/main/pkg/compose/service_containers.go" target="_blank" rel="noopener">Docker source</a>
+          A service with its own <code>container_name</code> needs that name instead.
+          <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a>
+        </li>
+        <li>
+          The working set leaves out file cache the kernel can reclaim, so it's closer to what the container really
+          needs than total usage.
+          <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a>
+          A range query over a representative period (a week is a good default) gives the best average and peak.
+        </li>
+      </ul>
+    </section>
+
+    <section class="panel guide-section" id="assumptions" aria-labelledby="assumptions-heading">
+      <h2 id="assumptions-heading" class="panel__title"><span class="panel__index">07</span> All assumptions in one place</h2>
+      <p>Besides the margins of the <a href="/sizing-model/#assumptions">shared sizing model</a>:</p>
+      <p class="guide-kind-legend"><strong>Our default</strong>: a value we chose. <strong>Our reading</strong>: how we read documentation that isn't explicit. <strong>About your setup</strong>: something we take for granted about your data or cluster.</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Assumption</th><th scope="col">Kind</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
+          <tbody>
+            <tr><td>Swap is left as Docker sets it</td><td class="guide-kind">Our default</td><td>Whether to swap or fail fast depends on the service</td><td>On a host with swap, the container can use up to its limit again in swap; set <code>memswap_limit</code> to the limit to prevent it.</td></tr>
+            <tr><td>Containers keep Compose's default names</td><td class="guide-kind">About your setup</td><td>The paste hint filters by <code>&lt;project&gt;-&lt;service&gt;-&lt;number&gt;</code></td><td>With <code>container_name</code> set, the query matches nothing; filter by that name.</td></tr>
+            <tr><td>Size from the working set, not total usage</td><td class="guide-kind">Our default</td><td>Total usage includes reclaimable file cache</td><td>Sizing from total usage gives larger values for services that read many files.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="references" aria-labelledby="references-heading">
+      <h2 id="references-heading" class="panel__title"><span class="panel__index">08</span> References</h2>
+      <ul class="guide-references">
+        <li><a href="https://docs.docker.com/reference/compose-file/deploy/" target="_blank" rel="noopener">Compose Deploy Specification</a> — <code>resources.limits</code> and <code>resources.reservations</code>.</li>
+        <li><a href="https://docs.docker.com/reference/compose-file/services/" target="_blank" rel="noopener">Compose services</a> — <code>mem_limit</code>, <code>mem_reservation</code>, <code>memswap_limit</code>.</li>
+        <li><a href="https://docs.docker.com/reference/compose-file/extension/" target="_blank" rel="noopener">Compose file reference</a> — byte value units.</li>
+        <li><a href="https://docs.docker.com/engine/containers/resource_constraints/" target="_blank" rel="noopener">Resource constraints</a> — <code>--memory</code>, <code>--memory-reservation</code>, swap, and testing before production.</li>
+        <li><a href="https://docs.docker.com/reference/cli/docker/service/create/" target="_blank" rel="noopener"><code>docker service create</code></a> — how Swarm schedules by reservation.</li>
+        <li><a href="https://github.com/docker/compose/blob/main/pkg/compose/create.go" target="_blank" rel="noopener">Compose source: create.go</a> — how <code>deploy.resources</code> and <code>mem_limit</code> become container settings.</li>
+        <li><a href="https://github.com/moby/moby/blob/master/daemon/daemon_unix.go" target="_blank" rel="noopener">Docker Engine source: daemon_unix.go</a> — the 6 MiB minimum and limit ≥ reservation.</li>
+        <li><a href="https://github.com/docker/go-units/blob/master/size.go" target="_blank" rel="noopener">go-units: size.go</a> — how memory values are parsed.</li>
+        <li><a href="https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md" target="_blank" rel="noopener">cAdvisor Prometheus metrics</a> — <code>container_memory_working_set_bytes</code>.</li>
+      </ul>
+      <p class="guide-back"><a href="/docker-compose/">← Back to the Docker Compose calculator</a></p>
+    </section>
+
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div id="ethical-ads-slot" class="ethical-ads-slot"></div>
+    <div class="footer-row">
+      <!-- footer-links:start -->
+      <p class="footer-tagline">Your pasted metrics and results never leave the browser.</p>
+      <nav class="footer-links" aria-label="Project">
+        <a href="/privacy/" class="footer-link">Privacy</a>
+        <a href="/support/" class="footer-link">Support</a>
+        <a href="https://github.com/torrentalle/memorylimit-dev" class="footer-link" target="_blank" rel="noopener">★ Star on GitHub</a>
+        <a href="https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml" class="footer-link" target="_blank" rel="noopener">Report an issue</a>
+      </nav>
+      <!-- footer-links:end -->
+      <div id="donation-slot" class="donation-slot"></div>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="/js/site.js"></script>
+</body>
+</html>
