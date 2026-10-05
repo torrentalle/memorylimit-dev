@@ -92,6 +92,7 @@ export const PLATFORM_DEFINITIONS = [
     category: 'vms',
     label: 'VMware vSphere',
     path: '/vmware/',
+    guide: '/vmware/how-it-works/',
     tagline: 'Size a VM’s memory reservation and limit without ballooning or wasted host capacity.'
   },
   {

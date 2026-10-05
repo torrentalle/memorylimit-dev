@@ -166,13 +166,14 @@ test('VMware vSphere: produces vSphere Client steps and a govc command', async (
   await fillUsage(page, 390, 700);
 
   await expect(page.locator('#snippet-code')).toHaveText(
-    'govc vm.change -vm "<vm-name>" -mem.reservation 512 -mem.limit 1024 -mem.shares normal'
+    'govc vm.change -vm "<vm-name>" -mem.reservation 507 -mem.limit 910 -mem.shares normal'
   );
   await expect(page.locator('#snippet-secondary-note')).toHaveText(
-    'In vSphere Client: Edit Settings → Virtual Hardware → Memory → set Reservation to 512 MB, Limit to 1024 MB, Shares to Normal.'
+    'In vSphere Client: Edit Settings → Virtual Hardware → Memory → set Reservation to 507 MB, Limit to 910 MB, Shares to Normal.'
   );
-  await expect(page.locator('#gauge-track')).toHaveAttribute('aria-label', /reservation 512 MB, limit 1024 MB/);
+  await expect(page.locator('#gauge-track')).toHaveAttribute('aria-label', /reservation 507 MB, limit 910 MB/);
   await expect(page.locator('#stat-row')).toContainText('Normal');
+  await expect(page.locator('.explanation-panel .guide-link a')).toHaveAttribute('href', '/vmware/how-it-works/');
 });
 
 test('HashiCorp Nomad: produces a resources block and the oversubscription command', async ({ page }) => {
