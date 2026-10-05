@@ -121,7 +121,7 @@
           <pre>curl -s -u Administrator:"$CB_PASSWORD" http://localhost:8091/pools/default/buckets</pre>
           <p>Nodes, node RAM and the service quotas, from the cluster API:</p>
           <pre>curl -s -u Administrator:"$CB_PASSWORD" http://localhost:8091/pools/default</pre>
-          <p>Or document counts as Prometheus metrics, from a node's <code>/metrics</code> endpoint (or a Prometheus <code>kv_curr_items</code> query, as text or API JSON):</p>
+          <p>Or document counts as Prometheus metrics, from every Data node's <code>/metrics</code> endpoint — each node counts only its own active items, so paste them all and they're added up — or from a Prometheus <code>kv_curr_items</code> query, as text or API JSON:</p>
           <pre>curl -s -u Administrator:"$CB_PASSWORD" http://localhost:8091/metrics | grep -E '^kv_(curr_items|ep_cache_size)'</pre>
           <p>Document and key sizes aren't in any of them; average a sample of your documents.</p>
         </details>

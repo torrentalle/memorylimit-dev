@@ -346,6 +346,12 @@ test('Couchbase: a Prometheus paste sets the document count and keeps the sizes 
   await expect(page.locator('#metrics-feedback')).toContainText('Prometheus: 1 bucket');
   await expect(field(page, 'Documents')).toHaveValue('500000');
   await expect(field(page, 'Average document size')).toHaveValue('2048');
+
+  // Two nodes' own /metrics (no instance label): the identical lines are two nodes, so they're added up.
+  await page.getByLabel('Prometheus metrics or Couchbase REST output').fill('kv_curr_items{bucket="default"} 300000\nkv_curr_items{bucket="default"} 300000');
+  await expect(field(page, 'Documents')).toHaveValue('600000');
+  await expect(page.locator('#metrics-feedback')).toContainText('600,000 documents from 2 nodes’ /metrics');
+  await expect(page.locator('#metrics-feedback')).toContainText('paste every Data node’s output');
 });
 
 test('Couchbase: a paste with no bucket to size keeps the buckets, and a missing document count is called out', async ({ page }) => {
