@@ -169,6 +169,14 @@ test('Systemd: produces a MemoryHigh / MemoryMax drop-in with high/max gauge mar
   await expect(page.locator('#stat-row')).toContainText('Expected usage');
 });
 
+test('Systemd: the MemoryMax ratio under Advanced moves MemoryMax', async ({ page }) => {
+  await page.goto('/systemd/');
+  await fillUsage(page, 295, 390);
+  await page.locator('#advanced-settings summary').click();
+  await field(page, 'MemoryMax ratio').fill('1.4');
+  await expect(page.locator('#snippet-code')).toHaveText('[Service]\nMemoryHigh=507M\nMemoryMax=710M');
+});
+
 test('VMware vSphere: produces vSphere Client steps and a govc command', async ({ page }) => {
   await page.goto('/vmware/');
   await expect(currentNavLink(page)).toHaveText('VMware vSphere');

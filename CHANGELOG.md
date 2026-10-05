@@ -27,7 +27,7 @@ so entries are grouped under `Unreleased` until a release is tagged.
 - Azure Functions defaults to Microsoft's 2,048 MB instance size and shows CPU per size (#22, #27).
 - Cloud Run applies Google's concurrency formula (#21, #29).
 - vSphere follows VMware's advice: configured memory as the cap, no limit (#24, #30).
-- systemd sets `MemoryMax` to 1.25 × `MemoryHigh`, with the references behind the ratio (#23, #31).
+- systemd sets `MemoryMax` to 1.25 × `MemoryHigh`, with the references behind the ratio (#23, #31); the ratio can be changed under Advanced.
 - End-to-end tests moved from `e2e/` to `tests/e2e/`.
 
 ### Fixed
