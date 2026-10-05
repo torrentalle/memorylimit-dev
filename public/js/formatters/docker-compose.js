@@ -13,7 +13,7 @@
  * The method, sources and assumptions are on /docker-compose/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { marginTip, percent, pluralize } from './shared.js';
+import { marginTip, mib, percent, pluralize } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
@@ -47,8 +47,6 @@ export function generateYaml(reservation, limit) {
 export function serviceLevelSnippet(reservation, limit) {
   return [`mem_limit: ${limit}M`, `mem_reservation: ${reservation}M`].join('\n');
 }
-
-const mib = (value) => `${Number(value.toFixed(1))} MiB`;
 
 function explainSteps(raw, reservation, limit, totalReservation, raisedTo) {
   const fromPeak = `${mib(raw.peakMiB)} peak + ${percent(raw.limitMarginPct)} = ${mib(raw.limitMiB)}`;

@@ -12,7 +12,7 @@
  * The method, sources and assumptions are on /proxmox/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { marginTip, percent } from './shared.js';
+import { marginTip, mib, percent } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
@@ -43,8 +43,6 @@ export function uiInstructions(memory, balloon) {
     `Minimum memory (MiB): ${balloon}, Ballooning Device: on.`
   );
 }
-
-const mib = (value) => `${Number(value.toFixed(1))} MiB`;
 
 function explainSteps(raw, balloon, memory, raisedTo) {
   const fromPeak = `${mib(raw.peakMiB)} peak + ${percent(raw.limitMarginPct)} = ${mib(raw.limitMiB)}`;

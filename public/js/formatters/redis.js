@@ -14,7 +14,7 @@
  * The method, sources and assumptions are on /redis/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { marginTip, percent } from './shared.js';
+import { marginTip, mib, percent } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
@@ -46,8 +46,6 @@ export function runtimeCommand(maxmemory) {
     `redis-cli CONFIG SET maxmemory-policy ${EVICTION_POLICY} && redis-cli CONFIG REWRITE`
   );
 }
-
-const mib = (value) => `${Number(value.toFixed(1))} MiB`;
 
 function explainSteps(raw, maxmemory, provision, fromAverage, factor) {
   return [
