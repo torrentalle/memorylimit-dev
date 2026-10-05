@@ -187,6 +187,14 @@
             <label class="field-label" for="limit-margin-input">Limit margin <span class="field-unit">%</span></label>
             <input id="limit-margin-input" class="field-input" type="number" min="0" max="200" step="any" inputmode="decimal" placeholder="from profile" data-unit="percent" />
           </div>
+          <div class="field">
+            <label class="field-label" for="min-instance-select">Minimum instance size</label>
+            <select id="min-instance-select" class="field-input" data-formatter-option="minInstanceMB">
+              <option value="512">512 MB</option>
+              <option value="2048" selected>2,048 MB — Microsoft’s suggestion</option>
+              <option value="4096">4,096 MB</option>
+            </select>
+          </div>
         </div>
         <button class="copy-btn advanced__reset" type="button" data-advanced-reset>Reset to defaults</button>
       </details>
