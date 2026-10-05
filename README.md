@@ -131,8 +131,8 @@ public/                     deployed as-is
   _redirects _headers robots.txt sitemap.xml og-image.png
   favicon.ico favicon.svg apple-touch-icon.png           (generated)
 docs/adr/                   Architecture Decision Records
-tests/                      unit + page-structure tests (node:test)
-e2e/                        Playwright smoke tests + CSP enforcement
+tests/                     unit + page-structure tests (node:test)
+  e2e/                      Playwright smoke tests + CSP enforcement
 scripts/                    sync-pages.js, generate-sitemap.js, generate-og-image.js (+ og-image-stamp.js),
                             generate-brand.js (+ brand/logo.js, the logo's geometry)
 og-image-source.html        template rendered to public/og-image.png
@@ -241,7 +241,7 @@ these third-party hosts:
 can never be inline or use `eval`, and the site can't be framed (`frame-ancestors 'none'`).
 
 The host applies these headers at deploy time. `serve`, used locally and in CI, ignores them, so
-`e2e/csp.spec.js` injects the policy into every HTML response instead and fails on any violation. It
+`tests/e2e/csp.spec.js` injects the policy into every HTML response instead and fails on any violation. It
 covers every page, plus a run with both third parties switched on and stubbed to behave like the real
 scripts. `tests/headers.test.js` pins the policy itself. If you add a third party, add its hosts to both
 files. To check the live site, run `curl -sI https://memorylimit.dev/ | grep -i content-security`.

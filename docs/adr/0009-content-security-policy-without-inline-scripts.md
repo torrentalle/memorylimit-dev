@@ -47,6 +47,6 @@ XSS, and the pages originally had inline scripts: the theme bootstrap and each p
 - An injected inline script is refused by the browser, even if output escaping ever fails.
 - New third parties need their hosts added to `_headers` and to `tests/headers.test.js`, or they are blocked.
 - The policy is only served by Cloudflare Pages ([ADR 0007](0007-host-on-cloudflare-pages.md)), so
-  `e2e/csp.spec.js` injects it into every HTML response in tests. It fails on any `securitypolicyviolation`,
+  `tests/e2e/csp.spec.js` injects it into every HTML response in tests. It fails on any `securitypolicyviolation`,
   on every page and with both third parties switched on (stubbed to behave like the real scripts).
 - `'unsafe-inline'` in `style-src` stays until EthicalAds supports nonces, or the ad integration changes.

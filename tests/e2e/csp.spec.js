@@ -2,8 +2,8 @@
 // `serve` (the local/CI web server) ignores _headers, so the policy is added
 // to every HTML response here; any violation fails the test.
 import { test, expect } from './fixtures.js';
-import { sitewideCsp } from '../tests/helpers/headers.js';
-import { PLATFORM_DEFINITIONS, getGuidePages, SIZING_MODEL_GUIDE } from '../public/js/platforms.js';
+import { sitewideCsp } from '../helpers/headers.js';
+import { PLATFORM_DEFINITIONS, getGuidePages, SIZING_MODEL_GUIDE } from '../../public/js/platforms.js';
 
 // upgrade-insecure-requests would rewrite the http://localhost test server's
 // own asset URLs to https; it only matters on the real (https) origin.
