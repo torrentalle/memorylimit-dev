@@ -285,6 +285,17 @@ export function initCalculator({ platformId, formatter }) {
     return options;
   }
 
+  // A field with data-show-when="option=value" only shows while that option's control has that value
+  // (Kubernetes' VPA settings only matter with the VPA-style request basis).
+  const conditionalFields = [...document.querySelectorAll('[data-show-when]')].map((field) => {
+    const [option, value] = field.dataset.showWhen.split('=');
+    return { field, control: document.querySelector(`[data-formatter-option="${option}"]`), value };
+  });
+
+  function refreshConditionalFields() {
+    for (const { field, control, value } of conditionalFields) field.hidden = control?.value !== value;
+  }
+
   // An empty margin field uses the profile's margin, so its placeholder shows that margin.
   function showProfileMargins(profileRequestMargin, profileLimitMargin) {
     const asPercent = (fraction) => `${Number((fraction * 100).toFixed(2))} from profile`;
@@ -308,6 +319,7 @@ export function initCalculator({ platformId, formatter }) {
     const peakMiB = readPositiveNumber(el.peak);
 
     const profile = readProfile();
+    refreshConditionalFields();
 
     if (averageMiB === null || peakMiB === null) {
       // The profile's margins don't depend on the usage, so the placeholders can show them already.

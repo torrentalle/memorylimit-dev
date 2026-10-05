@@ -154,3 +154,17 @@ test('VPA-style request with Guaranteed QoS covers the larger of the VPA request
   assert.equal(result.limit, Math.ceil(1000 * 1.2));
   assert.equal(result.request, result.limit);
 });
+
+test('VPA-style takes the cluster’s own recommender margin and minimum', () => {
+  const result = kubernetes.format(raw({ averageMiB: 410, peakMiB: 630 }), { requestBasis: 'vpa', vpaMargin: 0.2, vpaMinMiB: 1000 });
+  assert.equal(result.request, 1000);
+  assert.equal(result.explanationSteps[0].text, '630 MiB peak + VPA’s 20% = 756 MiB, raised to VPA’s 1000 MiB → 1000Mi');
+  assert.match(result.note, /your VPA settings: 20% above the target and at least 1000 MiB per Pod/);
+});
+
+test('the overcommit warning moves with its ratio', () => {
+  // 100 MiB average, 630 MiB peak: request 130Mi, limit 819Mi, 6.3×
+  const input = raw({ averageMiB: 100, peakMiB: 630 });
+  assert.ok(kubernetes.format(input).warnings.some((w) => w.code === 'overcommit-risk'));
+  assert.ok(!kubernetes.format(input, { overcommitRatio: 8 }).warnings.some((w) => w.code === 'overcommit-risk'));
+});
