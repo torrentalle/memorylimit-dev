@@ -101,7 +101,7 @@ platform's rules:
 | Google Cloud Run | `--memory` | Peak-based, rounded up to a whole Mi, kept within 128 Mi–32 Gi, with the minimum vCPU Cloud Run requires above 4 GiB (the default 1 vCPU below). Applies Google's own formula, standing memory + memory per request × concurrency, when you give the idle memory and a planned concurrency. Full method on [/cloud-run/how-it-works/](public/cloud-run/how-it-works/index.html). |
 | Azure Functions | Instance size | Peak-based, rounded up to the next Flex Consumption size (2048 or 4096 MB; 512 exists but isn't chosen); above 4096 MB it switches to the smallest Elastic Premium SKU (EP1–EP3) that fits. The legacy Consumption plan is fixed at 1.5 GB and isn't sized. Never below Microsoft's 2,048 MB default for most apps (512 MB is left as a manual choice). Shows the CPU cores of the size. Full method on [/azure-functions/how-it-works/](public/azure-functions/how-it-works/index.html). |
 | systemd | `MemoryHigh` < `MemoryMax` | `MemoryHigh` (throttle, systemd's main control) sits just above the observed peak, rounded up to a whole M, so normal peaks never throttle. `MemoryMax` (OOM-kill, the last line of defense) is 1.25× `MemoryHigh` (our choice, at the low end of the 20–30% gap guides suggest). Needs cgroup v2, the only hierarchy since systemd 258. Also gives the `systemctl set-property` command. Full method on [/systemd/how-it-works/](public/systemd/how-it-works/index.html). |
-| VMware vSphere | memory, reservation, no limit | Follows VMware's advice: the VM's configured memory (peak-based) is the cap and the limit is left unlimited (`-mem.limit -1`); the reservation is average-based. Both round up to a whole MB; memory is raised to the reservation if needed (a reservation can't exceed configured memory). Shares stay Normal. vSphere Client steps plus a `govc vm.change -m … -mem.reservation … -mem.limit -1` command. Full method on [/vmware/how-it-works/](public/vmware/how-it-works/index.html). |
+| VMware vSphere | memory, reservation, no limit | Follows VMware's advice: the VM's configured memory (peak-based) is the cap and the limit is left unlimited (`-mem.limit -1`); the reservation is average-based. The memory rounds up to a multiple of 4 MB, the only sizes vSphere accepts, and the reservation to a whole MB; memory is raised to the reservation if needed (a reservation can't exceed configured memory). Shares stay Normal. vSphere Client steps plus a `govc vm.change -m … -mem.reservation … -mem.limit -1` command. Full method on [/vmware/how-it-works/](public/vmware/how-it-works/index.html). |
 | Proxmox VE | `balloon` ≤ `memory` | Minimum memory (average-based) and memory (peak-based) round up to a whole MiB; memory is raised to the minimum when needed (Proxmox refuses a larger balloon) and is at least 16 MiB. `qm set` command plus web UI steps. Full method on [/proxmox/how-it-works/](public/proxmox/how-it-works/index.html). |
 | Redis | `maxmemory` | Peak `used_memory` + margin, rounded up to a whole mb, with `allkeys-lru`. Recommends 2× `maxmemory` for the host or container, the worst case Redis documents during RDB saves and AOF rewrites (which replication also triggers unless diskless). Full method on [/redis/how-it-works/](public/redis/how-it-works/index.html). |
 | Couchbase | Data, Index, Search, Eventing, Analytics quotas per node; one quota per bucket | Sized from the dataset, not from usage samples: per bucket, Couchbase's sizing formula, (resident metadata + working set) × 1.25 overhead ÷ 0.85 high-water mark, spread over the Data nodes and rounded up to a whole MiB per node, since bucket quotas, like `--bucket-ramsize`, are per node. The Data quota per node is the bucket quotas added up. Warns above Couchbase's recommended 90% of node RAM (80% under 5 GiB) and errors above its firm limit, max(RAM − 1 GiB, 80% × RAM); also warns when a bucket quota is under 10% of its dataset, and when a full-ejection bucket keeps under 20% in RAM (reads and existence checks go to disk). `couchbase-cli` commands plus the REST equivalent. Paste mode reads Prometheus `kv_curr_items` (text or API JSON), `/pools/default/buckets` and `/pools/default` to fill in buckets, nodes and quotas. The full method, sources and assumptions are on [/couchbase/how-it-works/](public/couchbase/how-it-works/index.html); see also [ADR 0012](docs/adr/0012-couchbase-sizing-from-buckets-and-service-quotas.md). |
@@ -198,8 +198,8 @@ Three plain objects, each in its own module:
 
 Each element renders only when it is switched on **and** configured. The shipped placeholders
 (`REPLACE_WITH_…`) render nothing and load no third-party scripts. Configured or not, `public/js/env.js`
-also keeps both silent everywhere except the production host itself, so a preview or local run never
-pollutes real analytics.
+also keeps the analytics beacon silent everywhere except the production host itself, so a preview or local
+run never pollutes real analytics. The donation link is a plain link and loads nothing.
 
 ## Adding a platform
 
@@ -267,8 +267,8 @@ these third-party hosts:
 
 The host applies these headers at deploy time. `serve`, used locally and in CI, ignores them, so
 `tests/e2e/csp.spec.js` injects the policy into every HTML response instead and fails on any violation. It
-covers every page, plus a run with both third parties switched on and stubbed to behave like the real
-scripts. `tests/headers.test.js` pins the policy itself. If you add a third party, add its hosts to both
+covers every page, plus a run with the analytics beacon switched on and stubbed to behave like the real
+script. `tests/headers.test.js` pins the policy itself. If you add a third party, add its hosts to both
 files. To check the live site, run `curl -sI https://memorylimit.dev/ | grep -i content-security`.
 
 ## License

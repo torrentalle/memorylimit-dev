@@ -38,7 +38,7 @@ test('maxmemory never drops below the average-based figure for steady caches, an
 test('explains the derivation in two short steps with the real numbers', () => {
   assert.deepEqual(redis.format(raw({ averageMiB: 410, peakMiB: 630 })).explanationSteps, [
     { label: 'maxmemory', text: '630 MiB peak used_memory + 30% = 819 MiB → 819mb' },
-    { label: 'Memory to provision', text: '2 × 819 MB for persistence forks = 1638 MB' }
+    { label: 'Memory to provision', text: '2 × 819 MiB for persistence forks = 1638 MiB' }
   ]);
 });
 
@@ -60,7 +60,7 @@ test('every number in the guide’s examples is what the formatter gives', () =>
   for (const [, example, body] of tables) {
     const [averageMiB, peakMiB, workloadType, sensitivity, environment] = example.split(' ');
     const result = redis.format(calculateRawSizing({ averageMiB: Number(averageMiB), peakMiB: Number(peakMiB), workloadType, sensitivity, environment }));
-    const expected = { maxmemory: `${result.maxmemory}mb`, provision: `${result.provision} MB` };
+    const expected = { maxmemory: `${result.maxmemory}mb`, provision: `${result.provision} MiB` };
     const checks = [...body.matchAll(/data-check="(\w+)">([^<]+)</g)];
     assert.ok(checks.length >= 2, example);
     for (const [, key, text] of checks) assert.equal(text, expected[key], `${example} ${key}`);
@@ -76,11 +76,11 @@ test('the guide cites the Redis documentation', () => {
   assert.ok(guide.includes('href="/sizing-model/"'));
 });
 
-test('the memory to provision follows the provisioning factor, rounded up to a whole MB', () => {
-  // maxmemory 650mb; 1.25 × 650 = 812.5 → 813 MB
+test('the memory to provision follows the provisioning factor, rounded up to a whole MiB', () => {
+  // maxmemory 650mb; 1.25 × 650 = 812.5 → 813 MiB
   const result = redis.format(raw(), { provisionFactor: 1.25 });
   assert.equal(result.maxmemory, 650);
   assert.equal(result.provision, 813);
-  assert.equal(result.explanationSteps[1].text, '1.25 × 650 MB, your provisioning factor = 812.5 MB → 813 MB');
+  assert.equal(result.explanationSteps[1].text, '1.25 × 650 MiB, your provisioning factor = 812.5 MiB → 813 MiB');
   assert.throws(() => redis.format(raw(), { provisionFactor: 0.5 }), RangeError);
 });
