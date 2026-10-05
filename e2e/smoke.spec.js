@@ -137,9 +137,12 @@ test('AWS Lambda: recommends a single peak-based MemorySize and hides replicas',
   await page.goto('/lambda/');
   await expect(field(page, 'Replica count')).toBeHidden();
   await fillUsage(page, 450, 630);
-  await expect(page.locator('#stat-row')).toContainText('819 MB');
-  await expect(page.locator('#snippet-code')).toContainText('--memory-size 819');
+  // 630 MiB × 1.30 = 819 MiB = 858.8 MB: Lambda's MB are decimal.
+  await expect(page.locator('#stat-row')).toContainText('859 MB');
+  await expect(page.locator('#stat-row')).toContainText('≈ 0.49 vCPU');
+  await expect(page.locator('#snippet-code')).toContainText('--function-name <function> --memory-size 859');
   await expect(page.locator('#explanation-note')).toBeVisible();
+  await expect(page.locator('.explanation-panel .guide-link a')).toHaveAttribute('href', '/lambda/how-it-works/');
 });
 
 test('Systemd: produces a MemoryHigh / MemoryMax drop-in with high/max gauge markers', async ({ page }) => {
@@ -313,9 +316,7 @@ test('shared fields have tooltips saying how they move the result, and the deriv
   await expect(guide).toHaveAttribute('target', '_blank');
 
   // Lambda is sized from the peak alone: no tooltip on the average, and the replica field is hidden.
-  // Without a guide of its own, it links the shared sizing model.
   await page.goto('/lambda/');
-  await expect(guide).toHaveAttribute('href', '/sizing-model/');
   await expect(page.locator('.hint-tip__btn')).toHaveCount(4);
   await expect(averageInput(page)).not.toHaveAttribute('aria-describedby', /.+/);
   await expect(peakInput(page)).toHaveAccessibleDescription(/MemorySize is this plus the limit margin/);

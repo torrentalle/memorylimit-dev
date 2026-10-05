@@ -60,6 +60,7 @@ export const PLATFORM_DEFINITIONS = [
     category: 'serverless',
     label: 'AWS Lambda',
     path: '/lambda/',
+    guide: '/lambda/how-it-works/',
     tagline: 'Find the MemorySize that balances cost per invocation against duration.'
   },
   {
