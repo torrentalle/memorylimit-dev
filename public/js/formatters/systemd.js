@@ -7,7 +7,8 @@
  *   MemoryHigh — just above the observed peak (peak + limit margin). Normal
  *                peaks run unthrottled; throttling and aggressive reclaim
  *                only start when usage grows past anything seen so far.
- *   MemoryMax  — 1.2× MemoryHigh (our choice). The gap is warning time: a
+ *   MemoryMax  — 1.25× MemoryHigh, so MemoryHigh sits 20% below it (our choice,
+ *                at the low end of the 20–30% gap guides suggest). The gap is warning time: a
  *                leak slows the service down before the kernel OOM-kills it.
  * The average-based request has nothing to reserve without a scheduler, so
  * it's reported as "expected usage" only, and MemoryHigh never goes below it.
@@ -23,12 +24,12 @@ import { percent } from './shared.js';
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
   avg: 'Only sets Expected usage, which isn’t enforced, and keeps MemoryHigh from going below it.',
-  peak: 'MemoryHigh is this plus the limit margin, and MemoryMax 1.2× MemoryHigh.'
+  peak: 'MemoryHigh is this plus the limit margin, and MemoryMax 1.25× MemoryHigh.'
 };
 
 // systemd's M is MiB; the drop-in uses whole M.
 export const ROUNDING_STEP_MIB = 1;
-export const MAX_TO_HIGH_RATIO = 1.2;
+export const MAX_TO_HIGH_RATIO = 1.25;
 
 const INSTALL_INSTRUCTIONS = [
   'Save as /etc/systemd/system/<service>.service.d/override.conf, then run:',

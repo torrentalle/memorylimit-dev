@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>How the Systemd Memory Limits Calculator Works | MemoryLimit</title>
-<meta name="description" content="How the systemd calculator sets MemoryHigh and MemoryMax: systemd's own advice, the 1.2× gap, cgroup v2, the drop-in and set-property, and what to paste, with links to the systemd and kernel docs." />
+<meta name="description" content="How the systemd calculator sets MemoryHigh and MemoryMax: systemd's own advice, the 1.25× gap, cgroup v2, the drop-in and set-property, and what to paste, with links to the systemd and kernel docs." />
 <link rel="canonical" href="https://memorylimit.dev/systemd/how-it-works/" />
 <link rel="icon" href="/favicon.ico" sizes="32x32" />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -12,14 +12,14 @@
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="MemoryLimit" />
 <meta property="og:title" content="How the Systemd Memory Limits Calculator Works" />
-<meta property="og:description" content="How the systemd calculator sets MemoryHigh and MemoryMax: systemd's own advice, the 1.2× gap, cgroup v2, the drop-in and set-property, and what to paste, with links to the systemd and kernel docs." />
+<meta property="og:description" content="How the systemd calculator sets MemoryHigh and MemoryMax: systemd's own advice, the 1.25× gap, cgroup v2, the drop-in and set-property, and what to paste, with links to the systemd and kernel docs." />
 <meta property="og:url" content="https://memorylimit.dev/systemd/how-it-works/" />
 <meta property="og:image" content="https://memorylimit.dev/og-image.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="How the Systemd Memory Limits Calculator Works" />
-<meta name="twitter:description" content="How the systemd calculator sets MemoryHigh and MemoryMax: systemd's own advice, the 1.2× gap, cgroup v2, the drop-in and set-property, and what to paste, with links to the systemd and kernel docs." />
+<meta name="twitter:description" content="How the systemd calculator sets MemoryHigh and MemoryMax: systemd's own advice, the 1.25× gap, cgroup v2, the drop-in and set-property, and what to paste, with links to the systemd and kernel docs." />
 <meta name="twitter:image" content="https://memorylimit.dev/og-image.png" />
 <link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="/css/styles.css" />
@@ -143,7 +143,7 @@
       <h2 id="steps-heading" class="panel__title"><span class="panel__index">02</span> MemoryHigh, MemoryMax and expected usage</h2>
       <pre class="yaml-block guide-formula"><code>expected usage = average × (1 + request margin)                     rounded up to a whole M
 MemoryHigh     = max(peak × (1 + limit margin), expected usage)     rounded up to a whole M
-MemoryMax      = 1.2 × MemoryHigh                                    rounded up to a whole M</code></pre>
+MemoryMax      = 1.25 × MemoryHigh                                   rounded up to a whole M</code></pre>
       <p>
         The margins come from the sensitivity, workload type and environment you choose; the
         <a href="/sizing-model/">sizing model</a> explains them, and they are assumptions too. systemd reads the
@@ -158,12 +158,12 @@ MemoryMax      = 1.2 × MemoryHigh                                    rounded up
           <a class="guide-tag guide-tag--assumption" id="assumption-2-ref" href="#assumption-2">Assumption</a>
         </li>
         <li>
-          <code>MemoryMax</code> is 20% above <code>MemoryHigh</code>. The gap is warning time: a leak slows the service down
+          <code>MemoryMax</code> is 25% above <code>MemoryHigh</code>, so <code>MemoryHigh</code> sits 20% below it. The gap is warning time: a leak slows the service down
           before the kernel kills it. Neither systemd nor the cgroup v2 memory controller's own documentation gives a ratio:
           both treat the high limit as the main control and the max as a final safety net, which by default isn't set at all.
           <a class="guide-tag guide-tag--doc" href="https://facebookmicrosites.github.io/cgroup2/docs/memory-controller.html" target="_blank" rel="noopener">cgroup2 docs</a>
-          1.2× is ours; guides outside the official documentation commonly put the high limit 20–30% below the max
-          (1.25–1.43×), so ours is on the tight side.
+          1.25× is ours, at the low end of what guides outside the official documentation commonly suggest: the high limit
+          20–30% below the max (1.25–1.43×).
           <a class="guide-tag guide-tag--assumption" id="assumption-1-ref" href="#assumption-1">Assumption</a>
         </li>
       </ul>
@@ -174,7 +174,7 @@ MemoryMax      = 1.2 × MemoryHigh                                    rounded up
         <table class="guide-table guide-table--numbers" data-example="295 390 generic medium production">
           <tbody>
             <tr><th scope="row">MemoryHigh</th><td>390 MiB × 1.30 = 507 MiB</td><td data-check="memoryHigh">507M</td></tr>
-            <tr><th scope="row">MemoryMax</th><td>1.2 × 507 = 608.4</td><td data-check="memoryMax">609M</td></tr>
+            <tr><th scope="row">MemoryMax</th><td>1.25 × 507 = 633.75</td><td data-check="memoryMax">634M</td></tr>
             <tr><th scope="row">expected usage</th><td>295 MiB × 1.30 = 383.5 MiB</td><td data-check="expectedUsage">384M</td></tr>
           </tbody>
         </table>
@@ -185,7 +185,7 @@ MemoryMax      = 1.2 × MemoryHigh                                    rounded up
           <tbody>
             <tr><th scope="row">expected usage</th><td>1000 MiB × 1.35</td><td data-check="expectedUsage">1350M</td></tr>
             <tr><th scope="row">MemoryHigh</th><td>1020 MiB × 1.30 = 1326 MiB, below expected usage</td><td data-check="memoryHigh">1350M</td></tr>
-            <tr><th scope="row">MemoryMax</th><td>1.2 × 1350</td><td data-check="memoryMax">1620M</td></tr>
+            <tr><th scope="row">MemoryMax</th><td>1.25 × 1350 = 1687.5</td><td data-check="memoryMax">1688M</td></tr>
           </tbody>
         </table>
       </div>
@@ -195,7 +195,7 @@ MemoryMax      = 1.2 × MemoryHigh                                    rounded up
       <h2 id="output-heading" class="panel__title"><span class="panel__index">03</span> What the calculator writes</h2>
       <pre class="yaml-block"><code>[Service]
 MemoryHigh=507M
-MemoryMax=609M</code></pre>
+MemoryMax=634M</code></pre>
       <ul>
         <li>
           Saved as <code>/etc/systemd/system/&lt;service&gt;.service.d/override.conf</code>, it's a drop-in: systemd reads every
@@ -204,7 +204,7 @@ MemoryMax=609M</code></pre>
           Then <code>systemctl daemon-reload &amp;&amp; systemctl restart &lt;service&gt;</code>.
         </li>
         <li>
-          Or, without a restart: <code>systemctl set-property &lt;service&gt;.service MemoryHigh=507M MemoryMax=609M</code> changes
+          Or, without a restart: <code>systemctl set-property &lt;service&gt;.service MemoryHigh=507M MemoryMax=634M</code> changes
           resource settings at runtime and keeps them for future boots.
           <a class="guide-tag guide-tag--doc" href="https://www.freedesktop.org/software/systemd/man/latest/systemctl.html" target="_blank" rel="noopener">systemd docs</a>
         </li>
@@ -266,7 +266,7 @@ MemoryMax=609M</code></pre>
         <table class="guide-table">
           <thead><tr><th scope="col">Assumption</th><th scope="col">Kind</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
           <tbody>
-            <tr id="assumption-1"><td>MemoryMax is 1.2× MemoryHigh <a class="guide-backref" href="#assumption-1-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>Leaves warning time between throttling and an OOM kill; no official source gives a ratio</td><td>A smaller gap kills sooner after throttling starts; a larger one lets a leak take more of the host first.</td></tr>
+            <tr id="assumption-1"><td>MemoryMax is 1.25× MemoryHigh <a class="guide-backref" href="#assumption-1-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>Leaves warning time between throttling and an OOM kill; no official source gives a ratio</td><td>A smaller gap kills sooner after throttling starts; a larger one lets a leak take more of the host first.</td></tr>
             <tr id="assumption-2"><td>MemoryHigh never goes below expected usage <a class="guide-backref" href="#assumption-2-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>A steady service shouldn't be throttled at its normal level</td><td>Only matters when peak and average are close; MemoryHigh is then a little higher.</td></tr>
             <tr id="assumption-3"><td><code>MemoryCurrent</code> is the unit's <code>memory.current</code> <a class="guide-backref" href="#assumption-3-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our reading</td><td>systemd lists the property without describing it</td><td>If it counted less than <code>memory.current</code>, the values would be too small.</td></tr>
           </tbody>
