@@ -210,6 +210,17 @@ test('Google Cloud Run: produces a gcloud command with the memory limit', async 
   await expect(page.locator('.explanation-panel .guide-link a')).toHaveAttribute('href', '/cloud-run/how-it-works/');
 });
 
+test('Google Cloud Run: a planned concurrency rescales the peak with Google’s formula', async ({ page }) => {
+  await page.goto('/cloud-run/');
+  await fillUsage(page, 410, 630);
+  await field(page, 'Idle memory per instance').fill('120');
+  await field(page, 'Max concurrency planned').fill('160');
+  await expect(page.locator('#snippet-code')).toHaveText('gcloud run services update <service> --memory 1482Mi');
+  await expect(page.locator('#explanation .explanation-steps li').first()).toHaveText(
+    'Concurrency: 120 MiB idle + (630 − 120) ÷ 80 × 160 requests = 1140 MiB planned peak'
+  );
+});
+
 test('Azure Functions: produces a Flex Consumption instance size command', async ({ page }) => {
   await page.goto('/azure-functions/');
   await expect(currentNavLink(page)).toHaveText('Azure Functions');
