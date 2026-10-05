@@ -202,6 +202,18 @@
             <label class="field-label" for="limit-margin-input">Limit margin <span class="field-unit">%</span></label>
             <input id="limit-margin-input" class="field-input" type="number" min="0" max="200" step="any" inputmode="decimal" placeholder="from profile" data-unit="percent" />
           </div>
+          <div class="field">
+            <label class="field-label" for="overcommit-ratio-input">Overcommit warning above <span class="field-unit">× request</span></label>
+            <input id="overcommit-ratio-input" class="field-input" type="number" min="1" max="20" step="any" inputmode="decimal" value="4" data-formatter-option="overcommitRatio" />
+          </div>
+          <div class="field" data-show-when="requestBasis=vpa" hidden>
+            <label class="field-label" for="vpa-margin-input">VPA margin <span class="field-unit">%</span></label>
+            <input id="vpa-margin-input" class="field-input" type="number" min="0" max="100" step="any" inputmode="decimal" value="15" data-unit="percent" data-formatter-option="vpaMargin" />
+          </div>
+          <div class="field" data-show-when="requestBasis=vpa" hidden>
+            <label class="field-label" for="vpa-min-input">VPA minimum <span class="field-unit">MiB</span></label>
+            <input id="vpa-min-input" class="field-input" type="number" min="0" max="4096" step="any" inputmode="decimal" value="250" data-formatter-option="vpaMinMiB" />
+          </div>
         </div>
         <button class="copy-btn advanced__reset" type="button" data-advanced-reset>Reset to defaults</button>
       </details>

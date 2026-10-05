@@ -336,6 +336,9 @@ limit   = max(peak × (1 + limit margin), request)</code></pre>
           <tbody>
             <tr><td>Request margin</td><td>from the profile</td><td>0–200%</td><td>MemoryLimit’s default, from sensitivity, workload type and environment (<a href="/sizing-model/#margins">sizing model</a>); sizes the request</td></tr>
             <tr><td>Limit margin</td><td>from the profile</td><td>0–200%</td><td>MemoryLimit’s default, from sensitivity, workload type and environment (<a href="/sizing-model/#margins">sizing model</a>); sizes the limit</td></tr>
+            <tr><td>Overcommit warning above</td><td>4× the request</td><td>1–20×</td><td>Our default, <a href="#assumption-1">assumption 1</a>; only moves the warning</td></tr>
+            <tr><td>VPA margin (VPA-style only)</td><td>15%</td><td>0–100%</td><td>The VPA recommender’s <code>recommendation-margin-fraction</code> default (<a href="https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/flags.md" target="_blank" rel="noopener">flags</a>); set your cluster’s value if it changes it</td></tr>
+            <tr><td>VPA minimum (VPA-style only)</td><td>250 MiB</td><td>0–4,096 MiB</td><td>The VPA recommender’s <code>pod-recommendation-min-memory-mb</code> default (<a href="https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/flags.md" target="_blank" rel="noopener">flags</a>)</td></tr>
           </tbody>
         </table>
       </div>

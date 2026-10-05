@@ -1301,6 +1301,7 @@ body.tips-dismissed .hint-tip__text { visibility: hidden !important; opacity: 0 
 }
 .advanced__reset { margin-top: 10px; }
 .advanced__reset:disabled { opacity: 0.5; cursor: default; }
+.field[hidden] { display: none; }
 
 /* A number outside the field's min/max is used at the nearest end of the range; the border says so. */
 .advanced .field-input:invalid { border-color: var(--warn); }

@@ -16,6 +16,9 @@
  * 250 MiB per Pod — using the observed peak as the target (VPA uses the 90th
  * percentile of daily peaks over 8 days, which the peak is at least as high
  * as). The sensitivity, workload and environment margins don't apply to it.
+ * Both VPA values are recommender flags, so a cluster that changes them can
+ * pass its own (vpaMargin, vpaMinMiB); the overcommit warning's ratio, our
+ * own choice, can be changed too (overcommitRatio).
  *
  * The method, sources and assumptions are on /kubernetes/how-it-works/.
  */
@@ -25,7 +28,10 @@ import { percent, pluralize } from './shared.js';
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
   peak: 'The limit is this plus the limit margin, and never below the request.',
-  requestBasis: 'Average + margin sizes the request for normal use; VPA-style puts it 15% above the peak, as the Vertical Pod Autoscaler would, so the Pod is rarely above its request.'
+  requestBasis: 'Average + margin sizes the request for normal use; VPA-style puts it above the peak (15% by default), as the Vertical Pod Autoscaler would, so the Pod is rarely above its request.',
+  overcommitRatio: 'Only moves a warning, shown when the limit is more than this many times the request; 4× is our own choice.',
+  vpaMargin: 'With VPA-style, the request is the peak plus this; 15% is the VPA recommender’s default (--recommendation-margin-fraction).',
+  vpaMinMiB: 'With VPA-style, the request is never below this; 250 MiB per Pod is the VPA recommender’s default (--pod-recommendation-min-memory-mb).'
 };
 
 // Kubernetes takes any quantity; the manifest uses whole Mi.
@@ -41,13 +47,20 @@ export const VPA_MIN_MIB = 250;
 const BURSTABLE_NOTE =
   'A Pod using more than its request is among the first evicted when its node runs short of memory. ' +
   'Kubernetes’ Vertical Pod Autoscaler sizes the request from daily peaks instead, so it would recommend more.';
-const VPA_NOTE =
-  'VPA-style uses the Vertical Pod Autoscaler’s defaults: 15% above the target and at least 250 MiB per Pod. VPA ' +
-  'itself targets the 90th percentile of daily peaks over 8 days, so starting from the peak this is at least as high ' +
-  'as VPA would set.';
 const GUARANTEED_NOTE =
   'The Pod is only Guaranteed if every container also sets its CPU request equal to its CPU limit; ' +
   'otherwise it stays Burstable.';
+
+function vpaNote(vpaMargin, vpaMinMiB) {
+  const settings =
+    vpaMargin === VPA_MARGIN && vpaMinMiB === VPA_MIN_MIB
+      ? 'the Vertical Pod Autoscaler’s defaults: 15% above the target and at least 250 MiB per Pod'
+      : `your VPA settings: ${percent(vpaMargin)} above the target and at least ${vpaMinMiB} MiB per Pod (VPA’s defaults are 15% and 250 MiB)`;
+  return (
+    `VPA-style uses ${settings}. VPA itself targets the 90th percentile of daily peaks over 8 days, so starting from ` +
+    'the peak this is at least as high as VPA would set.'
+  );
+}
 
 export function generateYaml(request, limit) {
   return [
@@ -61,16 +74,16 @@ export function generateYaml(request, limit) {
 
 const mib = (value) => `${Number(value.toFixed(1))} MiB`;
 
-function requestSource(raw, basis, requestMiB) {
+function requestSource(raw, basis, requestMiB, vpa) {
   if (basis !== 'vpa') return `${mib(raw.averageMiB)} average + ${percent(raw.requestMarginPct)} = ${mib(requestMiB)}`;
-  const vpa = raw.peakMiB * (1 + VPA_MARGIN);
-  return vpa >= VPA_MIN_MIB
-    ? `${mib(raw.peakMiB)} peak + VPA’s ${percent(VPA_MARGIN)} = ${mib(requestMiB)}`
-    : `${mib(raw.peakMiB)} peak + VPA’s ${percent(VPA_MARGIN)} = ${mib(vpa)}, raised to VPA’s ${VPA_MIN_MIB} MiB`;
+  const fromPeak = raw.peakMiB * (1 + vpa.margin);
+  return fromPeak >= vpa.minMiB
+    ? `${mib(raw.peakMiB)} peak + VPA’s ${percent(vpa.margin)} = ${mib(requestMiB)}`
+    : `${mib(raw.peakMiB)} peak + VPA’s ${percent(vpa.margin)} = ${mib(fromPeak)}, raised to VPA’s ${vpa.minMiB} MiB`;
 }
 
-function explainSteps(raw, requestMiB, basis, request, limit, totalRequest, qos, limitFloored) {
-  const fromRequest = requestSource(raw, basis, requestMiB);
+function explainSteps(raw, requestMiB, basis, vpa, request, limit, totalRequest, qos, limitFloored) {
+  const fromRequest = requestSource(raw, basis, requestMiB, vpa);
   const fromPeak = `${mib(raw.peakMiB)} peak + ${percent(raw.limitMarginPct)}`;
   const total = { label: 'Total request', text: `${request}Mi × ${pluralize(raw.replicas, 'replica')} = ${totalRequest}Mi` };
 
@@ -102,11 +115,19 @@ function explainSteps(raw, requestMiB, basis, request, limit, totalRequest, qos,
 
 /**
  * @param {object} raw - result of calculateRawSizing()
- * @param {{ qos?: 'burstable' | 'guaranteed', requestBasis?: 'average' | 'vpa' }} [options]
+ * @param {object} [options]
+ * @param {'burstable' | 'guaranteed'} [options.qos='burstable']
+ * @param {'average' | 'vpa'} [options.requestBasis='average']
+ * @param {number} [options.vpaMargin=VPA_MARGIN] - VPA-style margin above the peak, as a fraction
+ * @param {number} [options.vpaMinMiB=VPA_MIN_MIB] - VPA-style minimum request
+ * @param {number} [options.overcommitRatio=OVERCOMMIT_RATIO] - warn when limit ÷ request is above this
  */
-export function format(raw, { qos = 'burstable', requestBasis = 'average' } = {}) {
-  const requestMiB =
-    requestBasis === 'vpa' ? Math.max(raw.peakMiB * (1 + VPA_MARGIN), VPA_MIN_MIB) : raw.requestMiB;
+export function format(
+  raw,
+  { qos = 'burstable', requestBasis = 'average', vpaMargin = VPA_MARGIN, vpaMinMiB = VPA_MIN_MIB, overcommitRatio = OVERCOMMIT_RATIO } = {}
+) {
+  const vpa = { margin: vpaMargin, minMiB: vpaMinMiB };
+  const requestMiB = requestBasis === 'vpa' ? Math.max(raw.peakMiB * (1 + vpa.margin), vpa.minMiB) : raw.requestMiB;
   let request;
   let limit;
   let limitFloored = false;
@@ -123,7 +144,7 @@ export function format(raw, { qos = 'burstable', requestBasis = 'average' } = {}
   const ratio = limit / request;
 
   const warnings = [...raw.warnings];
-  if (ratio > OVERCOMMIT_RATIO) {
+  if (ratio > overcommitRatio) {
     warnings.push({
       level: 'warning',
       code: 'overcommit-risk',
@@ -134,7 +155,7 @@ export function format(raw, { qos = 'burstable', requestBasis = 'average' } = {}
     });
   }
 
-  const steps = explainSteps(raw, requestMiB, requestBasis, request, limit, totalRequest, qos, limitFloored);
+  const steps = explainSteps(raw, requestMiB, requestBasis, vpa, request, limit, totalRequest, qos, limitFloored);
   return {
     platform: 'kubernetes',
     qos,
@@ -157,6 +178,6 @@ export function format(raw, { qos = 'burstable', requestBasis = 'average' } = {}
     warnings,
     explanationSteps: steps,
     explanation: steps.map((step) => `${step.label}: ${step.text}.`).join(' '),
-    note: qos === 'guaranteed' ? GUARANTEED_NOTE : requestBasis === 'vpa' ? VPA_NOTE : BURSTABLE_NOTE
+    note: qos === 'guaranteed' ? GUARANTEED_NOTE : requestBasis === 'vpa' ? vpaNote(vpa.margin, vpa.minMiB) : BURSTABLE_NOTE
   };
 }
