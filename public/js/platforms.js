@@ -108,6 +108,7 @@ export const PLATFORM_DEFINITIONS = [
     category: 'datastores',
     label: 'Redis maxmemory',
     path: '/redis/',
+    guide: '/redis/how-it-works/',
     tagline: 'Size maxmemory for a Redis cache — and the host memory it needs around it.'
   },
   {

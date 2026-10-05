@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>How the Redis maxmemory Calculator Works | MemoryLimit</title>
+<meta name="description" content="How the Redis calculator sets maxmemory and the memory to provision: the eviction policy, the 2× fork overhead Redis documents, units, CONFIG SET, and what to paste, with links to the Redis docs." />
+<link rel="canonical" href="https://memorylimit.dev/redis/how-it-works/" />
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="MemoryLimit" />
+<meta property="og:title" content="How the Redis maxmemory Calculator Works" />
+<meta property="og:description" content="How the Redis calculator sets maxmemory and the memory to provision: the eviction policy, the 2× fork overhead Redis documents, units, CONFIG SET, and what to paste, with links to the Redis docs." />
+<meta property="og:url" content="https://memorylimit.dev/redis/how-it-works/" />
+<meta property="og:image" content="https://memorylimit.dev/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="How the Redis maxmemory Calculator Works" />
+<meta name="twitter:description" content="How the Redis calculator sets maxmemory and the memory to provision: the eviction policy, the 2× fork overhead Redis documents, units, CONFIG SET, and what to paste, with links to the Redis docs." />
+<meta name="twitter:image" content="https://memorylimit.dev/og-image.png" />
+<link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/css/styles.css" />
+<script src="/js/theme-init.js"></script>
+</head>
+<body>
+
+<div class="skyline" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="brand" href="/" aria-label="MemoryLimit home">
+      <img class="brand__mark brand__mark--light" src="/brand/memorylimit-mark.svg" alt="" width="37" height="28" />
+      <img class="brand__mark brand__mark--dark" src="/brand/memorylimit-mark-on-dark.svg" alt="" width="37" height="28" />
+      <div><p class="brand__name">MemoryLimit</p><p class="brand__tagline">Memory request/limit sizing</p></div>
+    </a>
+    <!-- platform-nav:start -->
+    <nav class="site-nav" aria-label="Calculators">
+      <details class="site-nav__menu">
+        <summary class="site-nav__toggle">Calculators</summary>
+        <div class="site-nav__panel">
+          <div class="site-nav__group" data-platform-group="containers">
+            <p class="site-nav__group-title">Containers &amp; orchestration</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/kubernetes/" data-platform-link="kubernetes">Kubernetes</a></li>
+              <li><a class="site-nav__link" href="/docker-compose/" data-platform-link="dockerCompose">Docker Compose</a></li>
+              <li><a class="site-nav__link" href="/nomad/" data-platform-link="nomad">HashiCorp Nomad</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="serverless">
+            <p class="site-nav__group-title">Serverless</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/lambda/" data-platform-link="lambda">AWS Lambda</a></li>
+              <li><a class="site-nav__link" href="/cloud-run/" data-platform-link="cloudRun">Google Cloud Run</a></li>
+              <li><a class="site-nav__link" href="/azure-functions/" data-platform-link="azureFunctions">Azure Functions</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="vms">
+            <p class="site-nav__group-title">VMs &amp; bare metal</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/systemd/" data-platform-link="systemd">Systemd / Bare Metal / VM</a></li>
+              <li><a class="site-nav__link" href="/vmware/" data-platform-link="vmware">VMware vSphere</a></li>
+              <li><a class="site-nav__link" href="/proxmox/" data-platform-link="proxmox">Proxmox VE</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="datastores">
+            <p class="site-nav__group-title">Data stores</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/redis/" data-platform-link="redis">Redis maxmemory</a></li>
+              <li><a class="site-nav__link" href="/couchbase/" data-platform-link="couchbase">Couchbase memory quotas</a></li>
+            </ul>
+          </div>
+        </div>
+      </details>
+    </nav>
+    <!-- platform-nav:end -->
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Dark theme">
+      <span class="theme-toggle__icon" aria-hidden="true">◐</span><span class="theme-toggle__label">theme</span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <div class="wrap intro-section">
+    <p class="guide-back"><a href="/redis/">← Redis maxmemory calculator</a></p>
+    <h1 class="intro-title">How the Redis calculator works</h1>
+    <p class="intro-text">
+      This page walks through how the <a href="/redis/">Redis calculator</a> turns your <code>used_memory</code> into
+      <code>maxmemory</code> and the memory to give the Redis process. It starts from the
+      <a href="/sizing-model/">shared sizing model</a>; this page covers what happens after that. Statements backed by the
+      Redis documentation end with a <span class="guide-tag guide-tag--doc">Redis docs</span> link to it. Choices the
+      documentation doesn't make for us are explained and marked
+      <span class="guide-tag guide-tag--assumption">Assumption</span>, which links to its row in the table of all of them.
+    </p>
+  </div>
+
+  <div class="wrap guide">
+
+    <nav class="panel guide-toc" aria-labelledby="toc-heading">
+      <h2 id="toc-heading" class="panel__title panel__title--tight">On this page</h2>
+      <ol>
+        <li><a href="#settings">maxmemory and the eviction policy</a></li>
+        <li><a href="#steps">From used_memory to maxmemory</a></li>
+        <li><a href="#provision">Memory for the process</a></li>
+        <li><a href="#output">What the calculator writes</a></li>
+        <li><a href="#warnings">Every warning, and why</a></li>
+        <li><a href="#paste">What to paste</a></li>
+        <li><a href="#assumptions">All assumptions in one place</a></li>
+        <li><a href="#references">References</a></li>
+      </ol>
+    </nav>
+
+    <section class="panel guide-section" id="settings" aria-labelledby="settings-heading">
+      <h2 id="settings-heading" class="panel__title"><span class="panel__index">01</span> maxmemory and the eviction policy</h2>
+      <ul>
+        <li>
+          <code>maxmemory</code> is the most memory Redis uses for data; past it Redis applies the eviction policy. 0 means no
+          limit, the default on 64-bit systems.
+          <a class="guide-tag guide-tag--doc" href="https://redis.io/docs/latest/develop/reference/eviction/" target="_blank" rel="noopener">Redis docs</a>
+        </li>
+        <li>
+          <code>allkeys-lru</code> evicts the least recently used keys, and Redis calls it a good default when you have no reason
+          to prefer another. <code>noeviction</code> instead returns errors for writes at the limit.
+          <a class="guide-tag guide-tag--doc" href="https://redis.io/docs/latest/develop/reference/eviction/" target="_blank" rel="noopener">Redis docs</a>
+          The calculator writes <code>allkeys-lru</code>, taking this Redis to be a cache.
+          <a class="guide-tag guide-tag--assumption" id="assumption-4-ref" href="#assumption-4">Assumption</a>
+        </li>
+        <li>
+          Buffers for replication and the AOF don't count towards <code>maxmemory</code>, so Redis can use somewhat more.
+          <a class="guide-tag guide-tag--doc" href="https://redis.io/docs/latest/develop/reference/eviction/" target="_blank" rel="noopener">Redis docs</a>
+        </li>
+      </ul>
+    </section>
+
+    <section class="panel guide-section" id="steps" aria-labelledby="steps-heading">
+      <h2 id="steps-heading" class="panel__title"><span class="panel__index">02</span> From used_memory to maxmemory</h2>
+      <pre class="yaml-block guide-formula"><code>maxmemory           = max(peak × (1 + limit margin), average × (1 + request margin))   rounded up to a whole mb
+memory to provision = 2 × maxmemory</code></pre>
+      <p>
+        The margins come from the sensitivity, workload type and environment you choose; the <a href="/sizing-model/">sizing
+        model</a> explains them, and they are assumptions too. In Redis's configuration, <code>mb</code> is 1024 × 1024 bytes,
+        so MiB pass through unconverted.
+        <a class="guide-tag guide-tag--doc" href="https://github.com/redis/redis/blob/unstable/redis.conf" target="_blank" rel="noopener">Redis docs</a>
+      </p>
+      <p>
+        The samples are <code>used_memory</code>, which includes Redis's own overhead and not only the data, so a
+        <code>maxmemory</code> sized from them is on the generous side.
+        <a class="guide-tag guide-tag--assumption" id="assumption-3-ref" href="#assumption-3">Assumption</a>
+      </p>
+
+      <h3 class="guide-subheading">Worked example</h3>
+      <p>A cache peaking at 630 MiB of <code>used_memory</code>, medium sensitivity, production:</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-example="410 630 cache medium production">
+          <tbody>
+            <tr><th scope="row">maxmemory</th><td>630 MiB × 1.30 = 819 MiB</td><td data-check="maxmemory">819mb</td></tr>
+            <tr class="guide-table__result"><th scope="row">memory to provision</th><td>2 × 819</td><td data-check="provision">1638 MB</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>A steady cache, averaging 1000 MiB with a 1010 MiB peak at high sensitivity, where the average decides:</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-example="1000 1010 cache high production">
+          <tbody>
+            <tr><th scope="row">maxmemory</th><td>1000 MiB × 1.55 = 1550 MiB, above 1010 × 1.40 = 1414</td><td data-check="maxmemory">1550mb</td></tr>
+            <tr class="guide-table__result"><th scope="row">memory to provision</th><td>2 × 1550</td><td data-check="provision">3100 MB</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="provision" aria-labelledby="provision-heading">
+      <h2 id="provision-heading" class="panel__title"><span class="panel__index">03</span> Memory for the process</h2>
+      <ul>
+        <li>
+          In a write-heavy application, Redis can use up to twice its normal memory while it saves an RDB file or rewrites the
+          AOF, because the forked child shares pages that writes then copy.
+          <a class="guide-tag guide-tag--doc" href="https://redis.io/docs/latest/operate/oss_and_stack/management/admin/" target="_blank" rel="noopener">Redis docs</a>
+        </li>
+        <li>
+          With replication, Redis makes RDB saves even with persistence off, unless replication is diskless.
+          <a class="guide-tag guide-tag--doc" href="https://redis.io/docs/latest/operate/oss_and_stack/management/admin/" target="_blank" rel="noopener">Redis docs</a>
+        </li>
+        <li>
+          Redis also advises setting <code>maxmemory</code> below the free memory, to leave room for its overhead and
+          fragmentation: with 10 GB free, set it to 8 or 9 GB.
+          <a class="guide-tag guide-tag--doc" href="https://redis.io/docs/latest/operate/oss_and_stack/management/admin/" target="_blank" rel="noopener">Redis docs</a>
+        </li>
+      </ul>
+      <p>
+        So the calculator provisions the worst case, 2 × <code>maxmemory</code>.
+        <a class="guide-tag guide-tag--assumption" id="assumption-1-ref" href="#assumption-1">Assumption</a>
+        Without persistence or replication, the note suggests about 1.25 × <code>maxmemory</code>, which is Redis's 10-to-8 ratio
+        turned around.
+        <a class="guide-tag guide-tag--assumption" id="assumption-2-ref" href="#assumption-2">Assumption</a>
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="output" aria-labelledby="output-heading">
+      <h2 id="output-heading" class="panel__title"><span class="panel__index">04</span> What the calculator writes</h2>
+      <pre class="yaml-block"><code>maxmemory 819mb
+maxmemory-policy allkeys-lru</code></pre>
+      <ul>
+        <li>
+          Both lines go in <code>redis.conf</code>, or at runtime with <code>CONFIG SET maxmemory 819mb</code>, as the eviction
+          guide shows.
+          <a class="guide-tag guide-tag--doc" href="https://redis.io/docs/latest/develop/reference/eviction/" target="_blank" rel="noopener">Redis docs</a>
+        </li>
+        <li>
+          <code>CONFIG SET</code> takes effect from the next command, and <code>CONFIG REWRITE</code> writes the running
+          configuration back to the <code>redis.conf</code> the server started with.
+          <a class="guide-tag guide-tag--doc" href="https://redis.io/docs/latest/commands/config-rewrite/" target="_blank" rel="noopener">Redis docs</a>
+        </li>
+      </ul>
+    </section>
+
+    <section class="panel guide-section" id="warnings" aria-labelledby="warnings-heading">
+      <h2 id="warnings-heading" class="panel__title"><span class="panel__index">05</span> Every warning, and why</h2>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Message about</th><th scope="col">Shown when</th><th scope="col">Basis</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Peak below average <span class="guide-level guide-level--error">error</span></td>
+              <td>The peak you entered is lower than the average</td>
+              <td>Impossible with real samples; it usually means two different series. See the <a href="/sizing-model/#inputs">sizing model</a>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="paste" aria-labelledby="paste-heading">
+      <h2 id="paste-heading" class="panel__title"><span class="panel__index">06</span> What to paste</h2>
+      <pre class="yaml-block"><code>redis_memory_used_bytes{instance="redis:6379"}</code></pre>
+      <ul>
+        <li>
+          redis_exporter publishes <code>INFO</code>'s <code>used_memory</code> as <code>redis_memory_used_bytes</code>.
+          <a class="guide-tag guide-tag--doc" href="https://github.com/oliver006/redis_exporter/blob/master/exporter/exporter.go" target="_blank" rel="noopener">redis_exporter source</a>
+        </li>
+        <li>
+          Without it, sample <code>redis-cli INFO memory</code> and paste the <code>used_memory:</code> lines; the calculator reads
+          them as bytes.
+        </li>
+      </ul>
+    </section>
+
+    <section class="panel guide-section" id="assumptions" aria-labelledby="assumptions-heading">
+      <h2 id="assumptions-heading" class="panel__title"><span class="panel__index">07</span> All assumptions in one place</h2>
+      <p>Besides the margins of the <a href="/sizing-model/#assumptions">shared sizing model</a>:</p>
+      <p class="guide-kind-legend"><strong>Our default</strong>: a value we chose. <strong>Our reading</strong>: how we read documentation that isn't explicit. <strong>About your setup</strong>: something we take for granted about your data or cluster.</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Assumption</th><th scope="col">Kind</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
+          <tbody>
+            <tr id="assumption-1"><td>Provision 2 × maxmemory <a class="guide-backref" href="#assumption-1-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>Redis documents up to 2× during RDB saves and AOF rewrites</td><td>A read-mostly Redis copies fewer pages during a fork and needs less.</td></tr>
+            <tr id="assumption-2"><td>About 1.25 × maxmemory without persistence or replication <a class="guide-backref" href="#assumption-2-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our reading</td><td>Redis's example sets maxmemory to 8 of 10 GB free</td><td>With 9 of 10 GB, the ratio is 1.11; more fragmentation needs more.</td></tr>
+            <tr id="assumption-3"><td>maxmemory from peak <code>used_memory</code> <a class="guide-backref" href="#assumption-3-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td><code>used_memory</code> is the figure INFO and exporters give</td><td>It includes overhead beyond the data, so maxmemory comes out a little high.</td></tr>
+            <tr id="assumption-4"><td>This Redis is a cache <a class="guide-backref" href="#assumption-4-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">About your setup</td><td>That's what an eviction policy is for</td><td>For data you can't lose, use <code>noeviction</code> so writes fail at the limit instead.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="references" aria-labelledby="references-heading">
+      <h2 id="references-heading" class="panel__title"><span class="panel__index">08</span> References</h2>
+      <ul class="guide-references">
+        <li><a href="https://redis.io/docs/latest/develop/reference/eviction/" target="_blank" rel="noopener">Key eviction</a> — <code>maxmemory</code>, the policies, and buffers not counted.</li>
+        <li><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/admin/" target="_blank" rel="noopener">Redis administration</a> — up to 2× during saves, setting <code>maxmemory</code> below free memory, replication.</li>
+        <li><a href="https://github.com/redis/redis/blob/unstable/redis.conf" target="_blank" rel="noopener">redis.conf</a> — memory units.</li>
+        <li><a href="https://redis.io/docs/latest/commands/config-set/" target="_blank" rel="noopener"><code>CONFIG SET</code></a> and <a href="https://redis.io/docs/latest/commands/config-rewrite/" target="_blank" rel="noopener"><code>CONFIG REWRITE</code></a>.</li>
+        <li><a href="https://github.com/oliver006/redis_exporter/blob/master/exporter/exporter.go" target="_blank" rel="noopener">redis_exporter source</a> — <code>redis_memory_used_bytes</code>.</li>
+      </ul>
+      <p class="guide-back"><a href="/redis/">← Back to the Redis calculator</a></p>
+    </section>
+
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div id="ethical-ads-slot" class="ethical-ads-slot"></div>
+    <div class="footer-row">
+      <!-- footer-links:start -->
+      <p class="footer-tagline">Your pasted metrics and results never leave the browser.</p>
+      <nav class="footer-links" aria-label="Project">
+        <a href="/privacy/" class="footer-link">Privacy</a>
+        <a href="/support/" class="footer-link">Support</a>
+        <a href="https://github.com/torrentalle/memorylimit-dev" class="footer-link" target="_blank" rel="noopener">★ Star on GitHub</a>
+        <a href="https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml" class="footer-link" target="_blank" rel="noopener">Report an issue</a>
+      </nav>
+      <!-- footer-links:end -->
+      <div id="donation-slot" class="donation-slot"></div>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="/js/site.js"></script>
+</body>
+</html>
