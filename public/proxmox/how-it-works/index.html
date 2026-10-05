@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>How the Proxmox VE Memory Calculator Works | MemoryLimit</title>
+<meta name="description" content="How the Proxmox VE calculator sets a VM's memory and ballooning minimum: rounding, the balloon rule, auto-ballooning, qm and the web UI, and what to paste, with links to the Proxmox docs and source." />
+<link rel="canonical" href="https://memorylimit.dev/proxmox/how-it-works/" />
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="MemoryLimit" />
+<meta property="og:title" content="How the Proxmox VE Memory Calculator Works" />
+<meta property="og:description" content="How the Proxmox VE calculator sets a VM's memory and ballooning minimum: rounding, the balloon rule, auto-ballooning, qm and the web UI, and what to paste, with links to the Proxmox docs and source." />
+<meta property="og:url" content="https://memorylimit.dev/proxmox/how-it-works/" />
+<meta property="og:image" content="https://memorylimit.dev/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="How the Proxmox VE Memory Calculator Works" />
+<meta name="twitter:description" content="How the Proxmox VE calculator sets a VM's memory and ballooning minimum: rounding, the balloon rule, auto-ballooning, qm and the web UI, and what to paste, with links to the Proxmox docs and source." />
+<meta name="twitter:image" content="https://memorylimit.dev/og-image.png" />
+<link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/css/styles.css" />
+<script src="/js/theme-init.js"></script>
+</head>
+<body>
+
+<div class="skyline" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="brand" href="/" aria-label="MemoryLimit home">
+      <img class="brand__mark brand__mark--light" src="/brand/memorylimit-mark.svg" alt="" width="37" height="28" />
+      <img class="brand__mark brand__mark--dark" src="/brand/memorylimit-mark-on-dark.svg" alt="" width="37" height="28" />
+      <div><p class="brand__name">MemoryLimit</p><p class="brand__tagline">Memory request/limit sizing</p></div>
+    </a>
+    <!-- platform-nav:start -->
+    <nav class="site-nav" aria-label="Calculators">
+      <details class="site-nav__menu">
+        <summary class="site-nav__toggle">Calculators</summary>
+        <div class="site-nav__panel">
+          <div class="site-nav__group" data-platform-group="containers">
+            <p class="site-nav__group-title">Containers &amp; orchestration</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/kubernetes/" data-platform-link="kubernetes">Kubernetes</a></li>
+              <li><a class="site-nav__link" href="/docker-compose/" data-platform-link="dockerCompose">Docker Compose</a></li>
+              <li><a class="site-nav__link" href="/nomad/" data-platform-link="nomad">HashiCorp Nomad</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="serverless">
+            <p class="site-nav__group-title">Serverless</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/lambda/" data-platform-link="lambda">AWS Lambda</a></li>
+              <li><a class="site-nav__link" href="/cloud-run/" data-platform-link="cloudRun">Google Cloud Run</a></li>
+              <li><a class="site-nav__link" href="/azure-functions/" data-platform-link="azureFunctions">Azure Functions</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="vms">
+            <p class="site-nav__group-title">VMs &amp; bare metal</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/systemd/" data-platform-link="systemd">Systemd / Bare Metal / VM</a></li>
+              <li><a class="site-nav__link" href="/vmware/" data-platform-link="vmware">VMware vSphere</a></li>
+              <li><a class="site-nav__link" href="/proxmox/" data-platform-link="proxmox">Proxmox VE</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="datastores">
+            <p class="site-nav__group-title">Data stores</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/redis/" data-platform-link="redis">Redis maxmemory</a></li>
+              <li><a class="site-nav__link" href="/couchbase/" data-platform-link="couchbase">Couchbase memory quotas</a></li>
+            </ul>
+          </div>
+        </div>
+      </details>
+    </nav>
+    <!-- platform-nav:end -->
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Dark theme">
+      <span class="theme-toggle__icon" aria-hidden="true">◐</span><span class="theme-toggle__label">theme</span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <div class="wrap intro-section">
+    <p class="guide-back"><a href="/proxmox/">← Proxmox VE memory calculator</a></p>
+    <h1 class="intro-title">How the Proxmox VE calculator works</h1>
+    <p class="intro-text">
+      This page walks through how the <a href="/proxmox/">Proxmox VE calculator</a> turns your usage data into a VM's
+      memory and ballooning minimum. Both start from the <a href="/sizing-model/">shared sizing model</a>; this page covers
+      what happens after that. Statements backed by the Proxmox documentation or source end with a
+      <span class="guide-tag guide-tag--doc">Proxmox docs</span> link to it. Choices the documentation doesn't make for us
+      are explained and marked <span class="guide-tag guide-tag--assumption">Assumption</span>, which links to its row in the
+      table of all of them.
+    </p>
+  </div>
+
+  <div class="wrap guide">
+
+    <nav class="panel guide-toc" aria-labelledby="toc-heading">
+      <h2 id="toc-heading" class="panel__title panel__title--tight">On this page</h2>
+      <ol>
+        <li><a href="#settings">Memory and minimum memory</a></li>
+        <li><a href="#steps">From usage to the two values</a></li>
+        <li><a href="#ballooning">Auto-ballooning</a></li>
+        <li><a href="#output">What the calculator writes</a></li>
+        <li><a href="#warnings">Every warning, and why</a></li>
+        <li><a href="#paste">What to paste</a></li>
+        <li><a href="#assumptions">All assumptions in one place</a></li>
+        <li><a href="#references">References</a></li>
+      </ol>
+    </nav>
+
+    <section class="panel guide-section" id="settings" aria-labelledby="settings-heading">
+      <h2 id="settings-heading" class="panel__title"><span class="panel__index">01</span> Memory and minimum memory</h2>
+      <ul>
+        <li>
+          <strong>Memory</strong> (<code>memory</code>) is the RAM online for the VM, in MiB, and the most it can have when the
+          balloon device is used. It's at least 16 MiB and defaults to 512.
+          <a class="guide-tag guide-tag--doc" href="https://github.com/proxmox/qemu-server/blob/master/src/PVE/QemuServer/Memory.pm" target="_blank" rel="noopener">Proxmox source</a>
+        </li>
+        <li>
+          <strong>Minimum memory</strong> (<code>balloon</code>) is the target RAM for the VM in MiB; 0 turns the balloon driver
+          off.
+          <a class="guide-tag guide-tag--doc" href="https://pve.proxmox.com/pve-docs/qm.1.html" target="_blank" rel="noopener">Proxmox docs</a>
+        </li>
+      </ul>
+      <p>
+        With both equal, the VM gets exactly that much. With the minimum lower, Proxmox always keeps the minimum available and
+        adds memory up to the maximum as the host allows.
+        <a class="guide-tag guide-tag--doc" href="https://pve.proxmox.com/pve-docs/chapter-qm.html" target="_blank" rel="noopener">Proxmox docs</a>
+        That's the shared model's request and limit, so the minimum comes from the average and memory from the peak.
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="steps" aria-labelledby="steps-heading">
+      <h2 id="steps-heading" class="panel__title"><span class="panel__index">02</span> From usage to the two values</h2>
+      <pre class="yaml-block guide-formula"><code>minimum memory = average × (1 + request margin)                      rounded up to a whole MiB
+memory         = max(peak × (1 + limit margin), minimum memory, 16)   rounded up to a whole MiB</code></pre>
+      <p>
+        The margins come from the sensitivity, workload type and environment you choose; the
+        <a href="/sizing-model/">sizing model</a> explains them, and they are assumptions too.
+      </p>
+      <p>
+        Proxmox refuses a balloon value larger than the assigned memory, so when the peak is so close to the average that the
+        peak-based memory falls below the minimum, memory is raised to it.
+        <a class="guide-tag guide-tag--doc" href="https://github.com/proxmox/qemu-server/blob/master/src/PVE/API2/Qemu.pm" target="_blank" rel="noopener">Proxmox source</a>
+      </p>
+
+      <h3 class="guide-subheading">Worked example</h3>
+      <p>Average 410 MiB, peak 630 MiB, generic workload, medium sensitivity, production:</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-example="410 630 generic medium production">
+          <tbody>
+            <tr><th scope="row">minimum memory</th><td>410 MiB × 1.30 = 533 MiB</td><td data-check="balloon">533 MiB</td></tr>
+            <tr><th scope="row">memory</th><td>630 MiB × 1.30 = 819 MiB</td><td data-check="memory">819 MiB</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>A steady cache, averaging 1000 MiB with a 1020 MiB peak, where the minimum decides memory:</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-example="1000 1020 cache medium production">
+          <tbody>
+            <tr><th scope="row">minimum memory</th><td>1000 MiB × 1.35 = 1350 MiB</td><td data-check="balloon">1350 MiB</td></tr>
+            <tr><th scope="row">memory</th><td>1020 MiB × 1.30 = 1326 MiB, below the minimum</td><td data-check="memory">1350 MiB</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="ballooning" aria-labelledby="ballooning-heading">
+      <h2 id="ballooning-heading" class="panel__title"><span class="panel__index">03</span> Auto-ballooning</h2>
+      <ul>
+        <li>
+          While host RAM usage is below a target, 80% by default, Proxmox adds memory to the guest up to its maximum. When the host
+          needs memory back, the guest's balloon driver gives it up, which can make the guest swap or, as a last resort, run its
+          OOM killer.
+          <a class="guide-tag guide-tag--doc" href="https://pve.proxmox.com/pve-docs/chapter-qm.html" target="_blank" rel="noopener">Proxmox docs</a>
+        </li>
+        <li>
+          Linux distributions released after 2010 include the balloon driver. On Windows it has to be installed, can slow the
+          guest down, and isn't recommended for critical systems. Leave about 1 GB of RAM for the host itself.
+          <a class="guide-tag guide-tag--doc" href="https://pve.proxmox.com/pve-docs/chapter-qm.html" target="_blank" rel="noopener">Proxmox docs</a>
+        </li>
+      </ul>
+      <p>
+        So the minimum is what the VM can count on, and the memory above it is only there while the host has room. The calculator
+        assumes ballooning is on; with it off, set both values to the memory result.
+        <a class="guide-tag guide-tag--assumption" id="assumption-1-ref" href="#assumption-1">Assumption</a>
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="output" aria-labelledby="output-heading">
+      <h2 id="output-heading" class="panel__title"><span class="panel__index">04</span> What the calculator writes</h2>
+      <pre class="yaml-block"><code>qm set &lt;vmid&gt; --memory 819 --balloon 533</code></pre>
+      <ul>
+        <li>
+          <code>qm set</code> takes <code>--memory</code> and <code>--balloon</code>, both in MiB.
+          <a class="guide-tag guide-tag--doc" href="https://pve.proxmox.com/pve-docs/qm.1.html" target="_blank" rel="noopener">Proxmox docs</a>
+        </li>
+        <li>
+          In the web UI, the same values are <em>Memory (MiB)</em> and, under Advanced, <em>Minimum memory (MiB)</em> with
+          <em>Ballooning Device</em> on.
+          <a class="guide-tag guide-tag--doc" href="https://github.com/proxmox/pve-manager/blob/master/www/manager6/qemu/MemoryEdit.js" target="_blank" rel="noopener">Proxmox source</a>
+        </li>
+      </ul>
+    </section>
+
+    <section class="panel guide-section" id="warnings" aria-labelledby="warnings-heading">
+      <h2 id="warnings-heading" class="panel__title"><span class="panel__index">05</span> Every warning, and why</h2>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Message about</th><th scope="col">Shown when</th><th scope="col">Basis</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Memory raised to the minimum <span class="guide-level">warning</span></td>
+              <td>The peak-based memory came out below the minimum</td>
+              <td>Proxmox refuses a balloon above memory. <a class="guide-tag guide-tag--doc" href="https://github.com/proxmox/qemu-server/blob/master/src/PVE/API2/Qemu.pm" target="_blank" rel="noopener">Proxmox source</a></td>
+            </tr>
+            <tr>
+              <td>Peak below average <span class="guide-level guide-level--error">error</span></td>
+              <td>The peak you entered is lower than the average</td>
+              <td>Impossible with real samples; it usually means two different series. See the <a href="/sizing-model/#inputs">sizing model</a>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="paste" aria-labelledby="paste-heading">
+      <h2 id="paste-heading" class="panel__title"><span class="panel__index">06</span> What to paste</h2>
+      <pre class="yaml-block"><code>node_memory_MemTotal_bytes{instance="vm1:9100"}
+  - node_memory_MemAvailable_bytes{instance="vm1:9100"}</code></pre>
+      <ul>
+        <li>
+          Measured inside the guest with node_exporter: total memory minus <code>MemAvailable</code>, the kernel's estimate of
+          memory available for new applications without swapping.
+          <a class="guide-tag guide-tag--doc" href="https://docs.kernel.org/filesystems/proc.html" target="_blank" rel="noopener">Kernel docs</a>
+        </li>
+        <li>
+          With ballooning active, the host's view shows what Proxmox lent the VM rather than what it needed, so the calculator
+          asks for the guest's own numbers.
+          <a class="guide-tag guide-tag--assumption" id="assumption-2-ref" href="#assumption-2">Assumption</a>
+        </li>
+      </ul>
+    </section>
+
+    <section class="panel guide-section" id="assumptions" aria-labelledby="assumptions-heading">
+      <h2 id="assumptions-heading" class="panel__title"><span class="panel__index">07</span> All assumptions in one place</h2>
+      <p>Besides the margins of the <a href="/sizing-model/#assumptions">shared sizing model</a>:</p>
+      <p class="guide-kind-legend"><strong>Our default</strong>: a value we chose. <strong>Our reading</strong>: how we read documentation that isn't explicit. <strong>About your setup</strong>: something we take for granted about your data or cluster.</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Assumption</th><th scope="col">Kind</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
+          <tbody>
+            <tr id="assumption-1"><td>Ballooning is on <a class="guide-backref" href="#assumption-1-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">About your setup</td><td>The minimum only means something with the balloon driver</td><td>Without it the VM has the full memory all the time; set both values to the memory result.</td></tr>
+            <tr id="assumption-2"><td>Measure inside the guest <a class="guide-backref" href="#assumption-2-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>The host sees what it lent the VM, not what the VM needed</td><td>Host-side numbers would size the VM to whatever ballooning gave it.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="references" aria-labelledby="references-heading">
+      <h2 id="references-heading" class="panel__title"><span class="panel__index">08</span> References</h2>
+      <ul class="guide-references">
+        <li><a href="https://pve.proxmox.com/pve-docs/chapter-qm.html" target="_blank" rel="noopener">QEMU/KVM virtual machines</a> — memory, minimum memory and auto-ballooning.</li>
+        <li><a href="https://pve.proxmox.com/pve-docs/qm.1.html" target="_blank" rel="noopener"><code>qm</code></a> — <code>--memory</code> and <code>--balloon</code>.</li>
+        <li><a href="https://github.com/proxmox/qemu-server/blob/master/src/PVE/QemuServer/Memory.pm" target="_blank" rel="noopener">qemu-server: Memory.pm</a> — memory in MiB, 16 minimum, 512 default.</li>
+        <li><a href="https://github.com/proxmox/qemu-server/blob/master/src/PVE/API2/Qemu.pm" target="_blank" rel="noopener">qemu-server: Qemu.pm</a> — the balloon may not exceed memory.</li>
+        <li><a href="https://github.com/proxmox/pve-manager/blob/master/www/manager6/qemu/MemoryEdit.js" target="_blank" rel="noopener">pve-manager: MemoryEdit.js</a> — the web UI fields.</li>
+        <li><a href="https://docs.kernel.org/filesystems/proc.html" target="_blank" rel="noopener">The /proc filesystem</a> (kernel) — <code>MemAvailable</code>.</li>
+      </ul>
+      <p class="guide-back"><a href="/proxmox/">← Back to the Proxmox VE calculator</a></p>
+    </section>
+
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div id="ethical-ads-slot" class="ethical-ads-slot"></div>
+    <div class="footer-row">
+      <!-- footer-links:start -->
+      <p class="footer-tagline">Your pasted metrics and results never leave the browser.</p>
+      <nav class="footer-links" aria-label="Project">
+        <a href="/privacy/" class="footer-link">Privacy</a>
+        <a href="/support/" class="footer-link">Support</a>
+        <a href="https://github.com/torrentalle/memorylimit-dev" class="footer-link" target="_blank" rel="noopener">★ Star on GitHub</a>
+        <a href="https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml" class="footer-link" target="_blank" rel="noopener">Report an issue</a>
+      </nav>
+      <!-- footer-links:end -->
+      <div id="donation-slot" class="donation-slot"></div>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="/js/site.js"></script>
+</body>
+</html>
