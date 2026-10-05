@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { parseHeaders, parseCsp } from './helpers/headers.js';
+
+const PUBLIC_DIR = join(import.meta.dirname, '..', 'public');
 
 const rules = parseHeaders();
 const csp = parseCsp(rules['/*']['Content-Security-Policy']);
@@ -36,6 +40,16 @@ test('sets the baseline security headers', () => {
   assert.equal(rules['/*']['X-Content-Type-Options'], 'nosniff');
   assert.equal(rules['/*']['Referrer-Policy'], 'strict-origin-when-cross-origin');
   assert.match(rules['/*']['Permissions-Policy'], /camera=\(\)/);
+});
+
+test('the favicon drops the page CSP, so its inline <style> for light and dark colours applies', () => {
+  assert.ok(Object.hasOwn(rules['/favicon.svg'], '! Content-Security-Policy'));
+  const svgWithStyle = readdirSync(PUBLIC_DIR, { recursive: true })
+    .filter((file) => file.endsWith('.svg'))
+    .filter((file) => readFileSync(join(PUBLIC_DIR, file), 'utf8').includes('<style'))
+    .map((file) => `/${file.replaceAll('\\', '/')}`);
+  // Any other SVG with a <style> would be blocked by style-src 'self' and needs the same rule.
+  assert.deepEqual(svgWithStyle, ['/favicon.svg']);
 });
 
 test('keeps short cache lifetimes for unhashed assets', () => {

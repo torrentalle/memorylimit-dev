@@ -11,7 +11,8 @@ const bucketWith = (overrides) => ({ ...BUCKET, ...overrides });
 
 test('golden: exact commands for a known input', () => {
   // metadata 1M × 92 B × 2 = 175.5 MiB; resident data 1M × 1 KiB × 2 × 20% = 390.6 MiB
-  // (175.5 + 390.6) × 1.25 ÷ 0.85 = 832.5 → 833 MiB; 833 ÷ 3 nodes = 277.7 → 278 MiB per node
+  // (175.5 + 390.6) × 1.25 ÷ 0.85 = 832.5 MiB for the cluster; ÷ 3 nodes = 277.5 → 278 MiB per node,
+  // and --bucket-ramsize, like ramQuota, is per node
   const result = couchbase.format(INPUT);
   assert.equal(
     result.snippet.code,
@@ -19,7 +20,7 @@ test('golden: exact commands for a known input', () => {
       'couchbase-cli setting-cluster -c localhost:8091 -u Administrator -p "$CB_PASSWORD" \\',
       '  --cluster-ramsize 278 \\',
       '  --cluster-index-ramsize 512',
-      'couchbase-cli bucket-edit -c localhost:8091 -u Administrator -p "$CB_PASSWORD" --bucket default --bucket-ramsize 833'
+      'couchbase-cli bucket-edit -c localhost:8091 -u Administrator -p "$CB_PASSWORD" --bucket default --bucket-ramsize 278'
     ].join('\n')
   );
   assert.equal(
@@ -28,7 +29,7 @@ test('golden: exact commands for a known input', () => {
   );
 });
 
-test('bucket quota is exactly the documented formula, rounded up to a whole MiB', () => {
+test('bucket quota is the documented formula spread over the Data nodes, rounded up to a whole MiB per node', () => {
   const [bucket] = sizing().buckets;
   assert.equal(couchbase.METADATA_BYTES, 56);
   assert.equal(couchbase.OVERHEAD, 0.25);
@@ -36,7 +37,16 @@ test('bucket quota is exactly the documented formula, rounded up to a whole MiB'
   assert.ok(Math.abs(bucket.metadataMiB - 175.48) < 0.01);
   assert.ok(Math.abs(bucket.residentDataMiB - 390.63) < 0.01);
   assert.ok(Math.abs(bucket.rawQuotaMiB - 832.5) < 0.1);
-  assert.equal(bucket.quotaMiB, 833);
+  assert.ok(Math.abs(bucket.rawNodeQuotaMiB - 277.5) < 0.1);
+  assert.equal(bucket.quotaMiB, 278);
+});
+
+test('the bucket quotas fit the Data quota on every node, as Couchbase requires', () => {
+  for (const dataNodes of [1, 2, 3, 7]) {
+    const buckets = [bucketWith({ name: 'a' }), bucketWith({ name: 'b', documents: 5000000 }), bucketWith({ name: 'c', documents: 10 })];
+    const result = sizing({ buckets, dataNodes });
+    assert.ok(result.buckets.reduce((sum, b) => sum + b.quotaMiB, 0) <= result.quotas.data, dataNodes);
+  }
 });
 
 
@@ -78,12 +88,13 @@ test('a tiny bucket is raised to the minimum and flagged', () => {
   assert.ok(result.warnings.some((w) => w.code === 'bucket-at-minimum'));
 });
 
-test('the Data quota splits the bucket total across the Data nodes, never below the minimum', () => {
+test('the Data quota is the per-node bucket quotas added up, never below the minimum', () => {
   const buckets = [bucketWith({ name: 'a' }), bucketWith({ name: 'b', documents: 2000000 })];
   const one = sizing({ buckets, dataNodes: 1 });
   const four = sizing({ buckets, dataNodes: 4 });
   assert.equal(one.quotas.data, one.bucketsTotalMiB);
-  assert.equal(four.quotas.data, Math.ceil(four.bucketsTotalMiB / 4));
+  assert.equal(four.quotas.data, four.buckets.reduce((sum, b) => sum + Math.ceil(b.rawQuotaMiB / 4), 0));
+  assert.ok(four.quotas.data < one.quotas.data / 3);
   assert.equal(sizing({ dataNodes: 50 }).quotas.data, couchbase.MIN_QUOTA_MIB.data);
 });
 
@@ -135,7 +146,8 @@ test('quotas above the firm limit are an error, above the recommended share a wa
 });
 
 test('a bucket quota under 10% of its dataset is flagged', () => {
-  const low = sizing({ buckets: [bucketWith({ workingSetPct: 1, eviction: 'full' })] });
+  // On one node the 100 MiB minimum is all the bucket gets; on three it would get 300 MiB, above 10%.
+  const low = sizing({ dataNodes: 1, buckets: [bucketWith({ workingSetPct: 1, eviction: 'full' })] });
   assert.ok(low.warnings.some((w) => w.code === 'bucket-below-dataset-share'));
   assert.ok(!sizing().warnings.some((w) => w.code === 'bucket-below-dataset-share'));
 });
@@ -152,8 +164,8 @@ test('the figures list every quota and end with the per-node total', () => {
 test('the explanation is three short steps with the actual numbers', () => {
   const { explanationSteps, explanation } = couchbase.format(INPUT);
   assert.deepEqual(explanationSteps, [
-    { label: 'Bucket', text: '(metadata + working set in RAM) × 1.25 ÷ 0.85 → default 833 MiB' },
-    { label: 'Data quota', text: '833 MiB ÷ 3 Data nodes = 278 MiB per node' },
+    { label: 'Bucket', text: '(metadata + working set in RAM) × 1.25 ÷ 0.85 ÷ 3 Data nodes → default 278 MiB per node' },
+    { label: 'Data quota', text: "the bucket's 278 MiB → 278 MiB per node" },
     { label: 'All quotas', text: "790 MiB per node, 5% of the node's RAM" }
   ]);
   assert.equal(explanation, explanationSteps.map((s) => `${s.label}: ${s.text}.`).join(' '));
@@ -163,7 +175,13 @@ test('with several buckets the explanation stays three steps', () => {
   const { explanationSteps } = couchbase.format({ ...INPUT, buckets: [BUCKET, bucketWith({ name: 'sessions', documents: 1000 })] });
   assert.equal(explanationSteps.length, 3);
   assert.equal(explanationSteps[0].label, 'Each bucket');
-  assert.match(explanationSteps[0].text, /default 833 MiB, sessions 100 MiB$/);
+  assert.match(explanationSteps[0].text, /default 278 MiB, sessions 100 MiB per node$/);
+  assert.equal(explanationSteps[1].text, "the buckets' 378 MiB together → 378 MiB per node");
+});
+
+test('a Data quota raised to its minimum says so', () => {
+  const { explanationSteps } = couchbase.format({ ...INPUT, dataNodes: 50 });
+  assert.equal(explanationSteps[1].text, "the bucket's 100 MiB, raised to Couchbase's 256 MiB minimum → 256 MiB per node");
 });
 
 test('the note stays short and flags the full-ejection assumption', () => {
@@ -175,7 +193,7 @@ test('the note stays short and flags the full-ejection assumption', () => {
 
 test('the guide page carries the details the note leaves out, with sources and assumptions', () => {
   const guide = readFileSync(join(import.meta.dirname, '..', '..', 'public', 'couchbase', 'how-it-works', 'index.html'), 'utf8');
-  for (const text of ['Query service has no quota', 'bucket-create', 'currently uses', 'for future nodes', 'max(RAM − 1 GiB, 80% × RAM)', '832.50 MiB', '833 MiB', '278 MiB']) {
+  for (const text of ['Query service has no quota', 'bucket-create', 'currently uses', 'for future nodes', 'max(RAM − 1 GiB, 80% × RAM)', '832.50 MiB', '277.50 MiB', '278 MiB', '--bucket-ramsize 278']) {
     assert.ok(guide.includes(text), text);
   }
   for (const doc of ['install/sizing-general.html', 'buckets-memory-and-storage/memory.html', 'change-ejection-policy.html', 'rest-configure-memory.html']) {
@@ -202,9 +220,9 @@ test('rejects invalid input rather than coercing it', () => {
 test('settings replace the sizing constants and the warnings’ thresholds', () => {
   const defaults = sizing();
   assert.deepEqual(defaults.settings, couchbase.DEFAULT_SETTINGS);
-  // (175.5 + 390.6) × 1.10 ÷ 0.90 = 691.9 → 692 MiB
+  // (175.5 + 390.6) × 1.10 ÷ 0.90 = 691.9 MiB for the cluster; ÷ 3 Data nodes = 230.6 → 231 MiB per node
   const custom = sizing({ settings: { overhead: 0.1, highWaterMark: 0.9 } });
-  assert.equal(custom.buckets[0].quotaMiB, 692);
+  assert.equal(custom.buckets[0].quotaMiB, 231);
   const noMetadata = sizing({ settings: { metadataBytes: 0 } });
   assert.ok(noMetadata.buckets[0].metadataMiB < defaults.buckets[0].metadataMiB);
 

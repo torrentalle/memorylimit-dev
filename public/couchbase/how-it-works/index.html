@@ -128,11 +128,12 @@
           whatever memory the operating system has left.
         </li>
         <li>
-          <strong>Bucket quotas, cluster-wide.</strong> Each bucket gets a quota taken out of the Data service's.
-          All bucket quotas together must fit in the Data quota of every Data node combined.
+          <strong>Bucket quotas, also per node.</strong> Each bucket gets a quota taken out of the Data service's on
+          every Data node, so all bucket quotas together must fit in the Data quota. Couchbase's <code>ramQuota</code>
+          and <code>--bucket-ramsize</code> are both MiB per node. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/rest-api/rest-bucket-create.html" target="_blank" rel="noopener">Couchbase docs</a>
         </li>
       </ul>
-      <div class="guide-nesting" role="img" aria-label="Node RAM contains the OS and Query service, and the service quotas; the Data quota, across all Data nodes, contains the bucket quotas.">
+      <div class="guide-nesting" role="img" aria-label="Node RAM contains the OS and Query service, and the service quotas; the Data quota contains the bucket quotas.">
         <div class="guide-nesting__box">
           <p class="guide-nesting__label">Node RAM</p>
           <div class="guide-nesting__row">
@@ -141,7 +142,7 @@
               <p class="guide-nesting__label">Service quotas</p>
               <div class="guide-nesting__row">
                 <div class="guide-nesting__box">
-                  <p class="guide-nesting__label">Data quota (× Data nodes)</p>
+                  <p class="guide-nesting__label">Data quota</p>
                   <div class="guide-nesting__row">
                     <div class="guide-nesting__box guide-nesting__box--leaf"><p class="guide-nesting__label">Bucket A</p></div>
                     <div class="guide-nesting__box guide-nesting__box--leaf"><p class="guide-nesting__label">Bucket B</p></div>
@@ -165,13 +166,15 @@
       <p>
         The bucket quota is Couchbase's own Data service sizing formula, from the
         <a href="https://docs.couchbase.com/server/current/install/sizing-general.html" target="_blank" rel="noopener">Sizing Guidelines</a>,
-        applied to one bucket at a time <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/install/sizing-general.html" target="_blank" rel="noopener">Couchbase docs</a>:
+        applied to one bucket at a time <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/install/sizing-general.html" target="_blank" rel="noopener">Couchbase docs</a>,
+        then spread over the Data nodes, since a bucket's quota is set per node:
       </p>
       <pre class="yaml-block guide-formula"><code>copies    = 1 + replicas
 metadata  = documents × (56 bytes + key length) × copies
 dataset   = documents × document size × copies
 working   = dataset × working set %
-quota     = (metadata + working) × (1 + 25%) ÷ 85%</code></pre>
+need      = (metadata + working) × (1 + 25%) ÷ 85%      the whole cluster
+quota     = need ÷ Data nodes                           per node</code></pre>
       <div class="guide-table-wrap">
         <table class="guide-table">
           <thead><tr><th scope="col">Term</th><th scope="col">Value</th><th scope="col">Where it comes from</th></tr></thead>
@@ -179,7 +182,7 @@ quota     = (metadata + working) × (1 + 25%) ÷ 85%</code></pre>
             <tr><td>Metadata per document</td><td>56 bytes</td><td>Sizing Guidelines (<code>metadata_per_document</code>). Every document's key and metadata take this much plus the key itself. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/install/sizing-general.html" target="_blank" rel="noopener">Couchbase docs</a></td></tr>
             <tr><td>Overhead</td><td>25%</td><td>Sizing Guidelines (<code>overhead_percentage</code>): memory the bucket uses beyond the metadata and working set the formula counts. The guide gives one figure; you can change it, and the other two, under <a href="#adjustable">Values you can change</a>. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/install/sizing-general.html" target="_blank" rel="noopener">Couchbase docs</a></td></tr>
             <tr><td>High-water mark</td><td>85%</td><td>Sizing Guidelines and <a href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Memory</a>: once a bucket's memory use reaches 85% of its quota, Couchbase starts ejecting items. Dividing by 0.85 keeps the working set below that line. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Couchbase docs</a></td></tr>
-            <tr><td>Replicas</td><td>0–3</td><td>Every replica is a full extra copy of the bucket's data and metadata, held in the same cluster-wide quota. <code>bucket-edit</code> accepts 0 to 3. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/cli/cbcli/couchbase-cli-bucket-edit.html" target="_blank" rel="noopener">Couchbase docs</a></td></tr>
+            <tr><td>Replicas</td><td>0–3</td><td>Every replica is a full extra copy of the bucket's data and metadata, held in the same quota. <code>bucket-edit</code> accepts 0 to 3. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/cli/cbcli/couchbase-cli-bucket-edit.html" target="_blank" rel="noopener">Couchbase docs</a></td></tr>
             <tr><td>Working set %</td><td>Your input</td><td>The share of the data you want served from RAM. Higher means fewer disk reads and a bigger quota.</td></tr>
             <tr><td>Key length, document size</td><td>Your input</td><td>Averages you supply from a sample of real documents. Nothing in the metrics or REST APIs gives them reliably, so the calculator never guesses them. <a class="guide-tag guide-tag--assumption" id="assumption-2-ref" href="#assumption-2">Assumption</a></td></tr>
           </tbody>
@@ -194,13 +197,13 @@ quota     = (metadata + working) × (1 + 25%) ÷ 85%</code></pre>
       <h3 class="guide-subheading">Rounding</h3>
       <p>
         Couchbase takes quotas in whole MiB (is in mebibytes), so the result is rounded up to the next whole MiB and no further. A bucket can't have
-        less than 100 MiB, so smaller results are raised to 100 MiB. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/cli/cbcli/couchbase-cli-bucket-edit.html" target="_blank" rel="noopener">Couchbase docs</a>
+        less than 100 MiB per node, so smaller results are raised to 100 MiB. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/cli/cbcli/couchbase-cli-bucket-edit.html" target="_blank" rel="noopener">Couchbase docs</a>
       </p>
 
       <h3 class="guide-subheading">Worked example</h3>
       <p>
         One bucket with 1,000,000 documents, 36-byte keys (a UUID), 1 KiB documents, 1 replica, 20% working set and
-        value ejection:
+        value ejection, on 3 Data nodes:
       </p>
       <div class="guide-table-wrap">
         <table class="guide-table guide-table--numbers">
@@ -211,8 +214,9 @@ quota     = (metadata + working) × (1 + 25%) ÷ 85%</code></pre>
             <tr><th scope="row">working</th><td>1,953.13 MiB × 20%</td><td>390.63 MiB</td></tr>
             <tr><th scope="row">metadata + working</th><td>175.48 + 390.63</td><td>566.10 MiB</td></tr>
             <tr><th scope="row">× (1 + 25%)</th><td>566.10 × 1.25</td><td>707.63 MiB</td></tr>
-            <tr><th scope="row">÷ 85%</th><td>707.63 ÷ 0.85</td><td>832.50 MiB</td></tr>
-            <tr class="guide-table__result"><th scope="row">bucket quota</th><td>rounded up to a whole MiB</td><td>833 MiB</td></tr>
+            <tr><th scope="row">÷ 85%</th><td>707.63 ÷ 0.85, for the whole cluster</td><td>832.50 MiB</td></tr>
+            <tr><th scope="row">÷ Data nodes</th><td>832.50 ÷ 3</td><td>277.50 MiB</td></tr>
+            <tr class="guide-table__result"><th scope="row">bucket quota</th><td>rounded up to a whole MiB, per node</td><td>278 MiB</td></tr>
           </tbody>
         </table>
       </div>
@@ -225,17 +229,19 @@ quota     = (metadata + working) × (1 + 25%) ÷ 85%</code></pre>
 
     <section class="panel guide-section" id="data-quota" aria-labelledby="data-quota-heading">
       <h2 id="data-quota-heading" class="panel__title"><span class="panel__index">03</span> Step 2 — the Data quota per node</h2>
-      <pre class="yaml-block guide-formula"><code>Data quota per node = sum of bucket quotas ÷ Data nodes   (rounded up to a whole MiB, at least 256 MiB)</code></pre>
+      <pre class="yaml-block guide-formula"><code>Data quota per node = sum of bucket quotas   (at least 256 MiB)</code></pre>
       <p>
-        Bucket quotas are cluster-wide while the Data quota is per node, so the bucket total is spread over the
-        Data nodes. The Sizing Guidelines do the same calculation the other way round: number of nodes = cluster
-        RAM quota required ÷ per-node RAM quota. The Data service needs at least 256 MiB. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/rest-api/rest-configure-memory.html" target="_blank" rel="noopener">Couchbase docs</a>
+        Bucket quotas and the Data quota are both per node, and every bucket's quota comes out of the Data quota on
+        each Data node, so the Data quota is the bucket quotas added up; Couchbase refuses a bucket quota that doesn't
+        fit. Step 1 already divided each bucket's need by the Data nodes, the way the Sizing Guidelines do it the other
+        way round: number of nodes = cluster RAM quota required ÷ per-node RAM quota. The Data service needs at least
+        256 MiB. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/rest-api/rest-configure-memory.html" target="_blank" rel="noopener">Couchbase docs</a>
       </p>
       <p>
         This assumes a bucket's data spreads evenly over the Data nodes. Couchbase distributes a bucket's vBuckets
         across them, so after a rebalance that holds closely; a cluster that hasn't been rebalanced may be uneven. <a class="guide-tag guide-tag--assumption" id="assumption-4-ref" href="#assumption-4">Assumption</a>
       </p>
-      <p>Worked example, with 3 Data nodes: 833 MiB ÷ 3 = 277.67 → <strong>278 MiB</strong> per node.</p>
+      <p>Worked example: the one bucket's 278 MiB is the whole Data quota, <strong>278 MiB</strong> per node.</p>
     </section>
 
     <section class="panel guide-section" id="other-services" aria-labelledby="other-services-heading">
@@ -325,8 +331,8 @@ quota     = (metadata + working) × (1 + 25%) ÷ 85%</code></pre>
             <tr><td>Quotas above the firm limit <span class="guide-level guide-level--error">error</span></td><td>The node's quotas total more than max(RAM − 1 GiB, 80% × RAM)</td><td>Couchbase refuses them. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Couchbase docs</a></td></tr>
             <tr><td>Quotas above the recommended share <span class="guide-level">warning</span></td><td>Above 90% of RAM (80% under 5 GiB)</td><td>Couchbase's recommendation. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Couchbase docs</a> The 5 GiB line is ours. <a class="guide-tag guide-tag--assumption" href="#assumption-5">Assumption</a></td></tr>
             <tr><td>Service quota below its minimum <span class="guide-level guide-level--error">error</span></td><td>Index, Search or Eventing under 256 MiB, Analytics under 1024 MiB</td><td>Couchbase's minimums. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/rest-api/rest-configure-memory.html" target="_blank" rel="noopener">Couchbase docs</a></td></tr>
-            <tr><td>Bucket raised to the minimum <span class="guide-level">warning</span></td><td>A bucket's result is under 100 MiB</td><td>The <code>--bucket-ramsize</code> minimum. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/cli/cbcli/couchbase-cli-bucket-edit.html" target="_blank" rel="noopener">Couchbase docs</a></td></tr>
-            <tr><td>Bucket quota under 10% of its dataset <span class="guide-level">warning</span></td><td>The quota is less than 10% of the bucket's data, replicas included</td><td>Couchbase recommends at least 10% for Couchstore, 1% for Magma. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Couchbase docs</a> Comparing against the data <em>with</em> replicas is our reading: the docs say "dataset size" without defining it. <a class="guide-tag guide-tag--assumption" id="assumption-6-ref" href="#assumption-6">Assumption</a></td></tr>
+            <tr><td>Bucket raised to the minimum <span class="guide-level">warning</span></td><td>A bucket's result is under 100 MiB per node</td><td>The <code>--bucket-ramsize</code> minimum. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/cli/cbcli/couchbase-cli-bucket-edit.html" target="_blank" rel="noopener">Couchbase docs</a></td></tr>
+            <tr><td>Bucket quota under 10% of its dataset <span class="guide-level">warning</span></td><td>The quota on all Data nodes together is less than 10% of the bucket's data, replicas included</td><td>Couchbase recommends at least 10% for Couchstore, 1% for Magma. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Couchbase docs</a> Comparing against the data <em>with</em> replicas is our reading: the docs say "dataset size" without defining it. <a class="guide-tag guide-tag--assumption" id="assumption-6-ref" href="#assumption-6">Assumption</a></td></tr>
             <tr><td>Full ejection with a small working set <span class="guide-level">warning</span></td><td>Full ejection and a working set under 20%</td><td>The disk reads are documented behaviour; the 20% threshold is ours. <a class="guide-tag guide-tag--assumption" id="assumption-7-ref" href="#assumption-7">Assumption</a></td></tr>
           </tbody>
         </table>
@@ -345,7 +351,7 @@ quota     = (metadata + working) × (1 + 25%) ÷ 85%</code></pre>
           <tbody>
             <tr>
               <td><a href="https://docs.couchbase.com/server/current/rest-api/rest-bucket-info.html" target="_blank" rel="noopener"><code>GET /pools/default/buckets</code></a></td>
-              <td>Bucket names, document count (<code>basicStats.itemCount</code>), replicas, ejection policy; shows the current quota</td>
+              <td>Bucket names, document count (<code>basicStats.itemCount</code>), replicas, ejection policy; shows the current quota per node (<code>quota.rawRAM</code>)</td>
               <td>Ephemeral and Memcached buckets are skipped: they don't use this formula. <code>itemCount</code> is read as the number of documents without replicas; the documentation shows the field but doesn't define it. <a class="guide-tag guide-tag--assumption" id="assumption-8-ref" href="#assumption-8">Assumption</a></td>
             </tr>
             <tr>
@@ -355,7 +361,7 @@ quota     = (metadata + working) × (1 + 25%) ÷ 85%</code></pre>
             </tr>
             <tr>
               <td>Prometheus: <a href="https://docs.couchbase.com/server/current/metrics-reference/data-service-metrics.html" target="_blank" rel="noopener"><code>kv_curr_items</code></a>, from a node's <code>/metrics</code> or a Prometheus query</td>
-              <td>Document count per bucket; shows the current quota from <code>kv_ep_cache_size</code></td>
+              <td>Document count per bucket; shows the current quota per node from <code>kv_ep_cache_size</code>, the same on every node</td>
               <td><code>kv_curr_items</code> counts items in <em>active</em> vBuckets, so one value per node is summed. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/metrics-reference/data-service-metrics.html" target="_blank" rel="noopener">Couchbase docs</a> For range data, each node's peak is used. Metrics don't include replicas or ejection policy. <a class="guide-tag guide-tag--assumption" href="#assumption-9">Assumption</a></td>
             </tr>
           </tbody>
@@ -369,7 +375,7 @@ quota     = (metadata + working) × (1 + 25%) ÷ 85%</code></pre>
       <pre class="yaml-block"><code>couchbase-cli setting-cluster -c localhost:8091 -u Administrator -p "$CB_PASSWORD" \
   --cluster-ramsize 278 \
   --cluster-index-ramsize 512
-couchbase-cli bucket-edit -c localhost:8091 -u Administrator -p "$CB_PASSWORD" --bucket orders --bucket-ramsize 833</code></pre>
+couchbase-cli bucket-edit -c localhost:8091 -u Administrator -p "$CB_PASSWORD" --bucket orders --bucket-ramsize 278</code></pre>
       <ul>
         <li>
           <a href="https://docs.couchbase.com/server/current/cli/cbcli/couchbase-cli-setting-cluster.html" target="_blank" rel="noopener"><code>setting-cluster</code></a>

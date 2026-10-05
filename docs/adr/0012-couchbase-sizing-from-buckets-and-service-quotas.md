@@ -69,3 +69,12 @@ calculator page to contain every element id `app.js` reads.
   that minimums and defaults differ between Couchbase Server versions.
 - Value ejection is the default and keeps all metadata resident; full ejection only counts the working-set
   share of it, giving smaller quotas but more disk reads. Magma-specific memory behaviour isn't modelled.
+
+## Update
+
+Bucket quotas are per node, not cluster-wide: Couchbase's `ramQuota` and `bucket-edit --bucket-ramsize` are MiB
+per node, and every bucket's quota comes out of the Data quota on each Data node. A bucket's quota is now its
+cluster-wide need ÷ Data nodes, rounded up to a whole MiB with the 100 MiB floor per node, and the Data quota per
+node is the bucket quotas added up (at least 256 MiB). The 10% dataset check compares the bucket's quota on all
+Data nodes together with its dataset. Paste mode reads the current quota per node (`quota.rawRAM`, and
+`kv_ep_cache_size` from one node rather than summed). The text above describes the original model.

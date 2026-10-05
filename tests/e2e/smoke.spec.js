@@ -184,12 +184,12 @@ test('VMware vSphere: produces vSphere Client steps and a govc command', async (
   await fillUsage(page, 390, 700);
 
   await expect(page.locator('#snippet-code')).toHaveText(
-    'govc vm.change -vm "<vm-name>" -m 910 -mem.reservation 507 -mem.limit -1 -mem.shares normal'
+    'govc vm.change -vm "<vm-name>" -m 912 -mem.reservation 507 -mem.limit -1 -mem.shares normal'
   );
   await expect(page.locator('#snippet-secondary-note')).toHaveText(
-    'In vSphere Client: Edit Settings → Virtual Hardware → Memory → set Memory to 910 MB, Reservation to 507 MB, Limit to Unlimited, Shares to Normal.'
+    'In vSphere Client: Edit Settings → Virtual Hardware → Memory → set Memory to 912 MB, Reservation to 507 MB, Limit to Unlimited, Shares to Normal.'
   );
-  await expect(page.locator('#gauge-track')).toHaveAttribute('aria-label', /reservation 507 MB, memory 910 MB/);
+  await expect(page.locator('#gauge-track')).toHaveAttribute('aria-label', /reservation 507 MB, memory 912 MB/);
   await expect(page.locator('#stat-row')).toContainText('Unlimited');
   await expect(page.locator('#stat-row')).toContainText('Normal');
   await expect(page.locator('.explanation-panel .guide-link a')).toHaveAttribute('href', '/vmware/how-it-works/');
@@ -277,10 +277,10 @@ test('Couchbase: default bucket produces quotas and couchbase-cli commands, and 
   await page.goto('/couchbase/');
   await expect(currentNavLink(page)).toHaveText('Couchbase memory quotas');
 
-  // 1M docs × (92 B metadata+key, 1 KiB value) × 2 copies, 20% resident → 833 MiB; ÷ 3 Data nodes → 278 MiB per node.
+  // 1M docs × (92 B metadata+key, 1 KiB value) × 2 copies, 20% resident → 832.5 MiB for the cluster; ÷ 3 Data nodes → 278 MiB per node.
   await expect(page.locator('#snippet-code')).toContainText('--cluster-ramsize 278');
   await expect(page.locator('#snippet-code')).toContainText('--cluster-index-ramsize 512');
-  await expect(page.locator('#snippet-code')).toContainText('--bucket default --bucket-ramsize 833');
+  await expect(page.locator('#snippet-code')).toContainText('--bucket default --bucket-ramsize 278');
   await expect(page.locator('#stat-row')).toContainText('Bucket default');
 
   await page.getByRole('button', { name: 'Add bucket' }).click();
@@ -301,15 +301,15 @@ test('Couchbase: quotas above the node RAM raise an error warning', async ({ pag
 
 test('Couchbase: the sizing defaults under Advanced change the bucket quota, and reset puts them back', async ({ page }) => {
   await page.goto('/couchbase/');
-  await expect(page.locator('#snippet-code')).toContainText('--bucket-ramsize 833');
+  await expect(page.locator('#snippet-code')).toContainText('--bucket-ramsize 278');
   await page.locator('#advanced-settings summary').click();
-  // (175.5 + 390.6) MiB × 1.10 ÷ 0.90 = 691.9 → 692 MiB
+  // (175.5 + 390.6) MiB × 1.10 ÷ 0.90 = 691.9 MiB for the cluster; ÷ 3 Data nodes → 231 MiB per node
   await field(page, 'Overhead').fill('10');
   await field(page, 'High-water mark').fill('90');
-  await expect(page.locator('#snippet-code')).toContainText('--bucket-ramsize 692');
+  await expect(page.locator('#snippet-code')).toContainText('--bucket-ramsize 231');
   await expect(page.locator('#advanced-settings summary')).toContainText('2 changed');
   await page.getByRole('button', { name: 'Reset to defaults' }).click();
-  await expect(page.locator('#snippet-code')).toContainText('--bucket-ramsize 833');
+  await expect(page.locator('#snippet-code')).toContainText('--bucket-ramsize 278');
 });
 
 test('Couchbase: pasted bucket API and cluster API output fill in the form', async ({ page }) => {

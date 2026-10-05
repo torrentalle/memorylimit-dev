@@ -11,8 +11,8 @@
  *
  * What each can supply:
  *   - Prometheus: document count per bucket (`kv_curr_items`, active items summed over
- *     the nodes' series, peak per series) and the current bucket quota (`kv_ep_cache_size`).
- *   - Bucket REST JSON: name, item count, replicas, eviction policy and the current quota.
+ *     the nodes' series, peak per series) and the current bucket quota per node (`kv_ep_cache_size`).
+ *   - Bucket REST JSON: name, item count, replicas, eviction policy and the current quota per node.
  *   - Cluster REST JSON: node RAM, number of Data nodes and each service's quota.
  * Document and key sizes aren't in any of them reliably, so they're never guessed.
  */
@@ -61,9 +61,16 @@ function seriesFromApiJson(json) {
   });
 }
 
+const peakOf = ({ values }) => (values.length ? Math.max(...values) : 0);
+
 /** Peak per series, summed over the series of a bucket (one per node). */
 function sumOfPeaks(series) {
-  return series.reduce((sum, { values }) => sum + (values.length ? Math.max(...values) : 0), 0);
+  return series.reduce((sum, entry) => sum + peakOf(entry), 0);
+}
+
+/** Peak per series, the largest of a bucket's series: for per-node values such as the quota. */
+function maxOfPeaks(series) {
+  return series.reduce((max, entry) => Math.max(max, peakOf(entry)), 0);
 }
 
 /** Repeated lines with the same labels are samples of one series (a range paste), not extra nodes. */
@@ -88,7 +95,8 @@ function bucketsFromSeries(series) {
   return [...byBucket].map(([name, { items, quota }]) => ({
     name,
     ...(items.length ? { documents: Math.round(sumOfPeaks(items)) } : {}),
-    ...(quota.length ? { currentQuotaMiB: Math.round(sumOfPeaks(quota) / BYTES_IN_MIB) } : {})
+    // kv_ep_cache_size is the bucket's quota on that node, the same on every node: not summed.
+    ...(quota.length ? { currentQuotaMiB: Math.round(maxOfPeaks(quota) / BYTES_IN_MIB) } : {})
   }));
 }
 
@@ -96,7 +104,8 @@ function bucketsFromSeries(series) {
 
 function bucketFromRest(bucket) {
   const documents = bucket.basicStats?.itemCount;
-  const quotaBytes = bucket.quota?.ram;
+  // quota.rawRAM is the per-node quota the calculator works in; quota.ram is that times the Data nodes.
+  const quotaBytes = bucket.quota?.rawRAM;
   return {
     name: bucket.name,
     ...(isCount(documents) ? { documents } : {}),

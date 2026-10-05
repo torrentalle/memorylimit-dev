@@ -10,32 +10,41 @@ const raw = (overrides = {}) => calculateRawSizing({ ...BASE, ...overrides });
 
 test('golden: exact vSphere Client steps and govc command for a known input', () => {
   const result = vmware.format(raw({ averageMiB: 390, peakMiB: 700 }));
-  assert.equal(result.snippet.code, 'govc vm.change -vm "<vm-name>" -m 910 -mem.reservation 507 -mem.limit -1 -mem.shares normal');
+  assert.equal(result.snippet.code, 'govc vm.change -vm "<vm-name>" -m 912 -mem.reservation 507 -mem.limit -1 -mem.shares normal');
   assert.equal(
     result.alternative.code,
-    'Edit Settings → Virtual Hardware → Memory → set Memory to 910 MB, Reservation to 507 MB, Limit to Unlimited, Shares to Normal.'
+    'Edit Settings → Virtual Hardware → Memory → set Memory to 912 MB, Reservation to 507 MB, Limit to Unlimited, Shares to Normal.'
   );
 });
 
 test('follows VMware’s advice: the configured memory is the cap and no limit is set', () => {
   const result = vmware.format(raw({ averageMiB: 450.4, peakMiB: 629.4 }));
-  assert.deepEqual([result.memory, result.reservation, result.limit], [819, 586, -1]);
+  assert.deepEqual([result.memory, result.reservation, result.limit], [820, 586, -1]);
   assert.ok(result.figures.some((f) => f.label === 'Limit' && f.text === 'Unlimited'));
 });
 
-test('memory and reservation round up to a whole MB and no further', () => {
+test('the reservation rounds up to a whole MB, the memory to the next multiple of 4 MB vSphere accepts', () => {
   const input = raw({ averageMiB: 401, peakMiB: 601 });
   const result = vmware.format(input);
   assert.equal(result.reservation, Math.ceil(input.requestMiB));
-  assert.equal(result.memory, Math.ceil(input.limitMiB));
+  assert.equal(result.memory, 784); // 781.3 MiB
+});
+
+test('the memory is always a multiple of 4 MB', () => {
+  for (let peakMiB = 100; peakMiB < 140; peakMiB += 0.7) {
+    for (const averageMiB of [50, peakMiB, peakMiB * 1.5]) {
+      assert.equal(vmware.format(raw({ averageMiB, peakMiB })).memory % 4, 0, `${averageMiB} ${peakMiB}`);
+    }
+  }
 });
 
 test('never reserves more than the configured memory', () => {
   const result = vmware.format(raw({ workloadType: 'cache', averageMiB: 1000, peakMiB: 1020 }));
-  assert.equal(result.memory, result.reservation);
+  assert.equal(result.reservation, 1350);
+  assert.equal(result.memory, 1352);
   const warning = result.warnings.find((w) => w.code === 'memory-raised-to-reservation');
   assert.match(warning.message, /can't be larger than the VM's configured memory/);
-  assert.match(result.explanationSteps[0].text, /raised to the reservation → 1350 MB$/);
+  assert.match(result.explanationSteps[0].text, /raised to the reservation → 1352 MB$/);
 });
 
 test('shares are a fixed, informational Normal', () => {
@@ -54,7 +63,7 @@ test('carries through the peak-below-average warning', () => {
 
 test('explains the derivation in three short steps with the real numbers', () => {
   assert.deepEqual(vmware.format(raw({ averageMiB: 390, peakMiB: 700 })).explanationSteps, [
-    { label: 'Memory', text: '700 MiB peak + 30% = 910 MiB → 910 MB' },
+    { label: 'Memory', text: '700 MiB peak + 30% = 910 MiB → 912 MB' },
     { label: 'Reservation', text: '390 MiB average + 30% = 507 MiB → 507 MB' },
     { label: 'Limit', text: 'Unlimited, so the configured memory is the cap' }
   ]);

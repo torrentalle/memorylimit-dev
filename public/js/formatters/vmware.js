@@ -3,8 +3,9 @@
  * following VMware's own advice, as vSphere Client steps and the equivalent
  * govc command.
  *
- *   Memory      — peak-based, rounded up to a whole MB: the VM's configured
- *                 memory. With no limit set, it is the VM's effective cap.
+ *   Memory      — peak-based, rounded up to a multiple of 4 MB (vSphere
+ *                 accepts no other size): the VM's configured memory. With
+ *                 no limit set, it is the VM's effective cap.
  *   Reservation — average-based, rounded up to a whole MB: the memory the VM
  *                 needs under normal load, guaranteed by the host.
  *   Limit       — Unlimited (-1). VMware warns that a limit can waste idle
@@ -29,8 +30,9 @@ export const fieldTips = {
   limitMargin: marginTip('the VM’s memory size is the peak plus it')
 };
 
-// vSphere takes whole MB (MiB).
+// vSphere takes whole MB (MiB) for the reservation; the memory size must be a multiple of 4 MB.
 export const ROUNDING_STEP_MB = 1;
+export const MEMORY_STEP_MB = 4;
 export const DEFAULT_SHARES = 'Normal';
 // The API's value for "no limit": the configured memory caps the VM.
 export const UNLIMITED = -1;
@@ -73,9 +75,9 @@ function explainSteps(raw, memory, reservation, memoryRaised) {
 /** @param {object} raw - result of calculateRawSizing() */
 export function format(raw) {
   const reservation = roundUpToMultiple(raw.requestMiB, ROUNDING_STEP_MB);
-  const peakBasedMemory = roundUpToMultiple(raw.limitMiB, ROUNDING_STEP_MB);
+  const peakBasedMemory = roundUpToMultiple(raw.limitMiB, MEMORY_STEP_MB);
   // A reservation can't be larger than the VM's configured memory.
-  const memory = Math.max(peakBasedMemory, reservation);
+  const memory = roundUpToMultiple(Math.max(raw.limitMiB, reservation), MEMORY_STEP_MB);
   const memoryRaised = memory > peakBasedMemory;
 
   const warnings = [...raw.warnings];

@@ -23,7 +23,11 @@
 /favicon.ico
   Cache-Control: public, max-age=86400
 
+# The favicon's colours, light and dark, come from an inline <style>, which the
+# site-wide style-src 'self' would block. It is a static file with no scripts,
+# so it drops the page policy rather than allowing 'unsafe-inline' everywhere.
 /favicon.svg
+  ! Content-Security-Policy
   Cache-Control: public, max-age=86400
 
 /apple-touch-icon.png
