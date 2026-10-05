@@ -100,6 +100,7 @@ export const PLATFORM_DEFINITIONS = [
     category: 'vms',
     label: 'Proxmox VE',
     path: '/proxmox/',
+    guide: '/proxmox/how-it-works/',
     tagline: 'Set a VM’s memory and ballooning minimum — handy when migrating from VMware.'
   },
   {

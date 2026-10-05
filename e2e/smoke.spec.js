@@ -335,9 +335,10 @@ test('Proxmox VE: produces a qm command and web UI steps', async ({ page }) => {
   await expect(currentNavLink(page)).toHaveText('Proxmox VE');
   await fillUsage(page, 450.4, 629.4);
 
-  await expect(page.locator('#snippet-code')).toHaveText('qm set <vmid> --memory 1024 --balloon 640');
-  await expect(page.locator('#snippet-secondary-note')).toContainText('Minimum memory (MiB): 640');
-  await expect(page.locator('#gauge-track')).toHaveAttribute('aria-label', /minimum 640 MiB, memory 1024 MiB/);
+  await expect(page.locator('#snippet-code')).toHaveText('qm set <vmid> --memory 819 --balloon 586');
+  await expect(page.locator('#snippet-secondary-note')).toContainText('Minimum memory (MiB): 586');
+  await expect(page.locator('#gauge-track')).toHaveAttribute('aria-label', /minimum 586 MiB, memory 819 MiB/);
+  await expect(page.locator('.explanation-panel .guide-link a')).toHaveAttribute('href', '/proxmox/how-it-works/');
 });
 
 for (const [id, path] of [

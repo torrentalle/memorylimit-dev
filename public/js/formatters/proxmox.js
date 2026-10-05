@@ -1,16 +1,18 @@
 /**
  * Raw MiB sizing → Proxmox VE VM memory and ballooning minimum.
  *
- *   Minimum memory (`balloon`) — average-based, rounded up to 128 MiB: always
- *                                available to the VM.
- *   Memory (`memory`)          — peak-based, rounded up to 256 MiB: the most
- *                                the guest can grow to while the host has room.
+ *   Minimum memory (`balloon`) — average-based: always available to the VM.
+ *   Memory (`memory`)          — peak-based: the most the guest can grow to
+ *                                while the host has room.
  *
- * Proxmox rejects a minimum above the maximum, so memory is raised to the
- * minimum when steady workloads would invert them. Both are in MiB.
+ * Both are in MiB and round up to a whole MiB. Proxmox rejects a minimum above
+ * the maximum, so memory is raised to the minimum when steady workloads would
+ * invert them, and memory is at least Proxmox's 16 MiB.
+ *
+ * The method, sources and assumptions are on /proxmox/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { describeProfile, percent } from './shared.js';
+import { percent } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
@@ -18,13 +20,16 @@ export const fieldTips = {
   peak: 'Memory is this plus the limit margin, raised to the minimum if it would fall below it.'
 };
 
-export const BALLOON_STEP_MIB = 128;
-export const MEMORY_STEP_MIB = 256;
+// Proxmox takes whole MiB.
+export const ROUNDING_STEP_MIB = 1;
+// The smallest memory Proxmox accepts for a VM.
+export const MIN_MEMORY_MIB = 16;
 
 const NOTE =
   'Proxmox only grows a VM above its minimum while host RAM usage is below the auto-ballooning target (80% by ' +
-  'default) and reclaims it back toward the minimum when the host gets busier. Linux guests ship the balloon ' +
-  'driver; Windows guests need the VirtIO balloon driver installed. Leave about 1 GB of RAM for the host itself.';
+  'default) and reclaims it back toward the minimum when the host gets busier; leave about 1 GB of RAM for the host ' +
+  'itself. Linux guests ship the balloon driver; on Windows it has to be installed, and Proxmox advises against it ' +
+  'for critical systems.';
 
 export function qmCommand(memory, balloon) {
   return `qm set <vmid> --memory ${memory} --balloon ${balloon}`;
@@ -37,24 +42,34 @@ export function uiInstructions(memory, balloon) {
   );
 }
 
-function explain(raw, balloon, memory, memoryRaised) {
-  return (
-    `Minimum memory = ${Math.round(raw.averageMiB)}MiB average + ${percent(raw.requestMarginPct)} margin ` +
-    `(${describeProfile(raw)}) → rounded up to ${balloon} MiB; ` +
-    `memory = ${Math.round(raw.peakMiB)}MiB peak + ${percent(raw.limitMarginPct)} margin` +
-    (memoryRaised ? `, raised to match the minimum → ${memory} MiB.` : ` → rounded up to ${memory} MiB.`)
-  );
+const mib = (value) => `${Number(value.toFixed(1))} MiB`;
+
+function explainSteps(raw, balloon, memory, raisedTo) {
+  const fromPeak = `${mib(raw.peakMiB)} peak + ${percent(raw.limitMarginPct)} = ${mib(raw.limitMiB)}`;
+  return [
+    { label: 'Minimum memory', text: `${mib(raw.averageMiB)} average + ${percent(raw.requestMarginPct)} = ${mib(raw.requestMiB)} → ${balloon} MiB` },
+    {
+      label: 'Memory',
+      text:
+        raisedTo === 'minimum'
+          ? `${fromPeak}, raised to the minimum → ${memory} MiB`
+          : raisedTo === 'floor'
+            ? `${fromPeak}, raised to Proxmox’s ${MIN_MEMORY_MIB} MiB → ${memory} MiB`
+            : `${fromPeak} → ${memory} MiB`
+    }
+  ];
 }
 
 /** @param {object} raw - result of calculateRawSizing() */
 export function format(raw) {
-  const balloon = roundUpToMultiple(raw.requestMiB, BALLOON_STEP_MIB);
-  const peakBasedMemory = roundUpToMultiple(raw.limitMiB, MEMORY_STEP_MIB);
-  const memory = Math.max(peakBasedMemory, roundUpToMultiple(balloon, MEMORY_STEP_MIB));
-  const memoryRaised = memory > peakBasedMemory;
+  const balloon = roundUpToMultiple(raw.requestMiB, ROUNDING_STEP_MIB);
+  const peakBasedMemory = roundUpToMultiple(raw.limitMiB, ROUNDING_STEP_MIB);
+  // Proxmox rejects a balloon above memory, and memory below 16 MiB.
+  const memory = Math.max(peakBasedMemory, balloon, MIN_MEMORY_MIB);
+  const raisedTo = memory === peakBasedMemory ? null : memory === balloon ? 'minimum' : 'floor';
 
   const warnings = [...raw.warnings];
-  if (memoryRaised) {
+  if (raisedTo === 'minimum') {
     warnings.push({
       level: 'warning',
       code: 'memory-raised-to-minimum',
@@ -64,6 +79,7 @@ export function format(raw) {
     });
   }
 
+  const steps = explainSteps(raw, balloon, memory, raisedTo);
   return {
     platform: 'proxmox',
     balloon,
@@ -79,7 +95,8 @@ export function format(raw) {
     snippet: { label: 'qm command', language: 'shell', code: qmCommand(memory, balloon) },
     alternative: { label: 'In the web UI', code: uiInstructions(memory, balloon) },
     warnings,
-    explanation: explain(raw, balloon, memory, memoryRaised),
+    explanationSteps: steps,
+    explanation: steps.map((step) => `${step.label}: ${step.text}.`).join(' '),
     note: NOTE
   };
 }
