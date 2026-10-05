@@ -5,13 +5,15 @@
   </picture>
 </p>
 
-# MemoryLimit
+# MemoryLimit — free memory sizing calculator
+
+### 👉 **[Use it online at memorylimit.dev](https://memorylimit.dev/)**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/torrentalle/memorylimit-dev/actions/workflows/ci.yml/badge.svg)](https://github.com/torrentalle/memorylimit-dev/actions/workflows/ci.yml)
 [![GitHub stars](https://img.shields.io/github/stars/torrentalle/memorylimit-dev?style=flat)](https://github.com/torrentalle/memorylimit-dev/stargazers)
 
-A memory sizing calculator for containers, serverless, VMs, Redis and Couchbase: **Kubernetes**, **Docker Compose**,
+[**memorylimit.dev**](https://memorylimit.dev/) is a free, open-source memory sizing calculator for containers, serverless, VMs, Redis and Couchbase: **Kubernetes**, **Docker Compose**,
 **HashiCorp Nomad**, **AWS Lambda**, **Google Cloud Run**, **Azure Functions**, **systemd** services on VMs or bare metal,
 **VMware vSphere**, **Proxmox VE**, **Redis `maxmemory`** and **Couchbase** memory quotas. Paste real usage data — Prometheus output,
 Grafana CSV, CloudWatch exports, `redis-cli INFO` — pick a workload profile, and get a ready-to-use
@@ -40,14 +42,40 @@ If MemoryLimit saved you time, a star helps others find it.
 - **Accessible and fast.** Static HTML that works without JavaScript for navigation, WCAG AA contrast in both
   themes, no theme flash, self-hosted fonts, no framework.
 
-## Quick start
+## Try it
+
+No install needed: open **[https://memorylimit.dev](https://memorylimit.dev/)**, pick your platform and paste your usage data.
+Direct links: [Kubernetes](https://memorylimit.dev/kubernetes/) · [Docker Compose](https://memorylimit.dev/docker-compose/) ·
+[Nomad](https://memorylimit.dev/nomad/) · [AWS Lambda](https://memorylimit.dev/lambda/) ·
+[Cloud Run](https://memorylimit.dev/cloud-run/) · [Azure Functions](https://memorylimit.dev/azure-functions/) ·
+[systemd](https://memorylimit.dev/systemd/) · [vSphere](https://memorylimit.dev/vmware/) ·
+[Proxmox](https://memorylimit.dev/proxmox/) · [Redis](https://memorylimit.dev/redis/) ·
+[Couchbase](https://memorylimit.dev/couchbase/)
+
+## Local development
+
+Requirements: [Node.js](https://nodejs.org/) 22 or newer and Git.
 
 ```bash
+git clone https://github.com/torrentalle/memorylimit-dev.git
+cd memorylimit-dev
 npm install   # dev server + browser tests only; unit tests need nothing installed
 npm run dev   # serves public/ at http://localhost:3000
 ```
 
 Pages use ES modules and root-relative paths, so serve `public/` over HTTP rather than opening files directly.
+There is no build step: edit files under `public/` and reload the browser.
+
+Common tasks:
+
+```bash
+npm test                  # unit + page-structure tests
+npm run sync:pages        # regenerate the nav and landing-page blocks after editing platforms.js
+npm run generate:sitemap  # regenerate public/sitemap.xml
+```
+
+Analytics and ads stay off on `localhost` (see [Configuration](#configuration)). Browser tests are described in
+[Testing](#testing).
 
 ## How the sizing works
 
