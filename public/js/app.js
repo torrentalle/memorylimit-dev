@@ -238,7 +238,9 @@ export function initCalculator({ platformId, formatter }) {
     el.copyButton.disabled = !snippet;
     if (copyResetTimer === null) el.copyButton.textContent = copyLabelFor(snippet);
 
-    el.snippetNote.textContent = alternative ? `${alternative.label}: ${alternative.code}` : '';
+    // Code of more than one line starts on its own line, so it can be copied as it is.
+    const separator = alternative?.code.includes('\n') ? ':\n' : ': ';
+    el.snippetNote.textContent = alternative ? `${alternative.label}${separator}${alternative.code}` : '';
     el.snippetNote.classList.toggle('is-hidden', !alternative);
   }
 

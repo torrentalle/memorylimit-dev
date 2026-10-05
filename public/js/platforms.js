@@ -44,6 +44,7 @@ export const PLATFORM_DEFINITIONS = [
     category: 'containers',
     label: 'Docker Compose',
     path: '/docker-compose/',
+    guide: '/docker-compose/how-it-works/',
     tagline: 'Size deploy.resources memory reservations and limits for Compose services.'
   },
   {

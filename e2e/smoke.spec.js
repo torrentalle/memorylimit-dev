@@ -121,6 +121,16 @@ test('Docker Compose: steady workloads never get a reservation above the limit',
     'deploy:\n  resources:\n    limits:\n      memory: 1350M\n    reservations:\n      memory: 1350M'
   );
   await expect(page.locator('#warnings')).toContainText('raised to 1350M');
+  await expect(page.locator('#explanation .explanation-steps li')).toHaveText([
+    'Reservation: 1000 MiB average + 35% = 1350 MiB → 1350M',
+    'Limit: 1020 MiB peak + 30% = 1326 MiB, raised to the reservation → 1350M',
+    'Total reservation: 1350M × 3 replicas = 4050M'
+  ]);
+  await expect(page.locator('#snippet-secondary-note')).toHaveText(
+    'Service-level equivalent (use one or the other):\nmem_limit: 1350M\nmem_reservation: 1350M'
+  );
+  await expect(page.locator('#explanation-note')).toContainText('memswap_limit');
+  await expect(page.locator('.explanation-panel .guide-link a')).toHaveAttribute('href', '/docker-compose/how-it-works/');
 });
 
 test('AWS Lambda: recommends a single peak-based MemorySize and hides replicas', async ({ page }) => {
