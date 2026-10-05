@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>How the Google Cloud Run Memory Limit Calculator Works | MemoryLimit</title>
+<meta name="description" content="How the Cloud Run calculator sets an instance's memory limit and CPU: Google's concurrency formula, the CPU each size needs, the range and what to paste, with links to the Cloud Run docs." />
+<link rel="canonical" href="https://memorylimit.dev/cloud-run/how-it-works/" />
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="MemoryLimit" />
+<meta property="og:title" content="How the Google Cloud Run Memory Limit Calculator Works" />
+<meta property="og:description" content="How the Cloud Run calculator sets an instance's memory limit and CPU: Google's concurrency formula, the CPU each size needs, the range and what to paste, with links to the Cloud Run docs." />
+<meta property="og:url" content="https://memorylimit.dev/cloud-run/how-it-works/" />
+<meta property="og:image" content="https://memorylimit.dev/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="How the Google Cloud Run Memory Limit Calculator Works" />
+<meta name="twitter:description" content="How the Cloud Run calculator sets an instance's memory limit and CPU: Google's concurrency formula, the CPU each size needs, the range and what to paste, with links to the Cloud Run docs." />
+<meta name="twitter:image" content="https://memorylimit.dev/og-image.png" />
+<link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/css/styles.css" />
+<script src="/js/theme-init.js"></script>
+</head>
+<body>
+
+<div class="skyline" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="brand" href="/" aria-label="MemoryLimit home">
+      <img class="brand__mark brand__mark--light" src="/brand/memorylimit-mark.svg" alt="" width="37" height="28" />
+      <img class="brand__mark brand__mark--dark" src="/brand/memorylimit-mark-on-dark.svg" alt="" width="37" height="28" />
+      <div><p class="brand__name">MemoryLimit</p><p class="brand__tagline">Memory request/limit sizing</p></div>
+    </a>
+    <!-- platform-nav:start -->
+    <nav class="site-nav" aria-label="Calculators">
+      <details class="site-nav__menu">
+        <summary class="site-nav__toggle">Calculators</summary>
+        <div class="site-nav__panel">
+          <div class="site-nav__group" data-platform-group="containers">
+            <p class="site-nav__group-title">Containers &amp; orchestration</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/kubernetes/" data-platform-link="kubernetes">Kubernetes</a></li>
+              <li><a class="site-nav__link" href="/docker-compose/" data-platform-link="dockerCompose">Docker Compose</a></li>
+              <li><a class="site-nav__link" href="/nomad/" data-platform-link="nomad">HashiCorp Nomad</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="serverless">
+            <p class="site-nav__group-title">Serverless</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/lambda/" data-platform-link="lambda">AWS Lambda</a></li>
+              <li><a class="site-nav__link" href="/cloud-run/" data-platform-link="cloudRun">Google Cloud Run</a></li>
+              <li><a class="site-nav__link" href="/azure-functions/" data-platform-link="azureFunctions">Azure Functions</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="vms">
+            <p class="site-nav__group-title">VMs &amp; bare metal</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/systemd/" data-platform-link="systemd">Systemd / Bare Metal / VM</a></li>
+              <li><a class="site-nav__link" href="/vmware/" data-platform-link="vmware">VMware vSphere</a></li>
+              <li><a class="site-nav__link" href="/proxmox/" data-platform-link="proxmox">Proxmox VE</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="datastores">
+            <p class="site-nav__group-title">Data stores</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/redis/" data-platform-link="redis">Redis maxmemory</a></li>
+              <li><a class="site-nav__link" href="/couchbase/" data-platform-link="couchbase">Couchbase memory quotas</a></li>
+            </ul>
+          </div>
+        </div>
+      </details>
+    </nav>
+    <!-- platform-nav:end -->
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Dark theme">
+      <span class="theme-toggle__icon" aria-hidden="true">◐</span><span class="theme-toggle__label">theme</span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <div class="wrap intro-section">
+    <p class="guide-back"><a href="/cloud-run/">← Google Cloud Run memory limit calculator</a></p>
+    <h1 class="intro-title">How the Cloud Run calculator works</h1>
+    <p class="intro-text">
+      This page walks through how the <a href="/cloud-run/">Cloud Run calculator</a> turns your usage data into an
+      instance's memory limit and the CPU it needs. It starts from the peak side of the
+      <a href="/sizing-model/">shared sizing model</a>; this page covers what happens after that. Statements backed by
+      Google's documentation end with a <span class="guide-tag guide-tag--doc">Cloud Run docs</span> link to it. Choices
+      the documentation doesn't make for us are explained and marked
+      <span class="guide-tag guide-tag--assumption">Assumption</span>, which links to its row in the table of all of them.
+    </p>
+  </div>
+
+  <div class="wrap guide">
+
+    <nav class="panel guide-toc" aria-labelledby="toc-heading">
+      <h2 id="toc-heading" class="panel__title panel__title--tight">On this page</h2>
+      <ol>
+        <li><a href="#setting">What the memory limit does</a></li>
+        <li><a href="#steps">From peak usage to a memory limit</a></li>
+        <li><a href="#concurrency">Google's formula: concurrency</a></li>
+        <li><a href="#cpu">The CPU it needs</a></li>
+        <li><a href="#output">What the calculator writes</a></li>
+        <li><a href="#warnings">Every warning, and why</a></li>
+        <li><a href="#paste">Where the numbers come from</a></li>
+        <li><a href="#assumptions">All assumptions in one place</a></li>
+        <li><a href="#references">References</a></li>
+      </ol>
+    </nav>
+
+    <section class="panel guide-section" id="setting" aria-labelledby="setting-heading">
+      <h2 id="setting-heading" class="panel__title"><span class="panel__index">01</span> What the memory limit does</h2>
+      <ul>
+        <li>
+          Each instance gets one memory limit, 512 MiB by default, up to 32 GiB. An instance that exceeds it is terminated.
+          <a class="guide-tag guide-tag--doc" href="https://docs.cloud.google.com/run/docs/configuring/services/memory-limits" target="_blank" rel="noopener">Cloud Run docs</a>
+        </li>
+        <li>
+          The container's filesystem is in memory: files it writes use the instance's memory, and can use it all up.
+          <a class="guide-tag guide-tag--doc" href="https://docs.cloud.google.com/run/docs/container-contract" target="_blank" rel="noopener">Cloud Run docs</a>
+        </li>
+      </ul>
+      <p>
+        With no separate reservation and running out ending the instance, the calculator sizes the limit from the peak
+        alone. The average you enter doesn't change the result.
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="steps" aria-labelledby="steps-heading">
+      <h2 id="steps-heading" class="panel__title"><span class="panel__index">02</span> From peak usage to a memory limit</h2>
+      <pre class="yaml-block guide-formula"><code>memory = peak × (1 + limit margin)    rounded up to a whole Mi, kept within 128Mi–32Gi</code></pre>
+      <p>
+        The limit margin comes from the sensitivity, workload type and environment you choose; the
+        <a href="/sizing-model/">sizing model</a> explains it, and it's an assumption too.
+      </p>
+      <p>
+        <code>--memory</code> takes <code>Mi</code> and <code>Gi</code> (or decimal <code>M</code> and <code>G</code>);
+        the calculator writes <code>Mi</code>, or <code>Gi</code> for whole gibibytes. The first generation execution
+        environment goes down to 128 MiB, the second needs 512 MiB.
+        <a class="guide-tag guide-tag--doc" href="https://docs.cloud.google.com/run/docs/configuring/services/memory-limits" target="_blank" rel="noopener">Cloud Run docs</a>
+      </p>
+
+      <h3 class="guide-subheading">Worked example</h3>
+      <p>Peak 630 MiB, generic workload, medium sensitivity, production:</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-example="410 630 generic medium production">
+          <tbody>
+            <tr><th scope="row">memory</th><td>630 MiB × 1.30 = 819 MiB</td><td data-check="memory">819Mi</td></tr>
+            <tr class="guide-table__result"><th scope="row">CPU</th><td>up to 4 GiB, the default is enough</td><td data-check="cpu">1 vCPU</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Above 4 GiB, the memory also sets the CPU. Peak 5000 MiB, same profile:</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-example="4000 5000 generic medium production">
+          <tbody>
+            <tr><th scope="row">memory</th><td>5000 MiB × 1.30 = 6500 MiB</td><td data-check="memory">6500Mi</td></tr>
+            <tr class="guide-table__result"><th scope="row">CPU</th><td>between 4 and 8 GiB</td><td data-check="cpu">2 vCPU</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="concurrency" aria-labelledby="concurrency-heading">
+      <h2 id="concurrency-heading" class="panel__title"><span class="panel__index">03</span> Google's formula: concurrency</h2>
+      <p>
+        Google's own way to size an instance's memory counts requests, not samples:
+        <a class="guide-tag guide-tag--doc" href="https://docs.cloud.google.com/run/docs/configuring/services/memory-limits" target="_blank" rel="noopener">Cloud Run docs</a>
+      </p>
+      <pre class="yaml-block guide-formula"><code>memory = standing memory + memory per request × concurrency</code></pre>
+      <p>
+        Measured usage already contains that sum for the concurrency the service ran at, so the calculator starts from the
+        measured peak instead. It only holds while concurrency stays the same: raise it, and memory per instance grows with
+        it, which the note under the result says.
+        <a class="guide-tag guide-tag--assumption" id="assumption-1-ref" href="#assumption-1">Assumption</a>
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="cpu" aria-labelledby="cpu-heading">
+      <h2 id="cpu-heading" class="panel__title"><span class="panel__index">04</span> The CPU it needs</h2>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers">
+          <thead><tr><th scope="col">Memory</th><th scope="col">Fewest vCPU allowed</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Up to 512 MiB</th><td>0.08</td></tr>
+            <tr><th scope="row">Up to 1 GiB</th><td>0.5</td></tr>
+            <tr><th scope="row">Up to 4 GiB</th><td>1</td></tr>
+            <tr><th scope="row">Up to 8 GiB</th><td>2</td></tr>
+            <tr><th scope="row">Up to 16 GiB</th><td>4</td></tr>
+            <tr><th scope="row">Up to 24 GiB</th><td>6</td></tr>
+            <tr><th scope="row">Up to 32 GiB</th><td>8</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Instances get 1 vCPU by default. Less than 1 vCPU is possible, but only with a concurrency of 1, request-based billing
+        and the first generation environment.
+        <a class="guide-tag guide-tag--doc" href="https://docs.cloud.google.com/run/docs/configuring/services/cpu" target="_blank" rel="noopener">Cloud Run docs</a>
+      </p>
+      <p>
+        So up to 4 GiB the calculator leaves CPU at the default and doesn't suggest a fraction; above it, it adds the fewest
+        vCPU the memory needs.
+        <a class="guide-tag guide-tag--assumption" id="assumption-2-ref" href="#assumption-2">Assumption</a>
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="output" aria-labelledby="output-heading">
+      <h2 id="output-heading" class="panel__title"><span class="panel__index">05</span> What the calculator writes</h2>
+      <pre class="yaml-block"><code>gcloud run services update &lt;service&gt; --memory 6500Mi --cpu 2
+
+spec.template.spec.containers[0].resources.limits:
+  memory: 6500Mi
+  cpu: 2</code></pre>
+      <p>
+        <code>gcloud run services update SERVICE --memory SIZE</code> is the documented command, and the service YAML
+        takes the same values under each container's <code>resources.limits</code>.
+        <a class="guide-tag guide-tag--doc" href="https://docs.cloud.google.com/run/docs/reference/yaml/v1" target="_blank" rel="noopener">Cloud Run docs</a>
+        <code>--cpu</code> only appears when the memory needs more than the default.
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="warnings" aria-labelledby="warnings-heading">
+      <h2 id="warnings-heading" class="panel__title"><span class="panel__index">06</span> Every warning, and why</h2>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Message about</th><th scope="col">Shown when</th><th scope="col">Basis</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Outside Cloud Run's range <span class="guide-level">warning</span></td>
+              <td>The result is below 128 MiB or above 32 GiB</td>
+              <td>Cloud Run's limits. <a class="guide-tag guide-tag--doc" href="https://docs.cloud.google.com/run/docs/configuring/services/memory-limits" target="_blank" rel="noopener">Cloud Run docs</a></td>
+            </tr>
+            <tr>
+              <td>Only first generation <span class="guide-level">warning</span></td>
+              <td>The result is below 512 MiB</td>
+              <td>The second generation needs 512 MiB. <a class="guide-tag guide-tag--doc" href="https://docs.cloud.google.com/run/docs/configuring/services/memory-limits" target="_blank" rel="noopener">Cloud Run docs</a></td>
+            </tr>
+            <tr>
+              <td>Peak below average <span class="guide-level guide-level--error">error</span></td>
+              <td>The peak you entered is lower than the average</td>
+              <td>Impossible with real samples; it usually means two different series. See the <a href="/sizing-model/#inputs">sizing model</a>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="paste" aria-labelledby="paste-heading">
+      <h2 id="paste-heading" class="panel__title"><span class="panel__index">07</span> Where the numbers come from</h2>
+      <p>
+        Cloud Run's built-in metrics include "Container memory utilization".
+        <a class="guide-tag guide-tag--doc" href="https://docs.cloud.google.com/run/docs/monitoring" target="_blank" rel="noopener">Cloud Run docs</a>
+        The documentation lists it without its unit; we read it as a share of the instance's current limit, as the console
+        charts it. So multiply its p99 over a representative period by the current limit to get the peak in MiB, and its p50
+        for the average, which doesn't change the result.
+        <a class="guide-tag guide-tag--assumption" id="assumption-3-ref" href="#assumption-3">Assumption</a>
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="assumptions" aria-labelledby="assumptions-heading">
+      <h2 id="assumptions-heading" class="panel__title"><span class="panel__index">08</span> All assumptions in one place</h2>
+      <p>Besides the margins of the <a href="/sizing-model/#assumptions">shared sizing model</a>:</p>
+      <p class="guide-kind-legend"><strong>Our default</strong>: a value we chose. <strong>Our reading</strong>: how we read documentation that isn't explicit. <strong>About your setup</strong>: something we take for granted about your data or cluster.</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Assumption</th><th scope="col">Kind</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
+          <tbody>
+            <tr id="assumption-1"><td>Concurrency stays as it was when the samples were taken <a class="guide-backref" href="#assumption-1-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">About your setup</td><td>Measured usage includes memory per request × concurrency</td><td>Raise concurrency and each instance needs more; size again after the change.</td></tr>
+            <tr id="assumption-2"><td>Keep the default 1 vCPU up to 4 GiB <a class="guide-backref" href="#assumption-2-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>Less than 1 vCPU forces concurrency 1 and the first generation</td><td>A service that fits those limits could run on 0.5 or 0.08 vCPU for less.</td></tr>
+            <tr id="assumption-3"><td>Utilization is a share of the limit; p99 × limit is the peak <a class="guide-backref" href="#assumption-3-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our reading</td><td>The docs list the metric without a unit; the console charts it against the limit</td><td>A rarer spike than p99 isn't covered; use the maximum if you can export it.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="references" aria-labelledby="references-heading">
+      <h2 id="references-heading" class="panel__title"><span class="panel__index">09</span> References</h2>
+      <ul class="guide-references">
+        <li><a href="https://docs.cloud.google.com/run/docs/configuring/services/memory-limits" target="_blank" rel="noopener">Configure memory limits</a> — range, units, the gcloud command and Google's sizing formula.</li>
+        <li><a href="https://docs.cloud.google.com/run/docs/configuring/services/cpu" target="_blank" rel="noopener">Configure CPU limits</a> — the default and the CPU each memory size needs.</li>
+        <li><a href="https://docs.cloud.google.com/run/docs/container-contract" target="_blank" rel="noopener">Container runtime contract</a> — the in-memory filesystem and what happens past the limit.</li>
+        <li><a href="https://docs.cloud.google.com/run/docs/reference/yaml/v1" target="_blank" rel="noopener">Service YAML reference</a> — <code>resources.limits.memory</code> and <code>cpu</code>.</li>
+        <li><a href="https://docs.cloud.google.com/run/docs/monitoring" target="_blank" rel="noopener">Monitor health and performance</a> — the built-in metrics.</li>
+      </ul>
+      <p class="guide-back"><a href="/cloud-run/">← Back to the Cloud Run calculator</a></p>
+    </section>
+
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div id="ethical-ads-slot" class="ethical-ads-slot"></div>
+    <div class="footer-row">
+      <!-- footer-links:start -->
+      <p class="footer-tagline">Your pasted metrics and results never leave the browser.</p>
+      <nav class="footer-links" aria-label="Project">
+        <a href="/privacy/" class="footer-link">Privacy</a>
+        <a href="/support/" class="footer-link">Support</a>
+        <a href="https://github.com/torrentalle/memorylimit-dev" class="footer-link" target="_blank" rel="noopener">★ Star on GitHub</a>
+        <a href="https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml" class="footer-link" target="_blank" rel="noopener">Report an issue</a>
+      </nav>
+      <!-- footer-links:end -->
+      <div id="donation-slot" class="donation-slot"></div>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="/js/site.js"></script>
+</body>
+</html>

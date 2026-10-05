@@ -2,12 +2,19 @@
  * Raw MiB sizing → a Google Cloud Run memory limit.
  *
  * Like Lambda, Cloud Run has one memory setting per instance and running
- * out kills the instance, so the size is peak-based. It rounds up to 64 Mi,
- * is clamped to Cloud Run's 128 Mi – 32 Gi range, and larger sizes carry the
- * minimum CPU count Cloud Run requires for them.
+ * out terminates the instance, so the size is peak-based. It rounds up to a
+ * whole Mi, is kept within Cloud Run's 128 Mi – 32 Gi range, and sizes above
+ * 4 GiB carry the minimum CPU Cloud Run requires for them. Up to 4 GiB the
+ * default 1 vCPU is enough.
+ *
+ * Google's own sizing formula is standing memory + memory per request ×
+ * concurrency: the samples already include the concurrency they ran at,
+ * which the note points out.
+ *
+ * The method, sources and assumptions are on /cloud-run/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { describeProfile, percent, PEAK_ONLY_FIELD_TIPS } from './shared.js';
+import { percent, PEAK_ONLY_FIELD_TIPS } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
@@ -15,12 +22,15 @@ export const fieldTips = {
   peak: 'The memory limit is this plus the limit margin; above 4 GiB it also sets the minimum CPU.'
 };
 
-export const STEP_MIB = 64;
+// Cloud Run takes any Mi value; the output uses whole Mi.
+export const ROUNDING_STEP_MIB = 1;
 export const MIN_MEMORY_MIB = 128;
 export const MIN_GEN2_MEMORY_MIB = 512;
 export const MAX_MEMORY_MIB = 32768;
+export const DEFAULT_CPU = 1;
 
-// Minimum vCPUs Cloud Run requires for a memory size (in MiB).
+// The fewest vCPUs Cloud Run allows for a memory size (in MiB), from 1 vCPU up. Below 1 vCPU, Cloud Run also
+// allows 0.5 vCPU up to 1 GiB and 0.08 vCPU up to 512 MiB, with extra restrictions; the default is 1 vCPU.
 const CPU_FOR_MEMORY = [
   { upToMiB: 4096, cpu: 1 },
   { upToMiB: 8192, cpu: 2 },
@@ -30,9 +40,9 @@ const CPU_FOR_MEMORY = [
 ];
 
 const NOTE =
-  'Memory per instance grows with concurrency, so this fits the concurrency your samples were collected under — ' +
-  'raise it if you raise concurrency. Files written to the container’s filesystem are held in memory and count ' +
-  'against this limit too.';
+  'Google sizes memory as standing memory + memory per request × concurrency, so this fits the concurrency your ' +
+  'samples ran at: raise it if you raise concurrency. Files written to the container’s filesystem are held in ' +
+  'memory and count against this limit too.';
 
 export function minimumCpu(memoryMiB) {
   return CPU_FOR_MEMORY.find((tier) => memoryMiB <= tier.upToMiB).cpu;
@@ -44,19 +54,41 @@ export function formatQuantity(memoryMiB) {
 
 export function gcloudCommand(memoryMiB) {
   const cpu = minimumCpu(memoryMiB);
-  return `gcloud run services update <service> --memory ${formatQuantity(memoryMiB)}${cpu > 1 ? ` --cpu ${cpu}` : ''}`;
+  return `gcloud run services update <service> --memory ${formatQuantity(memoryMiB)}${cpu > DEFAULT_CPU ? ` --cpu ${cpu}` : ''}`;
 }
 
-function explain(raw, rounded, memory, clamped) {
-  const base = `Memory = ${Math.round(raw.peakMiB)}MiB peak + ${percent(raw.limitMarginPct)} margin (${describeProfile(raw)})`;
-  return clamped
-    ? `${base} → ${rounded}Mi, clamped to Cloud Run’s 128Mi–32Gi range → ${formatQuantity(memory)}.`
-    : `${base} → rounded up to ${formatQuantity(memory)}.`;
+export function yamlSnippet(memoryMiB) {
+  const cpu = minimumCpu(memoryMiB);
+  return [
+    'spec.template.spec.containers[0].resources.limits:',
+    `  memory: ${formatQuantity(memoryMiB)}`,
+    ...(cpu > DEFAULT_CPU ? [`  cpu: ${cpu}`] : [])
+  ].join('\n');
+}
+
+const fixed = (value) => Number(value.toFixed(1));
+
+function explainSteps(raw, rounded, memory, cpu) {
+  const base = `${fixed(raw.peakMiB)} MiB peak + ${percent(raw.limitMarginPct)} = ${fixed(raw.limitMiB)} MiB`;
+  return [
+    {
+      label: 'Memory',
+      text: memory === rounded
+        ? `${base} → ${formatQuantity(memory)}`
+        : `${base} → ${rounded}Mi, kept within Cloud Run’s 128Mi–32Gi → ${formatQuantity(memory)}`
+    },
+    {
+      label: 'CPU',
+      text: cpu > DEFAULT_CPU
+        ? `${formatQuantity(memory)} needs at least ${cpu} vCPU`
+        : `the default 1 vCPU covers up to 4Gi`
+    }
+  ];
 }
 
 /** @param {object} raw - result of calculateRawSizing() */
 export function format(raw) {
-  const rounded = roundUpToMultiple(raw.limitMiB, STEP_MIB);
+  const rounded = roundUpToMultiple(raw.limitMiB, ROUNDING_STEP_MIB);
   const memory = Math.min(MAX_MEMORY_MIB, Math.max(MIN_MEMORY_MIB, rounded));
   const clamped = memory !== rounded;
   const cpu = minimumCpu(memory);
@@ -77,25 +109,29 @@ export function format(raw) {
     });
   }
 
+  const steps = explainSteps(raw, rounded, memory, cpu);
   return {
     platform: 'cloudRun',
     memory,
     cpu,
     figures: [
       { role: 'total', label: 'Memory limit', text: formatQuantity(memory), detail: 'per instance' },
-      { role: 'info', label: 'Minimum CPU', text: `${cpu} vCPU`, detail: 'required by Cloud Run for this memory size' }
+      {
+        role: 'info',
+        label: 'CPU',
+        text: `${cpu} vCPU`,
+        detail: cpu > DEFAULT_CPU ? 'the least Cloud Run allows for this memory' : 'the default, enough up to 4 GiB'
+      }
     ],
     markers: [
       { role: 'peak', name: 'peak', value: raw.peakMiB, text: `${Math.round(raw.peakMiB)}Mi` },
       { role: 'limit', name: 'memory', value: memory, text: formatQuantity(memory) }
     ],
     snippet: { label: 'gcloud command', language: 'shell', code: gcloudCommand(memory) },
-    alternative: {
-      label: 'service.yaml',
-      code: `spec.template.spec.containers[0].resources.limits.memory: ${formatQuantity(memory)}`
-    },
+    alternative: { label: 'service.yaml', code: yamlSnippet(memory) },
     warnings,
-    explanation: explain(raw, rounded, memory, clamped),
+    explanationSteps: steps,
+    explanation: steps.map((step) => `${step.label}: ${step.text}.`).join(' '),
     note: NOTE
   };
 }
