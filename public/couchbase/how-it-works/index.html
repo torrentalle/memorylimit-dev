@@ -177,7 +177,7 @@ quota     = (metadata + working) × (1 + 25%) ÷ 85%</code></pre>
           <thead><tr><th scope="col">Term</th><th scope="col">Value</th><th scope="col">Where it comes from</th></tr></thead>
           <tbody>
             <tr><td>Metadata per document</td><td>56 bytes</td><td>Sizing Guidelines (<code>metadata_per_document</code>). Every document's key and metadata take this much plus the key itself. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/install/sizing-general.html" target="_blank" rel="noopener">Couchbase docs</a></td></tr>
-            <tr><td>Overhead</td><td>25%</td><td>Sizing Guidelines (<code>overhead_percentage</code>): memory the bucket uses beyond the metadata and working set the formula counts. The guide gives one figure, so the calculator doesn't offer others. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/install/sizing-general.html" target="_blank" rel="noopener">Couchbase docs</a></td></tr>
+            <tr><td>Overhead</td><td>25%</td><td>Sizing Guidelines (<code>overhead_percentage</code>): memory the bucket uses beyond the metadata and working set the formula counts. The guide gives one figure; you can change it, and the other two, under <a href="#adjustable">Values you can change</a>. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/install/sizing-general.html" target="_blank" rel="noopener">Couchbase docs</a></td></tr>
             <tr><td>High-water mark</td><td>85%</td><td>Sizing Guidelines and <a href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Memory</a>: once a bucket's memory use reaches 85% of its quota, Couchbase starts ejecting items. Dividing by 0.85 keeps the working set below that line. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Couchbase docs</a></td></tr>
             <tr><td>Replicas</td><td>0–3</td><td>Every replica is a full extra copy of the bucket's data and metadata, held in the same cluster-wide quota. <code>bucket-edit</code> accepts 0 to 3. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/cli/cbcli/couchbase-cli-bucket-edit.html" target="_blank" rel="noopener">Couchbase docs</a></td></tr>
             <tr><td>Working set %</td><td>Your input</td><td>The share of the data you want served from RAM. Higher means fewer disk reads and a bigger quota.</td></tr>
@@ -409,6 +409,25 @@ couchbase-cli bucket-edit -c localhost:8091 -u Administrator -p "$CB_PASSWORD" -
             <tr id="assumption-8"><td><code>itemCount</code> counts documents without replicas <a class="guide-backref" href="#assumption-8-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our reading</td><td>The documentation shows the field without defining it</td><td>If it included replicas, pasted counts would be too high and quotas oversized.</td></tr>
             <tr id="assumption-9"><td>Peak per node for Prometheus range data; smallest Data node's RAM <a class="guide-backref" href="#assumption-9-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>Size for the worst case</td><td>Quotas are a little larger than an average would give.</td></tr>
             <tr id="assumption-10"><td>Couchstore, not Magma <a class="guide-backref" href="#assumption-10-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">About your setup</td><td>The 10% guidance and the formula are written for it</td><td>Magma buckets can run with much less memory (1% of the dataset); this sizing is conservative for them.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3 class="guide-subheading" id="adjustable">Values you can change</h3>
+      <p>
+        The calculator’s <strong>Advanced: sizing defaults and thresholds</strong> section, closed by default, lets you replace these values when your
+        setup differs. Each field’s “?” says how it moves the result; a value outside the range is used at its nearest end,
+        and “Reset to defaults” puts them all back.
+      </p>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Value</th><th scope="col">Default</th><th scope="col">Range</th><th scope="col">Where the default comes from</th></tr></thead>
+          <tbody>
+            <tr><td>Metadata per document</td><td>56 bytes</td><td>0–256 bytes</td><td>Couchbase’s sizing guidelines (<code>metadata_per_document</code>)</td></tr>
+            <tr><td>Overhead</td><td>25%</td><td>0–100%</td><td>Couchbase’s sizing guidelines (<code>overhead_percentage</code>)</td></tr>
+            <tr><td>High-water mark</td><td>85%</td><td>50–99%</td><td>Couchbase’s default; use the bucket’s own if you changed it</td></tr>
+            <tr><td>Storage engine</td><td>Couchstore</td><td>Couchstore or Magma</td><td><a href="#assumption-10">Assumption 10</a>; only moves the 10% (Magma: 1%) dataset warning</td></tr>
+            <tr><td>Small node below</td><td>5 GiB</td><td>1–64 GiB</td><td>Our reading of “little memory”, <a href="#assumption-5">assumption 5</a>; only moves the 90%/80% warning</td></tr>
+            <tr><td>Full-ejection warning below</td><td>20%</td><td>1–100%</td><td>Our threshold, <a href="#assumption-7">assumption 7</a>; only moves the warning</td></tr>
           </tbody>
         </table>
       </div>

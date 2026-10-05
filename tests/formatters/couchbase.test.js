@@ -198,3 +198,30 @@ test('rejects invalid input rather than coercing it', () => {
   assert.throws(() => sizing({ buckets: [bucketWith({ name: '  ' })] }), RangeError);
   assert.throws(() => sizing({ buckets: [BUCKET, BUCKET] }), RangeError);
 });
+
+test('settings replace the sizing constants and the warnings’ thresholds', () => {
+  const defaults = sizing();
+  assert.deepEqual(defaults.settings, couchbase.DEFAULT_SETTINGS);
+  // (175.5 + 390.6) × 1.10 ÷ 0.90 = 691.9 → 692 MiB
+  const custom = sizing({ settings: { overhead: 0.1, highWaterMark: 0.9 } });
+  assert.equal(custom.buckets[0].quotaMiB, 692);
+  const noMetadata = sizing({ settings: { metadataBytes: 0 } });
+  assert.ok(noMetadata.buckets[0].metadataMiB < defaults.buckets[0].metadataMiB);
+
+  const tiny = { buckets: [bucketWith({ documentBytes: 100000, workingSetPct: 1 })] };
+  assert.ok(sizing(tiny).warnings.some((w) => w.code === 'bucket-below-dataset-share'));
+  const magma = sizing({ ...tiny, settings: { storageEngine: 'magma' } });
+  assert.ok(!magma.warnings.some((w) => w.code === 'bucket-below-dataset-share'));
+
+  const full = { buckets: [bucketWith({ eviction: 'full', workingSetPct: 15 })] };
+  assert.ok(sizing(full).warnings.some((w) => w.code === 'full-ejection-low-working-set'));
+  assert.ok(!sizing({ ...full, settings: { lowWorkingSetPct: 10 } }).warnings.some((w) => w.code === 'full-ejection-low-working-set'));
+
+  assert.equal(couchbase.recommendedQuotaShare(6144, 8192), 0.8);
+});
+
+test('invalid settings are rejected', () => {
+  for (const settings of [{ highWaterMark: 0 }, { highWaterMark: 1.2 }, { overhead: -1 }, { lowWorkingSetPct: 120 }, { storageEngine: 'rocks' }]) {
+    assert.throws(() => sizing({ settings }), RangeError, JSON.stringify(settings));
+  }
+});

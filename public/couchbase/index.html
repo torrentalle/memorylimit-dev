@@ -168,6 +168,41 @@
           <input id="analytics-quota-input" class="field-input" type="number" min="0" step="any" inputmode="decimal" value="0" />
         </div>
       </div>
+
+      <details class="advanced" id="advanced-settings">
+        <summary class="advanced__summary">Advanced: sizing defaults and thresholds <span class="advanced__count" data-advanced-count></span></summary>
+        <p class="field-hint">Values the result relies on that are Couchbase’s sizing defaults, or our own thresholds for the warnings. Each “?” says how one moves the result; the guide says where it comes from.</p>
+        <div class="field-grid">
+          <div class="field">
+            <label class="field-label" for="metadata-bytes-input">Metadata per document <span class="field-unit">bytes</span></label>
+            <input id="metadata-bytes-input" class="field-input" type="number" min="0" max="256" step="any" inputmode="decimal" value="56" />
+          </div>
+          <div class="field">
+            <label class="field-label" for="overhead-input">Overhead <span class="field-unit">%</span></label>
+            <input id="overhead-input" class="field-input" type="number" min="0" max="100" step="any" inputmode="decimal" value="25" data-unit="percent" />
+          </div>
+          <div class="field">
+            <label class="field-label" for="high-water-input">High-water mark <span class="field-unit">%</span></label>
+            <input id="high-water-input" class="field-input" type="number" min="50" max="99" step="any" inputmode="decimal" value="85" data-unit="percent" />
+          </div>
+          <div class="field">
+            <label class="field-label" for="storage-engine-select">Storage engine</label>
+            <select id="storage-engine-select" class="field-input">
+              <option value="couchstore" selected>Couchstore</option>
+              <option value="magma">Magma</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label" for="small-node-input">Small node below <span class="field-unit">GiB</span></label>
+            <input id="small-node-input" class="field-input" type="number" min="1" max="64" step="any" inputmode="decimal" value="5" />
+          </div>
+          <div class="field">
+            <label class="field-label" for="low-working-set-input">Full-ejection warning below <span class="field-unit">%</span></label>
+            <input id="low-working-set-input" class="field-input" type="number" min="1" max="100" step="any" inputmode="decimal" value="20" />
+          </div>
+        </div>
+        <button class="copy-btn advanced__reset" type="button" data-advanced-reset>Reset to defaults</button>
+      </details>
     </section>
 
     <section class="results" aria-labelledby="results-heading">

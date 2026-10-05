@@ -30,6 +30,7 @@ so entries are grouped under `Unreleased` until a release is tagged.
 - vSphere follows VMware's advice: configured memory as the cap, no limit (#24, #30).
 - systemd sets `MemoryMax` to 1.25 × `MemoryHigh`, with the references behind the ratio (#23, #31); the ratio can be changed under Advanced.
 - End-to-end tests moved from `e2e/` to `tests/e2e/`.
+- Couchbase: the metadata per document, overhead, high-water mark, storage engine and two warning thresholds can be changed under "Advanced: sizing defaults and thresholds".
 
 ### Fixed
 

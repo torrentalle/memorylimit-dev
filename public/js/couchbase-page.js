@@ -14,6 +14,7 @@ import * as couchbase from './formatters/couchbase.js';
 import { parseCouchbaseInput } from './couchbase-parser.js';
 import { attachTip } from './field-tips.js';
 import { renderExplanation } from './explanation.js';
+import { initAdvancedSettings, readAdvancedNumber } from './advanced-settings.js';
 
 const MIB_PER_GIB = 1024;
 const MAX_BUCKETS = 30;
@@ -45,6 +46,13 @@ const el = {
   searchQuota: element('search-quota-input'),
   eventingQuota: element('eventing-quota-input'),
   analyticsQuota: element('analytics-quota-input'),
+  advanced: element('advanced-settings'),
+  metadataBytes: element('metadata-bytes-input'),
+  overhead: element('overhead-input'),
+  highWaterMark: element('high-water-input'),
+  storageEngine: element('storage-engine-select'),
+  smallNode: element('small-node-input'),
+  lowWorkingSet: element('low-working-set-input'),
   disabledState: element('disabled-state'),
   outputPanels: element('output-panels'),
   statRow: element('stat-row'),
@@ -67,7 +75,7 @@ let renderedWarnings = '';
 // One sentence per input on how it moves the result. The bucket name has none: it doesn't affect the numbers.
 const BUCKET_TIPS = {
   documents: 'Metadata and data both grow with it: twice the documents, twice the quota.',
-  keyBytes: 'Added to the 56 bytes of metadata each document keeps in RAM, so longer keys raise the quota for every document.',
+  keyBytes: 'Added to the metadata each document keeps in RAM (56 bytes by default), so longer keys raise the quota for every document.',
   documentBytes: 'Only the working-set share of it is held in RAM, so it raises the quota by size × working set %.',
   replicas: 'Each replica is a full extra copy of data and metadata: 1 replica doubles the quota, 2 triple it.',
   workingSetPct: 'The share of the data kept in RAM: the quota grows with it, and reads outside it go to disk.',
@@ -75,8 +83,15 @@ const BUCKET_TIPS = {
 };
 const FIELD_TIPS = {
   dataNodes: 'The bucket total is divided by this to give the Data quota per node: more nodes, a smaller quota on each.',
-  nodeRam: 'Doesn’t change any quota; the quotas are checked against it (at most 90% recommended, never above RAM − 1 GiB).'
+  nodeRam: 'Doesn’t change any quota; the quotas are checked against it (at most 90% recommended, never above RAM − 1 GiB).',
   // The other services' quotas all work the same way, so one sentence in the section's hint covers them.
+  // "Advanced: sizing defaults and thresholds":
+  metadataBytes: 'Added to every document’s key length to give the metadata it keeps in RAM; 56 bytes is the metadata_per_document of Couchbase’s sizing guidelines.',
+  overhead: 'Every bucket quota is multiplied by 1 plus this; 25% is the overhead_percentage of Couchbase’s sizing guidelines.',
+  highWaterMark: 'Every bucket quota is divided by this, so the working set stays below the point where Couchbase starts ejecting items; 85% is Couchbase’s default high-water mark.',
+  storageEngine: 'Only moves a warning: Couchbase recommends a bucket quota of at least 10% of the dataset for Couchstore, and 1% for Magma.',
+  smallNode: 'Only moves a warning: below this much RAM the recommended share for quotas drops from 90% to 80%, and 5 GiB is our reading of Couchbase’s “little memory”.',
+  lowWorkingSet: 'Only moves a warning, shown for a full-ejection bucket that keeps less than this share in RAM; 20% is our own threshold.'
 };
 
 // ---- bucket rows ---------------------------------------------------------
@@ -385,6 +400,23 @@ function renderEmpty(message) {
   renderExplanation(el, message, null);
 }
 
+/** The values of "Advanced: sizing defaults and thresholds", as calculateSizing() takes them; an empty field keeps its default. */
+function readSettings() {
+  const settings = { storageEngine: el.storageEngine.value };
+  const numbers = {
+    metadataBytes: el.metadataBytes,
+    overhead: el.overhead,
+    highWaterMark: el.highWaterMark,
+    smallNodeMiB: el.smallNode,
+    lowWorkingSetPct: el.lowWorkingSet
+  };
+  for (const [key, input] of Object.entries(numbers)) {
+    const value = readAdvancedNumber(input);
+    if (value !== null) settings[key] = key === 'smallNodeMiB' ? value * MIB_PER_GIB : value;
+  }
+  return settings;
+}
+
 function recalculate() {
   const nodeRamGiB = readNumber(el.nodeRam);
   const dataNodes = readNumber(el.dataNodes);
@@ -404,7 +436,8 @@ function recalculate() {
         search: readNumber(el.searchQuota) ?? 0,
         eventing: readNumber(el.eventingQuota) ?? 0,
         analytics: readNumber(el.analyticsQuota) ?? 0
-      }
+      },
+      settings: readSettings()
     });
   } catch (error) {
     if (!(error instanceof RangeError)) throw error;
@@ -442,6 +475,10 @@ el.bucketList.addEventListener('change', recalculate);
 for (const input of [el.dataNodes, el.nodeRam, el.indexQuota, el.searchQuota, el.eventingQuota, el.analyticsQuota]) {
   input.addEventListener('input', recalculate);
 }
+for (const input of [el.metadataBytes, el.overhead, el.highWaterMark, el.smallNode, el.lowWorkingSet]) {
+  input.addEventListener('input', recalculate);
+}
+el.storageEngine.addEventListener('change', recalculate);
 
 el.copyButton.addEventListener('click', async () => {
   if (!currentSnippet) return;
@@ -463,6 +500,7 @@ if (live) {
   for (const [key, text] of Object.entries(FIELD_TIPS)) {
     attachTip(document.querySelector(`label[for="${el[key].id}"]`), el[key], text);
   }
+  initAdvancedSettings(el.advanced, recalculate);
   setMode('manual');
   addBucketRow();
   recalculate();
