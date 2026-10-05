@@ -162,6 +162,17 @@ test('skips Grafana CSV rows whose value cell is empty instead of reading the ti
   }
 });
 
+test('a Grafana CSV with a date column keeps a steadily growing first series in the epoch-seconds range', () => {
+  // 1.2–1.3 GB, strictly increasing: in range for epoch seconds, but the dates already give each row its time.
+  const text = [
+    'Time,web-1,web-2',
+    '2026-09-25 10:00:00,1200000000,1300000000',
+    '2026-09-25 10:01:00,1250000000,1310000000',
+    '2026-09-25 10:02:00,1300000000,1320000000'
+  ].join('\n');
+  assert.deepEqual(Parser.parseSamples(text), [1200000000, 1300000000, 1250000000, 1310000000, 1300000000, 1320000000]);
+});
+
 test('keeps a genuine first column that is not increasing like a timestamp', () => {
   const text = '2147483648,3221225472\n2147000000,3221000000';
   assert.deepEqual(Parser.parseSamples(text), [2147483648, 3221225472, 2147000000, 3221000000]);
@@ -216,6 +227,27 @@ test('parses PromQL expression results, which have labels but no metric name', (
 
 test('parses Redis INFO used_memory lines', () => {
   assert.deepEqual(Parser.parseSamples('used_memory:419430400\r\nused_memory:429916160'), [419430400, 429916160]);
+});
+
+test('reads only used_memory from a whole INFO memory paste, and reports the other keys as ignored', () => {
+  const text = [
+    '# Memory',
+    'used_memory:419430400',
+    'used_memory_human:400.00M',
+    'used_memory_rss:500000000',
+    'used_memory_peak_perc:85.05%',
+    'total_system_memory:17179869184',
+    'maxmemory:0',
+    'mem_fragmentation_ratio:1.10'
+  ].join('\n');
+  const result = Parser.parseAndAnalyze(text);
+  assert.deepEqual(result.samples, [419430400]);
+  // The four other numeric keys, plus 400.00M and 85.05%, which were never readable.
+  assert.equal(result.ignoredLines, 6);
+});
+
+test('a paste of one key that isn\'t a known memory key is still read', () => {
+  assert.deepEqual(Parser.parseSamples('rss_bytes:419430400\nrss_bytes:429916160'), [419430400, 429916160]);
 });
 
 test('still reads recording-rule metric names that contain colons', () => {
