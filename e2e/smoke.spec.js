@@ -87,6 +87,16 @@ test('Kubernetes: Guaranteed QoS sets request equal to limit', async ({ page }) 
   await expect(page.locator('#explanation-note')).toContainText('CPU request equal to its CPU limit');
 });
 
+test('Kubernetes: VPA-style request basis puts the request 15% above the peak', async ({ page }) => {
+  await page.goto('/kubernetes/');
+  await fillUsage(page, 450.4, 629.4);
+  await field(page, 'Request basis').selectOption('vpa');
+  await expect(page.locator('#snippet-code')).toHaveText(
+    'resources:\n  requests:\n    memory: "724Mi"\n  limits:\n    memory: "819Mi"'
+  );
+  await expect(page.locator('#explanation-note')).toContainText('Vertical Pod Autoscaler’s defaults');
+});
+
 test('Kubernetes: a Prometheus range-table paste fills the fields and skips the pause container', async ({ page }) => {
   await page.goto('/kubernetes/');
   await page.getByRole('button', { name: 'Paste Prometheus' }).click();
@@ -309,8 +319,8 @@ test('Couchbase: each input that changes the result has a tooltip saying how', a
 
 test('shared fields have tooltips saying how they move the result, and the derivation links the sizing model', async ({ page }) => {
   await page.goto('/kubernetes/');
-  // Average, peak, workload type, replicas, sensitivity, environment and QoS.
-  await expect(page.locator('.hint-tip__btn')).toHaveCount(7);
+  // Average, peak, workload type, replicas, sensitivity, environment, QoS and request basis.
+  await expect(page.locator('.hint-tip__btn')).toHaveCount(8);
   const tip = page.getByRole('tooltip').filter({ hasText: 'Guaranteed sets the request equal to the limit' });
   await expect(tip).toBeHidden();
   await expect(field(page, 'QoS class')).toHaveAccessibleDescription(/Guaranteed sets the request equal to the limit/);

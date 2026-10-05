@@ -258,6 +258,32 @@ limit   = max(peak × (1 + limit margin), request)        rounded up to a whole 
         with timestamps. If eviction is a concern, choose a higher sensitivity or Guaranteed QoS, or let VPA size
         the request once the workload has history. <a class="guide-tag guide-tag--assumption" id="assumption-2-ref" href="#assumption-2">Assumption</a>
       </p>
+
+      <h3 class="guide-subheading">Request basis: VPA-style</h3>
+      <p>
+        The calculator's <em>Request basis</em> field can size the request the way VPA does instead. VPA's recommender adds
+        its 15% margin to the memory target and never recommends less than 250 MiB for a Pod, split between its containers.
+        <a class="guide-tag guide-tag--doc" href="https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/pkg/recommender/logic/recommender.go" target="_blank" rel="noopener">Kubernetes source</a>
+      </p>
+      <pre class="yaml-block guide-formula"><code>request = max(peak × 1.15, 250 MiB)    rounded up to a whole Mi
+limit   = max(peak × (1 + limit margin), request)</code></pre>
+      <p>
+        VPA's target is the 90th percentile of daily peaks; with only a peak to go on, the calculator uses the peak, which is at
+        least as high, so the request comes out at or above what VPA would set.
+        <a class="guide-tag guide-tag--assumption" id="assumption-5-ref" href="#assumption-5">Assumption</a>
+        The sensitivity, workload and environment margins don't apply to the request in this mode, only to the limit. The 250 MiB
+        minimum is applied in full, as if the Pod had one container.
+        <a class="guide-tag guide-tag--assumption" id="assumption-6-ref" href="#assumption-6">Assumption</a>
+      </p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-example="410 630 generic medium production 3 burstable vpa">
+          <tbody>
+            <tr><th scope="row">request</th><td>630 MiB × 1.15 = 724.5 MiB</td><td data-check="request">725Mi</td></tr>
+            <tr><th scope="row">limit</th><td>630 MiB × 1.30 = 819 MiB</td><td data-check="limit">819Mi</td></tr>
+            <tr class="guide-table__result"><th scope="row">total request</th><td>725Mi × 3 replicas</td><td data-check="totalRequest">2175Mi</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <section class="panel guide-section" id="paste" aria-labelledby="paste-heading">
@@ -290,9 +316,11 @@ limit   = max(peak × (1 + limit margin), request)        rounded up to a whole 
           <thead><tr><th scope="col">Assumption</th><th scope="col">Kind</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
           <tbody>
             <tr id="assumption-1"><td>Warn when the limit is over 4× the request <a class="guide-backref" href="#assumption-1-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>A judgment call on when overcommit makes evictions likely</td><td>Only the warning moves; a LimitRange in your namespace may set a stricter cap.</td></tr>
-            <tr id="assumption-2"><td>The request comes from the average, not from daily peaks like VPA <a class="guide-backref" href="#assumption-2-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>Works with few samples</td><td>The Pod is more often above its request, so more likely to be evicted under node pressure.</td></tr>
+            <tr id="assumption-2"><td>The request comes from the average, not from daily peaks like VPA <a class="guide-backref" href="#assumption-2-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>Works with few samples</td><td>The Pod is more often above its request, so more likely to be evicted under node pressure; choose VPA-style as the request basis to avoid it.</td></tr>
             <tr id="assumption-3"><td>Burstable by default <a class="guide-backref" href="#assumption-3-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>Packs more Pods per node</td><td>GKE recommends request = limit for memory; choose Guaranteed for workloads that mustn't be evicted.</td></tr>
             <tr id="assumption-4"><td><code>container=""</code> and <code>container="POD"</code> are Pod-level and pause series <a class="guide-backref" href="#assumption-4-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our reading</td><td>What cAdvisor commonly exports</td><td>If your setup labels them differently, they're averaged in and skew the result; filter them out in the query.</td></tr>
+            <tr id="assumption-5"><td>VPA-style uses the peak as VPA's target <a class="guide-backref" href="#assumption-5-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>The calculator has a peak, not 8 days of daily peaks</td><td>The request is at or a little above what VPA would recommend.</td></tr>
+            <tr id="assumption-6"><td>VPA's 250 MiB minimum goes to one container <a class="guide-backref" href="#assumption-6-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">About your setup</td><td>VPA splits it between a Pod's containers; the calculator sizes one</td><td>In a multi-container Pod, VPA would give each container only its share of 250 MiB.</td></tr>
           </tbody>
         </table>
       </div>

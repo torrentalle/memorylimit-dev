@@ -253,11 +253,31 @@ export function initCalculator({ platformId, formatter }) {
 
   function attachFieldTips() {
     for (const [key, text] of Object.entries(fieldTipsFor(formatter))) {
-      const control = el[key];
+      // Shared fields by name; a platform's own fields by their data-formatter-option.
+      const control = el[key] ?? document.querySelector(`[data-formatter-option="${key}"]`);
       // A field the page hides, or doesn't have (QoS outside Kubernetes), gets no tooltip.
       if (!control || control.closest('.is-hidden')) continue;
       attachTip(document.querySelector(`label[for="${control.id}"]`), control, text);
     }
+  }
+
+  // A platform's own fields (QoS on Kubernetes, concurrency on Cloud Run…) carry data-formatter-option="name"
+  // and reach the formatter as format(raw, { name: value }). Number inputs that are empty or invalid are left out,
+  // so the formatter falls back to its default.
+  const optionControls = [...document.querySelectorAll('[data-formatter-option]')];
+
+  function readFormatterOptions() {
+    const options = {};
+    for (const control of optionControls) {
+      if (control.closest('.is-hidden')) continue;
+      if (control.type === 'number') {
+        const value = readPositiveNumber(control);
+        if (value !== null) options[control.dataset.formatterOption] = value;
+      } else {
+        options[control.dataset.formatterOption] = control.value;
+      }
+    }
+    return options;
   }
 
   function recalculate() {
@@ -281,7 +301,7 @@ export function initCalculator({ platformId, formatter }) {
       environment: el.environment.value,
       replicas: clamp(Math.round(parseFloat(el.replicas.value) || 1), 1, MAX_REPLICAS)
     });
-    const result = formatter.format(raw, el.qos ? { qos: el.qos.value } : {});
+    const result = formatter.format(raw, readFormatterOptions());
 
     renderGauge(raw.averageMiB, result.markers);
     renderFigures(result.figures);
@@ -304,8 +324,11 @@ export function initCalculator({ platformId, formatter }) {
   for (const input of [el.avg, el.peak, el.replicas]) {
     input.addEventListener('input', recalculate);
   }
-  for (const select of [el.workload, el.sensitivity, el.environment, el.qos].filter(Boolean)) {
+  for (const select of [el.workload, el.sensitivity, el.environment]) {
     select.addEventListener('change', recalculate);
+  }
+  for (const control of optionControls) {
+    control.addEventListener(control.tagName === 'SELECT' ? 'change' : 'input', recalculate);
   }
 
   el.copyButton.addEventListener('click', async () => {
