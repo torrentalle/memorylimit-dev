@@ -275,6 +275,7 @@ maxmemory-policy allkeys-lru</code></pre>
           <tbody>
             <tr><td>Request margin</td><td>from the profile</td><td>0–200%</td><td>MemoryLimit’s default, from sensitivity, workload type and environment (<a href="/sizing-model/#margins">sizing model</a>); sizes the floor of <code>maxmemory</code></td></tr>
             <tr><td>Limit margin</td><td>from the profile</td><td>0–200%</td><td>MemoryLimit’s default, from sensitivity, workload type and environment (<a href="/sizing-model/#margins">sizing model</a>); sizes <code>maxmemory</code></td></tr>
+            <tr><td>Provisioning factor</td><td>2 × maxmemory</td><td>1–3×</td><td>Redis documents up to 2× during RDB saves and AOF rewrites, <a href="#assumption-1">assumption 1</a>; about 1.25× without persistence or replication, <a href="#assumption-2">assumption 2</a></td></tr>
           </tbody>
         </table>
       </div>

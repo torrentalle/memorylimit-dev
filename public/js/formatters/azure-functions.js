@@ -10,7 +10,7 @@
  *
  * Microsoft suggests 2,048 MB for most apps, so that is the default: the
  * calculator picks the smallest size that fits but never less than 2,048 MB.
- * 512 MB stays a manual choice for small, low-concurrency apps.
+ * 512 MB stays a choice (minInstanceMB) for small, low-concurrency apps.
  *
  * The method, sources and assumptions are on /azure-functions/how-it-works/.
  */
@@ -19,8 +19,9 @@ import { marginTip, percent, PEAK_ONLY_FIELD_TIPS } from './shared.js';
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
   ...PEAK_ONLY_FIELD_TIPS,
-  peak: 'The instance size is the smallest one that fits this plus the limit margin, and at least Microsoft’s 2,048 MB default.',
-  limitMargin: marginTip('the instance size is the smallest that fits the peak plus it')
+  peak: 'The instance size is the smallest one that fits this plus the limit margin, and at least the minimum instance size (Microsoft’s suggested 2,048 MB by default).',
+  limitMargin: marginTip('the instance size is the smallest that fits the peak plus it'),
+  minInstanceMB: 'The smallest Flex Consumption size the result can be: Microsoft suggests 2,048 MB for most apps, and 512 MB suits a small, low-concurrency app.'
 };
 
 // Flex Consumption instance sizes (MB, read as MiB) and their typical CPU cores.
@@ -40,11 +41,19 @@ export const PREMIUM_SKUS = [
   { sku: 'EP3', memoryMiB: 14336, cores: 4 }
 ];
 
-const FLEX_NOTE =
-  'Microsoft suggests 2,048 MB for most apps, so that is the floor here; a small, low-concurrency app can run on ' +
-  '512 MB, with 0.25 cores and a default HTTP concurrency of 4 (1 for Python). Memory per instance is shared by every ' +
-  'execution on it, so this fits the concurrency your samples ran at; the legacy Consumption plan (fixed at 1.5 GB) ' +
-  'isn’t sized here.';
+const FLEX_NOTE_TAIL =
+  'Memory per instance is shared by every execution on it, so this fits the concurrency your samples ran at; the ' +
+  'legacy Consumption plan (fixed at 1.5 GB) isn’t sized here.';
+
+function flexNote(minInstanceMB) {
+  const floor =
+    minInstanceMB === DEFAULT_FLEX_MB
+      ? 'Microsoft suggests 2,048 MB for most apps, so that is the floor here; a small, low-concurrency app can run on ' +
+        '512 MB, with 0.25 cores and a default HTTP concurrency of 4 (1 for Python).'
+      : `The floor here is your ${minInstanceMB} MB minimum; Microsoft suggests 2,048 MB for most apps, and 512 MB comes ` +
+        'with 0.25 cores and a default HTTP concurrency of 4 (1 for Python).';
+  return `${floor} ${FLEX_NOTE_TAIL}`;
+}
 
 const PREMIUM_NOTE =
   'Elastic Premium instances are billed whether or not functions are running, and every function app in the plan ' +
@@ -69,9 +78,11 @@ function peakStep(raw) {
   return { label: 'Memory', text: `${fixed(raw.peakMiB)} MiB peak + ${percent(raw.limitMarginPct)} = ${fixed(raw.limitMiB)} MiB` };
 }
 
-function formatFlex(raw, size) {
-  const text = size.memoryMB === DEFAULT_FLEX_MB && raw.limitMiB <= FLEX_SIZES_MB[0]
-    ? `fits 512 MB, but Microsoft’s 2,048 MB default applies → ${size.memoryMB} MB, ${coresText(size.cores)}`
+function formatFlex(raw, size, minInstanceMB) {
+  const fits = FLEX_SIZES_MB.find((memoryMB) => memoryMB >= raw.limitMiB);
+  const floor = minInstanceMB === DEFAULT_FLEX_MB ? 'Microsoft’s 2,048 MB default' : `your ${minInstanceMB} MB minimum`;
+  const text = fits < size.memoryMB
+    ? `fits ${fits} MB, but ${floor} applies → ${size.memoryMB} MB, ${coresText(size.cores)}`
     : `the smallest Flex Consumption size that fits → ${size.memoryMB} MB, ${coresText(size.cores)}`;
   const steps = [peakStep(raw), { label: 'Instance size', text }];
   return {
@@ -90,7 +101,7 @@ function formatFlex(raw, size) {
     alternative: { label: 'Bicep', code: `functionAppConfig.scaleAndConcurrency.instanceMemoryMB: ${size.memoryMB}` },
     warnings: [],
     explanationSteps: steps,
-    note: FLEX_NOTE
+    note: flexNote(minInstanceMB)
   };
 }
 
@@ -140,10 +151,17 @@ function formatPremium(raw) {
   };
 }
 
-/** @param {object} raw - result of calculateRawSizing() */
-export function format(raw) {
-  const flexSize = FLEX_SIZES.find((size) => size.memoryMB >= Math.max(raw.limitMiB, DEFAULT_FLEX_MB));
-  const result = flexSize ? formatFlex(raw, flexSize) : formatPremium(raw);
+/**
+ * @param {object} raw - result of calculateRawSizing()
+ * @param {{ minInstanceMB?: number | string }} [options] - the smallest Flex Consumption size to pick, one of FLEX_SIZES_MB
+ */
+export function format(raw, { minInstanceMB = DEFAULT_FLEX_MB } = {}) {
+  const minimum = Number(minInstanceMB);
+  if (!FLEX_SIZES_MB.includes(minimum)) {
+    throw new RangeError(`minInstanceMB must be one of ${FLEX_SIZES_MB.join(', ')} (got ${minInstanceMB})`);
+  }
+  const flexSize = FLEX_SIZES.find((size) => size.memoryMB >= Math.max(raw.limitMiB, minimum));
+  const result = flexSize ? formatFlex(raw, flexSize, minimum) : formatPremium(raw);
   return {
     platform: 'azureFunctions',
     ...result,
