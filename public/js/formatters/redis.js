@@ -61,8 +61,8 @@ function explainSteps(raw, maxmemory, provision, fromAverage, factor) {
       label: 'Memory to provision',
       text:
         factor === PERSISTENCE_OVERHEAD
-          ? `${factor} × ${maxmemory} MB for persistence forks = ${provision} MB`
-          : `${factor} × ${maxmemory} MB, your provisioning factor = ${Number((maxmemory * factor).toFixed(1))} MB → ${provision} MB`
+          ? `${factor} × ${maxmemory} MiB for persistence forks = ${provision} MiB`
+          : `${factor} × ${maxmemory} MiB, your provisioning factor = ${Number((maxmemory * factor).toFixed(1))} MiB → ${provision} MiB`
     }
   ];
 }
@@ -84,14 +84,14 @@ export function format(raw, { provisionFactor = PERSISTENCE_OVERHEAD } = {}) {
     provision,
     figures: [
       { role: 'request', label: 'maxmemory', text: `${maxmemory}mb`, detail: `evicts keys (${EVICTION_POLICY}) above this` },
-      { role: 'total', label: 'Memory to provision', text: `${provision} MB`, detail:
+      { role: 'total', label: 'Memory to provision', text: `${provision} MiB`, detail:
           provisionFactor === PERSISTENCE_OVERHEAD
             ? 'host or container, with RDB/AOF persistence'
             : `host or container, ${provisionFactor}× maxmemory` }
     ],
     markers: [
       { role: 'request', name: 'maxmemory', value: maxmemory, text: `${maxmemory}mb` },
-      { role: 'limit', name: 'provision', value: provision, text: `${provision} MB` }
+      { role: 'limit', name: 'provision', value: provision, text: `${provision} MiB` }
     ],
     snippet: { label: 'redis.conf', language: 'text', code: generateConfig(maxmemory) },
     alternative: { label: 'Apply without a restart', code: runtimeCommand(maxmemory) },

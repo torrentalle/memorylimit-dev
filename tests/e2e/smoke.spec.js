@@ -215,7 +215,9 @@ test('Google Cloud Run: produces a gcloud command with the memory limit', async 
 
   await expect(page.locator('#snippet-code')).toHaveText('gcloud run services update <service> --memory 819Mi');
   await expect(page.locator('#stat-row')).toContainText('1 vCPU');
-  await expect(page.locator('#snippet-secondary-note')).toHaveText('service.yaml:\nspec.template.spec.containers[0].resources.limits:\n  memory: 819Mi');
+  await expect(page.locator('#snippet-secondary-note')).toHaveText(
+    'service.yaml (the part to change):\nspec:\n  template:\n    spec:\n      containers:\n      - resources:\n          limits:\n            memory: 819Mi'
+  );
   await expect(page.locator('.explanation-panel .guide-link a')).toHaveAttribute('href', '/cloud-run/how-it-works/');
 });
 
@@ -260,7 +262,7 @@ test('Redis: a used_memory paste produces maxmemory and host sizing', async ({ p
 
   await expect(page.locator('#prom-feedback')).toContainText('2 samples parsed');
   await expect(page.locator('#snippet-code')).toHaveText('maxmemory 650mb\nmaxmemory-policy allkeys-lru');
-  await expect(page.locator('#stat-row')).toContainText('1300 MB');
+  await expect(page.locator('#stat-row')).toContainText('1300 MiB');
   await expect(page.locator('.explanation-panel .guide-link a')).toHaveAttribute('href', '/redis/how-it-works/');
 });
 
@@ -269,8 +271,8 @@ test('Redis: the provisioning factor under Advanced sets the memory to provision
   await fillUsage(page, 400, 500);
   await page.locator('#advanced-settings summary').click();
   await field(page, 'Provisioning factor').fill('1.25');
-  // maxmemory 500 × 1.30 = 650mb; 1.25 × 650 = 812.5 → 813 MB
-  await expect(page.locator('#stat-row')).toContainText('813 MB');
+  // maxmemory 500 × 1.30 = 650mb; 1.25 × 650 = 812.5 → 813 MiB
+  await expect(page.locator('#stat-row')).toContainText('813 MiB');
 });
 
 test('Couchbase: default bucket produces quotas and couchbase-cli commands, and buckets can be added and removed', async ({ page }) => {

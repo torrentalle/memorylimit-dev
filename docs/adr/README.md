@@ -16,13 +16,14 @@ From here on, add an ADR when you make the decision.
 | [0005](0005-multi-page-static-html-with-generated-shared-blocks.md) | Multi-page static HTML with generated shared blocks | Accepted |
 | [0006](0006-load-only-the-current-platforms-formatter.md) | Load only the current platform's formatter | Accepted |
 | [0007](0007-host-on-cloudflare-pages.md) | Host on Cloudflare Pages | Accepted |
-| [0008](0008-cookieless-analytics-and-non-tracking-ads.md) | Cookieless analytics and non-tracking ads, dormant until configured | Accepted |
-| [0009](0009-content-security-policy-without-inline-scripts.md) | Content-Security-Policy with no inline scripts | Accepted |
+| [0008](0008-cookieless-analytics-and-non-tracking-ads.md) | Cookieless analytics and non-tracking ads, dormant until configured | Superseded by [0015](0015-remove-ethicalads-single-third-party-csp.md) |
+| [0009](0009-content-security-policy-without-inline-scripts.md) | Content-Security-Policy with no inline scripts | Superseded by [0015](0015-remove-ethicalads-single-third-party-csp.md) |
 | [0010](0010-testing-strategy.md) | Testing strategy | Accepted |
 | [0011](0011-logo-as-generated-svg.md) | The logo as SVG generated from measured geometry | Accepted |
 | [0012](0012-couchbase-sizing-from-buckets-and-service-quotas.md) | Couchbase: size quotas from buckets and services, with its own page script | Accepted |
 | [0013](0013-explain-each-calculator-with-sourced-guides.md) | Explain each calculator with a sourced guide page | Accepted |
 | [0014](0014-let-users-change-assumed-values.md) | Let users change the values we assumed | Accepted |
+| [0015](0015-remove-ethicalads-single-third-party-csp.md) | Remove EthicalAds: cookieless analytics as the only third party, and no inline styles | Accepted |
 
 ## Adding an ADR
 
