@@ -151,9 +151,11 @@ test('Systemd: produces a MemoryHigh / MemoryMax drop-in with high/max gauge mar
   await expect(field(page, 'Replica count')).toBeHidden();
   await fillUsage(page, 295, 390);
 
-  await expect(page.locator('#snippet-code')).toHaveText('[Service]\nMemoryHigh=512M\nMemoryMax=640M');
+  await expect(page.locator('#snippet-code')).toHaveText('[Service]\nMemoryHigh=507M\nMemoryMax=609M');
   await expect(page.locator('#snippet-secondary-note')).toContainText('systemctl daemon-reload && systemctl restart <service>');
-  await expect(page.locator('#gauge-track')).toHaveAttribute('aria-label', /high 512M, max 640M/);
+  await expect(page.locator('#snippet-secondary-note')).toContainText('systemctl set-property <service>.service MemoryHigh=507M MemoryMax=609M');
+  await expect(page.locator('#gauge-track')).toHaveAttribute('aria-label', /high 507M, max 609M/);
+  await expect(page.locator('.explanation-panel .guide-link a')).toHaveAttribute('href', '/systemd/how-it-works/');
   await expect(page.locator('#stat-row')).toContainText('Expected usage');
 });
 

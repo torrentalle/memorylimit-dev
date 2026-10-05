@@ -84,6 +84,7 @@ export const PLATFORM_DEFINITIONS = [
     category: 'vms',
     label: 'Systemd / Bare Metal / VM',
     path: '/systemd/',
+    guide: '/systemd/how-it-works/',
     tagline: 'Set MemoryHigh and MemoryMax for services running directly on a Linux host.'
   },
   {
