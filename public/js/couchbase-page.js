@@ -288,10 +288,20 @@ function applyCluster({ dataNodes, nodeRamMiB, services }) {
 
 const count = (n, noun) => `${n} ${noun}${n === 1 ? '' : 's'}`;
 
-function describeBucket({ name, documents, currentQuotaMiB }) {
+function describeBucket({ name, documents, documentsFromNodes, documentsFromUnnamedSeries, currentQuotaMiB }) {
   const parts = [];
-  if (documents !== undefined) parts.push(`${documents.toLocaleString('en-US')} documents`);
-  if (currentQuotaMiB !== undefined) parts.push(`quota now ${currentQuotaMiB} MiB`);
+  if (documents !== undefined) {
+    const source =
+      documentsFromNodes !== undefined
+        ? documentsFromNodes === 1
+          ? ' from one node’s /metrics'
+          : ` from ${documentsFromNodes} nodes’ /metrics`
+        : documentsFromUnnamedSeries
+          ? ', read from series without a metric name'
+          : '';
+    parts.push(`${documents.toLocaleString('en-US')} documents${source}`);
+  }
+  if (currentQuotaMiB !== undefined) parts.push(`quota now ${currentQuotaMiB} MiB per node`);
   return parts.length ? `${name} (${parts.join(', ')})` : name;
 }
 
@@ -337,7 +347,11 @@ function handlePaste() {
     // A bucket with only its quota in the paste keeps the default document count, so say it wasn't read.
     const uncounted = parsed.buckets.filter((bucket) => bucket.documents === undefined).map((bucket) => bucket.name);
     const noCount = uncounted.length ? ` No document count for ${uncounted.join(', ')} (no kv_curr_items) — enter it yourself.` : '';
-    setFeedback(`${source}: ${count(parsed.buckets.length, 'bucket')} — ${parsed.buckets.map(describeBucket).join('; ')}.${noCount}${missing}${skipped}`, 'ok');
+    // A node's /metrics counts only the items active on that node, so a count from some of the nodes is too low.
+    const perNode = parsed.buckets.some((bucket) => bucket.documentsFromNodes !== undefined)
+      ? ' A node’s /metrics counts only its own active items: paste every Data node’s output, or use the bucket API for the whole cluster.'
+      : '';
+    setFeedback(`${source}: ${count(parsed.buckets.length, 'bucket')} — ${parsed.buckets.map(describeBucket).join('; ')}.${noCount}${perNode}${missing}${skipped}`, 'ok');
   } else {
     setFeedback('Nothing recognised. Paste kv_curr_items from /metrics, or the JSON from /pools/default/buckets or /pools/default.', 'error');
     return;

@@ -40,7 +40,13 @@ const ROW_VALUE = new RegExp(
 const JSON_PAIR = new RegExp(`^\\[\\s*(${NUMBER_SRC})\\s*,\\s*"?(${NUMBER_SRC})"?\\s*\\],?$`);
 // `used_memory:419430400` (Redis INFO) or `MemoryCurrent=412345678` (systemctl show).
 // Checked before exposition parsing because `:` is legal in Prometheus names.
-const KEY_VALUE = new RegExp(`^[A-Za-z_][\\w.-]*\\s*[:=]\\s*(${NUMBER_SRC})\\s?(${Object.keys(UNIT_BYTES).join('|')})?$`);
+const KEY_VALUE = new RegExp(`^([A-Za-z_][\\w.-]*)\\s*[:=]\\s*(${NUMBER_SRC})\\s?(${Object.keys(UNIT_BYTES).join('|')})?$`);
+// The keys whose values are memory usage. When a paste mixes them with other keys — the whole of
+// `redis-cli INFO memory` rather than its used_memory lines — only these are read.
+const MEMORY_KEYS = new Set(['used_memory', 'MemoryCurrent']);
+// A date (2026-09-25) or a time of day (10:00) in a row means the row's time is already written out,
+// so its first number is a sample, not an epoch timestamp.
+const DATE_OR_TIME = /\d{4}-\d{2}-\d{2}|\b\d{1,2}:\d{2}\b/;
 
 const isEpochMs = (v) => v >= 1e12 && v < 1e13;
 const isEpochSeconds = (v) => v >= 1e9 && v < 1e10;
@@ -133,7 +139,9 @@ function parseRow(line) {
   if (pair) return { tokens: [{ value: parseFloat(pair[2]), unit: null }], hasTimeColumn: false };
 
   const tokens = [...line.matchAll(ROW_VALUE)].map((m) => ({ value: parseFloat(m[1]), unit: m[2] ?? null }));
-  return { tokens, hasTimeColumn: true };
+  // A Grafana CSV with a date column has its time there; a steadily growing first series in the
+  // epoch-seconds range (1–9 GiB in bytes) must not then be mistaken for a time column.
+  return { tokens, hasTimeColumn: !DATE_OR_TIME.test(line) };
 }
 
 /**
@@ -214,10 +222,10 @@ export function extractSamples(text) {
 
     const keyValue = KEY_VALUE.exec(line);
     if (keyValue) {
-      const value = parseFloat(keyValue[1]);
-      const unit = keyValue[2];
+      const [, key, number, unit] = keyValue;
+      const value = parseFloat(number);
       if (!isUsable(value)) out.ignoredLines++;
-      else entries.push({ sample: unit ? { value: value * UNIT_BYTES[unit], explicitBytes: true } : { value, explicitBytes: false } });
+      else entries.push({ key, sample: unit ? { value: value * UNIT_BYTES[unit], explicitBytes: true } : { value, explicitBytes: false } });
       continue;
     }
 
@@ -257,7 +265,13 @@ export function extractSamples(text) {
 
   const rows = entries.filter((e) => e.row).map((e) => e.row);
   const dropFirst = firstColumnIsTimestamp(rows.filter((r) => r.hasTimeColumn).map((r) => r.tokens));
-  for (const { sample, row } of entries) {
+  const keys = new Set(entries.filter((e) => e.key).map((e) => e.key));
+  const onlyMemoryKeys = keys.size > 1 && [...keys].some((key) => MEMORY_KEYS.has(key));
+  for (const { key, sample, row } of entries) {
+    if (onlyMemoryKeys && key && !MEMORY_KEYS.has(key)) {
+      out.ignoredLines++;
+      continue;
+    }
     if (sample) {
       out.samples.push(sample);
       continue;
