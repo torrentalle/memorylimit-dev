@@ -13,6 +13,7 @@ so entries are grouped under `Unreleased` until a release is tagged.
 - Calculators for Azure Functions (#9), Couchbase (#13), Nomad (#19), Cloud Run (#21), Lambda (#20), vSphere (#24), Proxmox VE (#25) and Redis (#26).
 - A guide page for each calculator, explaining its sizing model, plus a shared page on the common model (#14, #16, #17, #19–#26).
 - Field tooltips and links between each assumption label and its row in the table (#14, #18).
+- An "Advanced: margins and defaults" section on every calculator, closed by default, to replace the request and limit margins; each field has a tooltip and each guide a "Values you can change" table.
 - A report link under each calculator result (#10).
 - Kubernetes request basis option: VPA-style, peak + 15% (#28).
 - GitHub Sponsors links, a `/support/` page and issue forms (#4).

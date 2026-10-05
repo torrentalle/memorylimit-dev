@@ -1,4 +1,7 @@
 /** Text helpers shared by the platform formatters. */
+import { marginTip } from '../field-tip-texts.js';
+
+export { marginTip };
 
 const WORKLOAD_LABELS = {
   api: 'API service',
@@ -27,5 +30,6 @@ export function pluralize(count, noun) {
 export const PEAK_ONLY_FIELD_TIPS = {
   avg: null,
   sensitivity: 'Sets the base margin on the peak: the higher the sensitivity, the more headroom.',
-  workload: 'JVM and worker/batch get extra margin above the peak; the other types don’t change it.'
+  workload: 'JVM and worker/batch get extra margin above the peak; the other types don’t change it.',
+  requestMargin: null
 };

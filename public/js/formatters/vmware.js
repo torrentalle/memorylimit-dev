@@ -19,12 +19,14 @@
  * The method, sources and assumptions are on /vmware/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { percent } from './shared.js';
+import { marginTip, percent } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
   avg: 'The reservation is this plus the request margin.',
-  peak: 'The VM’s memory size is this plus the limit margin, raised to the reservation if it would fall below it.'
+  peak: 'The VM’s memory size is this plus the limit margin, raised to the reservation if it would fall below it.',
+  requestMargin: marginTip('the reservation is the average plus it'),
+  limitMargin: marginTip('the VM’s memory size is the peak plus it')
 };
 
 // vSphere takes whole MB (MiB).

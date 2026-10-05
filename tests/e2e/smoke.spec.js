@@ -332,8 +332,9 @@ test('Couchbase: each input that changes the result has a tooltip saying how', a
 
 test('shared fields have tooltips saying how they move the result, and the derivation links the sizing model', async ({ page }) => {
   await page.goto('/kubernetes/');
-  // Average, peak, workload type, replicas, sensitivity, environment, QoS and request basis.
-  await expect(page.locator('.hint-tip__btn')).toHaveCount(8);
+  // Average, peak, workload type, replicas, sensitivity, environment, QoS and request basis, plus the advanced
+  // request and limit margins.
+  await expect(page.locator('.hint-tip__btn')).toHaveCount(10);
   const tip = page.getByRole('tooltip').filter({ hasText: 'Guaranteed sets the request equal to the limit' });
   await expect(tip).toBeHidden();
   await expect(field(page, 'QoS class')).toHaveAccessibleDescription(/Guaranteed sets the request equal to the limit/);
@@ -346,11 +347,35 @@ test('shared fields have tooltips saying how they move the result, and the deriv
   await expect(guide).toHaveAttribute('href', '/kubernetes/how-it-works/');
   await expect(guide).toHaveAttribute('target', '_blank');
 
-  // Lambda is sized from the peak alone: no tooltip on the average, and the replica field is hidden.
+  // Lambda is sized from the peak alone: no tooltip on the average, and the replica and request margin fields
+  // are hidden.
   await page.goto('/lambda/');
-  await expect(page.locator('.hint-tip__btn')).toHaveCount(4);
+  await expect(page.locator('.hint-tip__btn')).toHaveCount(5);
   await expect(averageInput(page)).not.toHaveAttribute('aria-describedby', /.+/);
   await expect(peakInput(page)).toHaveAccessibleDescription(/MemorySize is this plus the limit margin/);
+});
+
+test('advanced margins and defaults: closed by default, they change the result, and reset puts them back', async ({ page }) => {
+  await page.goto('/kubernetes/');
+  await fillUsage(page, 410, 630);
+  const section = page.locator('#advanced-settings');
+  await expect(section).not.toHaveAttribute('open', '');
+  await expect(field(page, 'Limit margin')).toBeHidden();
+
+  await section.locator('summary').click();
+  // An empty margin shows the profile's.
+  await expect(field(page, 'Limit margin')).toHaveAttribute('placeholder', '30 from profile');
+  await field(page, 'Limit margin').fill('50');
+  await expect(page.locator('#snippet-code')).toContainText('memory: "945Mi"');
+  await field(page, 'Request margin').fill('10');
+  await expect(page.locator('#snippet-code')).toContainText('memory: "451Mi"');
+  await expect(section.locator('summary')).toContainText('2 changed');
+
+  await page.getByRole('button', { name: 'Reset to defaults' }).click();
+  await expect(section.locator('summary')).not.toContainText('changed');
+  await expect(page.getByRole('button', { name: 'Reset to defaults' })).toBeDisabled();
+  await expect(page.locator('#snippet-code')).toContainText('memory: "533Mi"');
+  await expect(page.locator('#snippet-code')).toContainText('memory: "819Mi"');
 });
 
 test('Proxmox VE: produces a qm command and web UI steps', async ({ page }) => {

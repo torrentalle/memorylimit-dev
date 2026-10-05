@@ -13,12 +13,14 @@
  * The method, sources and assumptions are on /redis/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { percent } from './shared.js';
+import { marginTip, percent } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
   avg: 'maxmemory never goes below this plus the request margin.',
-  peak: 'maxmemory is this plus the limit margin, and the memory to provision twice that.'
+  peak: 'maxmemory is this plus the limit margin, and the memory to provision twice that.',
+  requestMargin: marginTip('maxmemory never goes below the average plus it'),
+  limitMargin: marginTip('maxmemory is the peak plus it')
 };
 
 // Redis's mb is MiB; the output uses whole mb.

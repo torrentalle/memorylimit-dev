@@ -14,12 +14,13 @@
  *
  * The method, sources and assumptions are on /azure-functions/how-it-works/.
  */
-import { percent, PEAK_ONLY_FIELD_TIPS } from './shared.js';
+import { marginTip, percent, PEAK_ONLY_FIELD_TIPS } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
   ...PEAK_ONLY_FIELD_TIPS,
-  peak: 'The instance size is the smallest one that fits this plus the limit margin, and at least Microsoft’s 2,048 MB default.'
+  peak: 'The instance size is the smallest one that fits this plus the limit margin, and at least Microsoft’s 2,048 MB default.',
+  limitMargin: marginTip('the instance size is the smallest that fits the peak plus it')
 };
 
 // Flex Consumption instance sizes (MB, read as MiB) and their typical CPU cores.

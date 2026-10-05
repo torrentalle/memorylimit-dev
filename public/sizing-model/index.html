@@ -145,7 +145,9 @@
       <p>
         You can type the two numbers, in MiB, or paste monitoring output and let the calculator read them. A paste
         is turned into a list of samples: the average is their mean and the peak is the largest. <a class="guide-tag guide-tag--assumption" id="assumption-6-ref" href="#assumption-6">Assumption</a> Values in bytes are
-        converted to MiB. Kubernetes exports a series for the whole Pod and one for its pause container next to each
+        converted to MiB. Numbers without a unit are read as bytes, unless every one of them is below 1,000,000: no
+        process runs in less than a megabyte, so those are read as MiB. <a class="guide-tag guide-tag--assumption" id="assumption-7-ref" href="#assumption-7">Assumption</a>
+        Kubernetes exports a series for the whole Pod and one for its pause container next to each
         real container; those are skipped, because averaging them in would skew the result.
       </p>
       <p>
@@ -178,6 +180,12 @@ margin  = (sensitivity base + workload adjustment) × environment multiplier</co
         No vendor publishes a general safety margin for memory, so every value below is a MemoryLimit default: round
         figures that give clearly different results for each choice. They aren't measured, they're the same on every
         platform, and changing one changes every calculator's output. <a class="guide-tag guide-tag--assumption" id="assumption-1-ref" href="#assumption-1">Assumption</a>
+      </p>
+      <p>
+        If you know the headroom your service needs, you don't have to go through the tables: every calculator has an
+        <strong>Advanced: margins and defaults</strong> section, closed by default, where a request margin and a limit
+        margin (0–200%) replace the ones the profile gives. Left empty, each shows the profile's margin greyed out. Where
+        a platform has values of its own that you can change, the same section holds them, and its guide lists them.
       </p>
 
       <h3 class="guide-subheading">Sensitivity: the base</h3>
@@ -299,12 +307,13 @@ margin  = (sensitivity base + workload adjustment) × environment multiplier</co
         <table class="guide-table">
           <thead><tr><th scope="col">Assumption</th><th scope="col">Kind</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
           <tbody>
-            <tr id="assumption-1"><td>Sensitivity base margins: 15/30/50% on the request, 20/30/40% on the limit <a class="guide-backref" href="#assumption-1-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>No vendor publishes a general memory margin; these are round defaults</td><td>Too small and you'll see OOM kills or evictions; too large and memory sits unused. Pick another sensitivity, or adjust the result.</td></tr>
-            <tr id="assumption-2"><td>Workload adjustments for JVM, worker/batch and cache <a class="guide-backref" href="#assumption-2-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>How these runtimes typically use memory beyond what samples show</td><td>If your service doesn't behave like its type, choose Generic.</td></tr>
+            <tr id="assumption-1"><td>Sensitivity base margins: 15/30/50% on the request, 20/30/40% on the limit <a class="guide-backref" href="#assumption-1-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>No vendor publishes a general memory margin; these are round defaults</td><td>Too small and you'll see OOM kills or evictions; too large and memory sits unused. Pick another sensitivity, or set your own margins under Advanced.</td></tr>
+            <tr id="assumption-2"><td>Workload adjustments for JVM, worker/batch and cache <a class="guide-backref" href="#assumption-2-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>How these runtimes typically use memory beyond what samples show</td><td>If your service doesn't behave like its type, choose Generic, or set your own margins under Advanced.</td></tr>
             <tr id="assumption-3"><td>Development keeps 60% of the margins, staging 85% <a class="guide-backref" href="#assumption-3-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>An OOM kill costs less outside production</td><td>Choose Production for an environment that must not fail.</td></tr>
             <tr id="assumption-4"><td>The samples cover a representative period, busiest times included <a class="guide-backref" href="#assumption-4-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">About your setup</td><td>The average and the peak are only as good as the window</td><td>A missed peak gives a limit that's too low.</td></tr>
             <tr id="assumption-5"><td>Each sample is one instance's memory <a class="guide-backref" href="#assumption-4-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">About your setup</td><td>Every value is per replica, task or process</td><td>A series summed across replicas makes every value too large by the replica count.</td></tr>
             <tr id="assumption-6"><td>Average and maximum, not percentiles <a class="guide-backref" href="#assumption-6-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>They work with as few as one or two samples</td><td>One outlier spike raises the limit; remove it from the paste if it isn't real.</td></tr>
+            <tr id="assumption-7"><td>Numbers without a unit, all below 1,000,000, are MiB <a class="guide-backref" href="#assumption-7-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>A process's memory in bytes is always above a million; in MiB it rarely is</td><td>Unitless KiB or kB values would be read as MiB; paste them with their unit, or type the average and peak in MiB.</td></tr>
           </tbody>
         </table>
       </div>
