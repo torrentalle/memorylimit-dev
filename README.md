@@ -74,7 +74,7 @@ npm run sync:pages        # regenerate the nav and landing-page blocks after edi
 npm run generate:sitemap  # regenerate public/sitemap.xml
 ```
 
-Analytics and ads stay off on `localhost` (see [Configuration](#configuration)). Browser tests are described in
+Analytics stays off on `localhost` (see [Configuration](#configuration)). Browser tests are described in
 [Testing](#testing).
 
 ## How the sizing works
@@ -193,13 +193,13 @@ Three plain objects, each in its own module:
 | File | Object | Controls |
 | --- | --- | --- |
 | `public/js/platforms.js` | `ENABLED_PLATFORMS` | Which calculators appear in the nav, on the landing page and in the sitemap. If only one is enabled, `/` redirects to it. Run `npm run generate:sitemap` after changing it. |
-| `public/js/monetization.js` | `MONETIZATION` | EthicalAds text ad (currently disabled: it needs a publisher ID from [ethicalads.io](https://www.ethicalads.io/), which requires a traffic minimum; the privacy page doesn't mention it until it is enabled) and a GitHub Sponsors / Buy Me a Coffee link (needs an absolute `https://` URL). |
+| `public/js/monetization.js` | `MONETIZATION` | A GitHub Sponsors / Buy Me a Coffee link (needs an absolute `https://` URL). |
 | `public/js/analytics.js` | `ANALYTICS` | Cloudflare Web Analytics beacon (needs a token from the Cloudflare dashboard). Cookieless, so there is no consent banner. |
 
 Each element renders only when it is switched on **and** configured. The shipped placeholders
 (`REPLACE_WITH_…`) render nothing and load no third-party scripts. Configured or not, `public/js/env.js`
 also keeps both silent everywhere except the production host itself, so a preview or local run never
-pollutes real analytics or serves real ads.
+pollutes real analytics.
 
 ## Adding a platform
 
@@ -260,13 +260,10 @@ these third-party hosts:
 
 | Host | Directive | Why |
 | --- | --- | --- |
-| `media.ethicalads.io` | `script-src`, `img-src` | EthicalAds client script, ad images, ad-block probe pixel |
-| `server.ethicalads.io` | `script-src`, `img-src` | Ad decision (loaded as a JSONP script), view-tracking pixel |
 | `static.cloudflareinsights.com` | `script-src` | Cloudflare Web Analytics beacon |
 | `cloudflareinsights.com` | `connect-src` | Beacon reports |
 
-`style-src` allows `'unsafe-inline'` only because the EthicalAds client injects a `<style>` element. Scripts
-can never be inline or use `eval`, and the site can't be framed (`frame-ancestors 'none'`).
+`style-src` is `'self'` only. Scripts can never be inline or use `eval`, and the site can't be framed (`frame-ancestors 'none'`).
 
 The host applies these headers at deploy time. `serve`, used locally and in CI, ignores them, so
 `tests/e2e/csp.spec.js` injects the policy into every HTML response instead and fails on any violation. It

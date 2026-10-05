@@ -38,3 +38,7 @@ stance of [ADR 0002](0002-static-client-side-site-without-build-step.md).
 - The third-party hosts both services need are allowed in the CSP ahead of time
   ([ADR 0009](0009-content-security-policy-without-inline-scripts.md)), so switching them on needs no header
   change.
+
+## Update
+
+The EthicalAds part was removed before it was ever enabled (kept on the `feat/ethicalads` branch). Analytics and the donation link stand.

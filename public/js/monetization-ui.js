@@ -1,32 +1,9 @@
 /**
- * Fills the footer's #ethical-ads-slot and #donation-slot from
- * ./monetization.js. A slot whose element is off (or unconfigured) is
- * removed outright so it leaves no gap in the footer layout.
+ * Fills the footer's #donation-slot from ./monetization.js. The slot is
+ * removed outright when the link is off (or unconfigured) so it leaves no
+ * gap in the footer layout.
  */
-import { getEthicalAdsConfig, getDonationConfig } from './monetization.js';
-
-function renderEthicalAds() {
-  const slot = document.getElementById('ethical-ads-slot');
-  if (!slot) return;
-
-  const config = getEthicalAdsConfig();
-  if (!config) {
-    slot.remove();
-    return;
-  }
-
-  // EthicalAds' "text" placement: their least intrusive format.
-  const adUnit = document.createElement('div');
-  adUnit.className = 'ea-text';
-  adUnit.dataset.eaPublisher = config.publisherId;
-  adUnit.dataset.eaType = 'text';
-
-  const script = document.createElement('script');
-  script.async = true;
-  script.src = 'https://media.ethicalads.io/media/client/ethicalads.min.js';
-
-  slot.append(adUnit, script);
-}
+import { getDonationConfig } from './monetization.js';
 
 function renderDonationLink() {
   const slot = document.getElementById('donation-slot');
@@ -54,6 +31,5 @@ function renderDonationLink() {
 }
 
 export function renderMonetization() {
-  renderEthicalAds();
   renderDonationLink();
 }

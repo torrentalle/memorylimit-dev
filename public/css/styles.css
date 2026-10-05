@@ -948,24 +948,9 @@ select.field-input {
 .support-list a { color: var(--accent); }
 .support-list strong { display: block; color: var(--text-primary); }
 
-/* ---- monetization: EthicalAds + donation link ----
-   js/monetization-ui.js removes a slot outright when its element is off
+/* ---- monetization: donation link ----
+   js/monetization-ui.js removes the slot outright when the link is off
    or unconfigured; :empty only covers the case where scripts never run. */
-
-.ethical-ads-slot {
-  width: 100%;
-  max-width: 340px;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--panel-bg);
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-.ethical-ads-slot:empty { display: none; }
-/* EthicalAds' default styles assume a light page; use our tokens instead. */
-.ethical-ads-slot a { color: var(--accent); }
 
 .donation-slot:empty { display: none; }
 

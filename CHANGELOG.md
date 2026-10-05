@@ -42,3 +42,4 @@ so entries are grouped under `Unreleased` until a release is tagged.
 ### Removed
 
 - EthicalAds from the privacy page while ads are disabled (#8).
+- EthicalAds integration (slot, script, CSP hosts and `'unsafe-inline'` in `style-src`); it was never enabled. It is kept on the `feat/ethicalads` history for later.

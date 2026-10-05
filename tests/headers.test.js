@@ -9,11 +9,9 @@ test('every page gets a Content-Security-Policy', () => {
   assert.ok(rules['/*']['Content-Security-Policy']);
 });
 
-test('scripts are limited to the site and the two configured third parties, never inline or eval', () => {
+test('scripts are limited to the site and the analytics beacon, never inline or eval', () => {
   assert.deepEqual(csp['script-src'], [
     "'self'",
-    'https://media.ethicalads.io',
-    'https://server.ethicalads.io',
     'https://static.cloudflareinsights.com'
   ]);
   for (const directive of Object.values(csp)) {
