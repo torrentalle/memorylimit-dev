@@ -190,3 +190,19 @@ for (const page of GUIDE_PAGES) {
     assert.match(body, /id="assumptions"/);
   });
 }
+
+const ASSUMPTION_KINDS = ['Our default', 'Our reading', 'About your setup'];
+
+for (const page of GUIDE_PAGES) {
+  test(`${page.path} gives every assumption a kind`, () => {
+    const html = read(page.dir);
+    const section = html.slice(html.indexOf('id="assumptions"'));
+    const table = section.slice(0, section.indexOf('</table>'));
+    assert.match(table, /<th scope="col">Assumption<\/th><th scope="col">Kind<\/th>/);
+    const rows = [...table.matchAll(/<tr><td>/g)].length;
+    const kinds = [...table.matchAll(/<td class="guide-kind">([^<]+)<\/td>/g)].map((m) => m[1]);
+    assert.ok(rows > 0);
+    assert.equal(kinds.length, rows);
+    for (const kind of kinds) assert.ok(ASSUMPTION_KINDS.includes(kind), kind);
+  });
+}

@@ -1249,3 +1249,7 @@ body.tips-dismissed .hint-tip__text { visibility: hidden !important; opacity: 0 
 .explanation-steps { margin: 0; padding-left: 18px; }
 .explanation-steps li + li { margin-top: 4px; }
 .explanation-steps strong { color: var(--text-primary); font-weight: 600; }
+
+/* The kind of each row in a guide's table of assumptions (ADR 0013). */
+.guide-kind { color: var(--text-secondary); font-size: 12.5px; }
+.guide-kind-legend { font-size: 13px; color: var(--text-secondary); }

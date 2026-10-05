@@ -288,15 +288,16 @@ limit   = max(peak × (1 + limit margin), 1.2 × request)   rounded up to a whol
     <section class="panel guide-section" id="assumptions" aria-labelledby="assumptions-heading">
       <h2 id="assumptions-heading" class="panel__title"><span class="panel__index">07</span> All assumptions in one place</h2>
       <p>Besides the margins of the <a href="/sizing-model/#assumptions">shared sizing model</a>:</p>
+      <p class="guide-kind-legend"><strong>Our default</strong>: a value we chose. <strong>Our reading</strong>: how we read documentation that isn't explicit. <strong>About your setup</strong>: something we take for granted about your data or cluster.</p>
       <div class="guide-table-wrap">
         <table class="guide-table">
-          <thead><tr><th scope="col">Assumption</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
+          <thead><tr><th scope="col">Assumption</th><th scope="col">Kind</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
           <tbody>
-            <tr><td>The limit is at least 1.2× the request</td><td>Leaves room for growth when peak and average are close</td><td>Kubernetes only needs limit ≥ request; lower the limit by hand if you want it tighter.</td></tr>
-            <tr><td>Warn when the limit is over 4× the request</td><td>A judgment call on when overcommit makes evictions likely</td><td>Only the warning moves; a LimitRange in your namespace may set a stricter cap.</td></tr>
-            <tr><td>The request comes from the average, not from daily peaks like VPA</td><td>Works with few samples</td><td>The Pod is more often above its request, so more likely to be evicted under node pressure.</td></tr>
-            <tr><td>Burstable by default</td><td>Packs more Pods per node</td><td>GKE recommends request = limit for memory; choose Guaranteed for workloads that mustn't be evicted.</td></tr>
-            <tr><td><code>container=""</code> and <code>container="POD"</code> are Pod-level and pause series</td><td>What cAdvisor commonly exports</td><td>If your setup labels them differently, they're averaged in and skew the result; filter them out in the query.</td></tr>
+            <tr><td>The limit is at least 1.2× the request</td><td class="guide-kind">Our default</td><td>Leaves room for growth when peak and average are close</td><td>Kubernetes only needs limit ≥ request; lower the limit by hand if you want it tighter.</td></tr>
+            <tr><td>Warn when the limit is over 4× the request</td><td class="guide-kind">Our default</td><td>A judgment call on when overcommit makes evictions likely</td><td>Only the warning moves; a LimitRange in your namespace may set a stricter cap.</td></tr>
+            <tr><td>The request comes from the average, not from daily peaks like VPA</td><td class="guide-kind">Our default</td><td>Works with few samples</td><td>The Pod is more often above its request, so more likely to be evicted under node pressure.</td></tr>
+            <tr><td>Burstable by default</td><td class="guide-kind">Our default</td><td>Packs more Pods per node</td><td>GKE recommends request = limit for memory; choose Guaranteed for workloads that mustn't be evicted.</td></tr>
+            <tr><td><code>container=""</code> and <code>container="POD"</code> are Pod-level and pause series</td><td class="guide-kind">Our reading</td><td>What cAdvisor commonly exports</td><td>If your setup labels them differently, they're averaged in and skew the result; filter them out in the query.</td></tr>
           </tbody>
         </table>
       </div>
