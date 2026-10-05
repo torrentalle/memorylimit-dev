@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>How the Azure Functions Memory Calculator Works | MemoryLimit</title>
+<meta name="description" content="How the Azure Functions calculator picks a Flex Consumption instance size or Premium SKU: the sizes and their CPU, Microsoft's 2,048 MB default, concurrency, and what to paste, with links to the Azure docs." />
+<link rel="canonical" href="https://memorylimit.dev/azure-functions/how-it-works/" />
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="MemoryLimit" />
+<meta property="og:title" content="How the Azure Functions Memory Calculator Works" />
+<meta property="og:description" content="How the Azure Functions calculator picks a Flex Consumption instance size or Premium SKU: the sizes and their CPU, Microsoft's 2,048 MB default, concurrency, and what to paste, with links to the Azure docs." />
+<meta property="og:url" content="https://memorylimit.dev/azure-functions/how-it-works/" />
+<meta property="og:image" content="https://memorylimit.dev/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="How the Azure Functions Memory Calculator Works" />
+<meta name="twitter:description" content="How the Azure Functions calculator picks a Flex Consumption instance size or Premium SKU: the sizes and their CPU, Microsoft's 2,048 MB default, concurrency, and what to paste, with links to the Azure docs." />
+<meta name="twitter:image" content="https://memorylimit.dev/og-image.png" />
+<link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/css/styles.css" />
+<script src="/js/theme-init.js"></script>
+</head>
+<body>
+
+<div class="skyline" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="brand" href="/" aria-label="MemoryLimit home">
+      <img class="brand__mark brand__mark--light" src="/brand/memorylimit-mark.svg" alt="" width="37" height="28" />
+      <img class="brand__mark brand__mark--dark" src="/brand/memorylimit-mark-on-dark.svg" alt="" width="37" height="28" />
+      <div><p class="brand__name">MemoryLimit</p><p class="brand__tagline">Memory request/limit sizing</p></div>
+    </a>
+    <!-- platform-nav:start -->
+    <nav class="site-nav" aria-label="Calculators">
+      <details class="site-nav__menu">
+        <summary class="site-nav__toggle">Calculators</summary>
+        <div class="site-nav__panel">
+          <div class="site-nav__group" data-platform-group="containers">
+            <p class="site-nav__group-title">Containers &amp; orchestration</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/kubernetes/" data-platform-link="kubernetes">Kubernetes</a></li>
+              <li><a class="site-nav__link" href="/docker-compose/" data-platform-link="dockerCompose">Docker Compose</a></li>
+              <li><a class="site-nav__link" href="/nomad/" data-platform-link="nomad">HashiCorp Nomad</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="serverless">
+            <p class="site-nav__group-title">Serverless</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/lambda/" data-platform-link="lambda">AWS Lambda</a></li>
+              <li><a class="site-nav__link" href="/cloud-run/" data-platform-link="cloudRun">Google Cloud Run</a></li>
+              <li><a class="site-nav__link" href="/azure-functions/" data-platform-link="azureFunctions">Azure Functions</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="vms">
+            <p class="site-nav__group-title">VMs &amp; bare metal</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/systemd/" data-platform-link="systemd">Systemd / Bare Metal / VM</a></li>
+              <li><a class="site-nav__link" href="/vmware/" data-platform-link="vmware">VMware vSphere</a></li>
+              <li><a class="site-nav__link" href="/proxmox/" data-platform-link="proxmox">Proxmox VE</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="datastores">
+            <p class="site-nav__group-title">Data stores</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/redis/" data-platform-link="redis">Redis maxmemory</a></li>
+              <li><a class="site-nav__link" href="/couchbase/" data-platform-link="couchbase">Couchbase memory quotas</a></li>
+            </ul>
+          </div>
+        </div>
+      </details>
+    </nav>
+    <!-- platform-nav:end -->
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Dark theme">
+      <span class="theme-toggle__icon" aria-hidden="true">◐</span><span class="theme-toggle__label">theme</span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <div class="wrap intro-section">
+    <p class="guide-back"><a href="/azure-functions/">← Azure Functions memory calculator</a></p>
+    <h1 class="intro-title">How the Azure Functions calculator works</h1>
+    <p class="intro-text">
+      This page walks through how the <a href="/azure-functions/">Azure Functions calculator</a> turns your usage data into
+      an instance size. It starts from the peak side of the <a href="/sizing-model/">shared sizing model</a>; this page
+      covers what happens after that. Statements backed by Microsoft's documentation end with an
+      <span class="guide-tag guide-tag--doc">Azure docs</span> link to it. Choices the documentation doesn't make for us are
+      explained and marked <span class="guide-tag guide-tag--assumption">Assumption</span>, which links to its row in the
+      table of all of them.
+    </p>
+  </div>
+
+  <div class="wrap guide">
+
+    <nav class="panel guide-toc" aria-labelledby="toc-heading">
+      <h2 id="toc-heading" class="panel__title panel__title--tight">On this page</h2>
+      <ol>
+        <li><a href="#sizes">Fixed instance sizes</a></li>
+        <li><a href="#steps">From peak usage to an instance size</a></li>
+        <li><a href="#guidance">Microsoft's guidance: 2,048 MB and concurrency</a></li>
+        <li><a href="#premium">Above 4,096 MB: Elastic Premium</a></li>
+        <li><a href="#output">What the calculator writes</a></li>
+        <li><a href="#warnings">Every warning, and why</a></li>
+        <li><a href="#paste">Where the numbers come from</a></li>
+        <li><a href="#assumptions">All assumptions in one place</a></li>
+        <li><a href="#references">References</a></li>
+      </ol>
+    </nav>
+
+    <section class="panel guide-section" id="sizes" aria-labelledby="sizes-heading">
+      <h2 id="sizes-heading" class="panel__title"><span class="panel__index">01</span> Fixed instance sizes</h2>
+      <p>
+        Azure Functions doesn't take a free-form memory value. Flex Consumption, the recommended serverless plan, offers three
+        instance sizes:
+        <a class="guide-tag guide-tag--doc" href="https://learn.microsoft.com/en-us/azure/azure-functions/flex-consumption-plan" target="_blank" rel="noopener">Azure docs</a>
+      </p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers">
+          <thead><tr><th scope="col">Instance memory</th><th scope="col">CPU cores</th><th scope="col">Default HTTP concurrency</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">512 MB</th><td>0.25</td><td>4</td></tr>
+            <tr><th scope="row">2,048 MB</th><td>1</td><td>16</td></tr>
+            <tr><th scope="row">4,096 MB</th><td>2</td><td>32</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Python apps default to an HTTP concurrency of 1 at every size.
+        <a class="guide-tag guide-tag--doc" href="https://learn.microsoft.com/en-us/azure/azure-functions/functions-concurrency" target="_blank" rel="noopener">Azure docs</a>
+        Each instance also gets 272 MB the platform keeps for system and host processes, which isn't billed. Your function code
+        and the Functions host share the instance's resources.
+        <a class="guide-tag guide-tag--doc" href="https://learn.microsoft.com/en-us/azure/azure-functions/flex-consumption-plan" target="_blank" rel="noopener">Azure docs</a>
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="steps" aria-labelledby="steps-heading">
+      <h2 id="steps-heading" class="panel__title"><span class="panel__index">02</span> From peak usage to an instance size</h2>
+      <pre class="yaml-block guide-formula"><code>memory = peak × (1 + limit margin)
+size   = the smallest Flex Consumption size ≥ memory, else the smallest Elastic Premium SKU ≥ memory</code></pre>
+      <p>
+        Running out of memory recycles the instance, so, as with Lambda and Cloud Run, only the peak sets the size. The limit
+        margin comes from the sensitivity, workload type and environment you choose; the <a href="/sizing-model/">sizing model</a>
+        explains it.
+      </p>
+      <p>
+        Microsoft writes the sizes in MB but measures memory in MB and MiB interchangeably, so the calculator compares MiB with
+        those MB as equal; the sizes being powers of two point the same way.
+        <a class="guide-tag guide-tag--assumption" id="assumption-1-ref" href="#assumption-1">Assumption</a>
+      </p>
+
+      <h3 class="guide-subheading">Worked example</h3>
+      <p>Peak 630 MiB, generic workload, medium sensitivity, production:</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-example="410 630 generic medium production">
+          <tbody>
+            <tr><th scope="row">memory</th><td>630 MiB × 1.30</td><td>819 MiB</td></tr>
+            <tr class="guide-table__result"><th scope="row">instance size</th><td>512 is too small; 2,048 fits</td><td data-check="size">2048 MB</td></tr>
+            <tr><th scope="row">CPU</th><td>for that size</td><td data-check="cores">1 core</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>A small function peaking at 50 MiB fits the smallest size:</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-example="10 50 generic low production">
+          <tbody>
+            <tr class="guide-table__result"><th scope="row">instance size</th><td>50 MiB × 1.20 = 60 MiB</td><td data-check="size">512 MB</td></tr>
+            <tr><th scope="row">CPU</th><td>for that size</td><td data-check="cores">0.25 cores</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="guidance" aria-labelledby="guidance-heading">
+      <h2 id="guidance-heading" class="panel__title"><span class="panel__index">03</span> Microsoft's guidance: 2,048 MB and concurrency</h2>
+      <p>
+        Microsoft suggests 2,048 MB as the default for most apps, and 512 MB or 4,096 MB when concurrency or processing power
+        call for it. Larger instances handle more concurrent executions, and CPU and network bandwidth grow with the size.
+        <a class="guide-tag guide-tag--doc" href="https://learn.microsoft.com/en-us/azure/azure-functions/flex-consumption-plan" target="_blank" rel="noopener">Azure docs</a>
+      </p>
+      <p>
+        The calculator picks the smallest size the measured peak fits in, which can be 512 MB. The note under the result
+        points out Microsoft's default and what a smaller size gives up: CPU and default concurrency.
+        <a class="guide-tag guide-tag--assumption" id="assumption-2-ref" href="#assumption-2">Assumption</a>
+      </p>
+      <p>
+        Executions on an instance share its memory, so the measured peak includes the concurrency the app ran at. Raising
+        concurrency, or moving to a size with a higher default, can need more memory per instance.
+        <a class="guide-tag guide-tag--doc" href="https://learn.microsoft.com/en-us/azure/azure-functions/functions-concurrency" target="_blank" rel="noopener">Azure docs</a>
+        <a class="guide-tag guide-tag--assumption" id="assumption-3-ref" href="#assumption-3">Assumption</a>
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="premium" aria-labelledby="premium-heading">
+      <h2 id="premium-heading" class="panel__title"><span class="panel__index">04</span> Above 4,096 MB: Elastic Premium</h2>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers">
+          <thead><tr><th scope="col">SKU</th><th scope="col">Cores</th><th scope="col">Memory</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">EP1</th><td>1</td><td>3.5 GB</td></tr>
+            <tr><th scope="row">EP2</th><td>2</td><td>7 GB</td></tr>
+            <tr><th scope="row">EP3</th><td>4</td><td>14 GB</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Premium bills for the cores and memory provisioned, keeps at least one instance running, and every function app in the
+        plan shares its instances.
+        <a class="guide-tag guide-tag--doc" href="https://learn.microsoft.com/en-us/azure/azure-functions/functions-premium-plan" target="_blank" rel="noopener">Azure docs</a>
+        EP1 never comes up, because Flex Consumption's 4,096 MB already covers it, and the calculator assumes your app is the
+        only one on the plan.
+        <a class="guide-tag guide-tag--assumption" id="assumption-4-ref" href="#assumption-4">Assumption</a>
+      </p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-example="4000 5000 generic medium production">
+          <tbody>
+            <tr><th scope="row">memory</th><td>5000 MiB × 1.30</td><td>6500 MiB</td></tr>
+            <tr class="guide-table__result"><th scope="row">instance size</th><td>above 4,096 MB; EP2 holds 7,168 MiB</td><td data-check="size">EP2</td></tr>
+            <tr><th scope="row">CPU</th><td>for that SKU</td><td data-check="cores">2 cores</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        The legacy Consumption plan runs every instance with up to 1.5 GB and has nothing to size.
+        <a class="guide-tag guide-tag--doc" href="https://learn.microsoft.com/en-us/azure/azure-functions/functions-scale" target="_blank" rel="noopener">Azure docs</a>
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="output" aria-labelledby="output-heading">
+      <h2 id="output-heading" class="panel__title"><span class="panel__index">05</span> What the calculator writes</h2>
+      <pre class="yaml-block"><code>az functionapp scale config set --resource-group &lt;resource-group&gt; --name &lt;app&gt; --instance-memory 2048
+
+functionAppConfig.scaleAndConcurrency.instanceMemoryMB: 2048</code></pre>
+      <ul>
+        <li>
+          <code>az functionapp scale config set --instance-memory</code> changes a Flex Consumption app's size at any time.
+          <a class="guide-tag guide-tag--doc" href="https://learn.microsoft.com/en-us/azure/azure-functions/flex-consumption-how-to" target="_blank" rel="noopener">Azure docs</a>
+        </li>
+        <li>
+          In Bicep or ARM, <code>functionAppConfig.scaleAndConcurrency.instanceMemoryMB</code> sets the memory of each instance.
+          <a class="guide-tag guide-tag--doc" href="https://learn.microsoft.com/en-us/azure/templates/microsoft.web/sites" target="_blank" rel="noopener">Azure docs</a>
+        </li>
+        <li>
+          For Premium, <code>az functionapp plan update --sku EP2</code> changes the plan's SKU.
+          <a class="guide-tag guide-tag--doc" href="https://learn.microsoft.com/en-us/cli/azure/functionapp/plan" target="_blank" rel="noopener">Azure docs</a>
+        </li>
+      </ul>
+    </section>
+
+    <section class="panel guide-section" id="warnings" aria-labelledby="warnings-heading">
+      <h2 id="warnings-heading" class="panel__title"><span class="panel__index">06</span> Every warning, and why</h2>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Message about</th><th scope="col">Shown when</th><th scope="col">Basis</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Too big for Flex Consumption <span class="guide-level">warning</span></td>
+              <td>The memory is above 4,096 MB</td>
+              <td>Flex Consumption's largest size. <a class="guide-tag guide-tag--doc" href="https://learn.microsoft.com/en-us/azure/azure-functions/flex-consumption-plan" target="_blank" rel="noopener">Azure docs</a></td>
+            </tr>
+            <tr>
+              <td>Above every Premium SKU <span class="guide-level">warning</span></td>
+              <td>The memory is above EP3's 14 GB</td>
+              <td>Premium's largest SKU. <a class="guide-tag guide-tag--doc" href="https://learn.microsoft.com/en-us/azure/azure-functions/functions-premium-plan" target="_blank" rel="noopener">Azure docs</a></td>
+            </tr>
+            <tr>
+              <td>Peak below average <span class="guide-level guide-level--error">error</span></td>
+              <td>The peak you entered is lower than the average</td>
+              <td>Impossible with real samples; it usually means two different series. See the <a href="/sizing-model/#inputs">sizing model</a>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="paste" aria-labelledby="paste-heading">
+      <h2 id="paste-heading" class="panel__title"><span class="panel__index">07</span> Where the numbers come from</h2>
+      <p>
+        Azure Monitor's <strong>Memory working set</strong> (<code>MemoryWorkingSet</code>) is the memory the app uses now, and
+        <strong>Average memory working set</strong> its average; both can be split by instance. They aren't available for Linux
+        apps on the legacy Consumption plan.
+        <a class="guide-tag guide-tag--doc" href="https://learn.microsoft.com/en-us/azure/azure-functions/monitor-functions-reference" target="_blank" rel="noopener">Azure docs</a>
+        Take the highest per-instance working set over a representative period as the peak.
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="assumptions" aria-labelledby="assumptions-heading">
+      <h2 id="assumptions-heading" class="panel__title"><span class="panel__index">08</span> All assumptions in one place</h2>
+      <p>Besides the margins of the <a href="/sizing-model/#assumptions">shared sizing model</a>:</p>
+      <p class="guide-kind-legend"><strong>Our default</strong>: a value we chose. <strong>Our reading</strong>: how we read documentation that isn't explicit. <strong>About your setup</strong>: something we take for granted about your data or cluster.</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Assumption</th><th scope="col">Kind</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
+          <tbody>
+            <tr id="assumption-1"><td>Azure's MB are MiB <a class="guide-backref" href="#assumption-1-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our reading</td><td>The docs use MB and MiB for the same metrics; the sizes are powers of two</td><td>If they were decimal, a peak just under a size would be about 5% too big for it.</td></tr>
+            <tr id="assumption-2"><td>The smallest size that fits, not Microsoft's 2,048 MB default <a class="guide-backref" href="#assumption-2-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>The calculator sizes for memory, and smaller instances cost less</td><td>A 512 MB instance has 0.25 cores and a default concurrency of 4; choose 2,048 MB if the app needs more.</td></tr>
+            <tr id="assumption-3"><td>Concurrency stays as when the samples were taken <a class="guide-backref" href="#assumption-3-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">About your setup</td><td>Executions on an instance share its memory</td><td>More concurrent executions per instance need more memory; size again after changing it.</td></tr>
+            <tr id="assumption-4"><td>The app is alone on its Premium plan <a class="guide-backref" href="#assumption-4-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">About your setup</td><td>Apps in a Premium plan share its instances</td><td>Add up the peaks of every app in the plan before choosing a SKU.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="references" aria-labelledby="references-heading">
+      <h2 id="references-heading" class="panel__title"><span class="panel__index">09</span> References</h2>
+      <ul class="guide-references">
+        <li><a href="https://learn.microsoft.com/en-us/azure/azure-functions/flex-consumption-plan" target="_blank" rel="noopener">Flex Consumption plan</a> — instance sizes, cores, the 272 MB buffer and Microsoft's default.</li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/azure-functions/functions-concurrency" target="_blank" rel="noopener">Concurrency in Azure Functions</a> — default HTTP concurrency per size.</li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/azure-functions/functions-premium-plan" target="_blank" rel="noopener">Premium plan</a> — EP1–EP3 and billing.</li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/azure-functions/functions-scale" target="_blank" rel="noopener">Scale and hosting</a> — memory limits per plan, Consumption's 1.5 GB.</li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/azure-functions/flex-consumption-how-to" target="_blank" rel="noopener">Manage Flex Consumption apps</a> — <code>az functionapp scale config set --instance-memory</code>.</li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/templates/microsoft.web/sites" target="_blank" rel="noopener">Microsoft.Web/sites template reference</a> — <code>instanceMemoryMB</code>.</li>
+        <li><a href="https://learn.microsoft.com/en-us/cli/azure/functionapp/plan" target="_blank" rel="noopener"><code>az functionapp plan</code></a> — <code>update --sku</code>.</li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/azure-functions/monitor-functions-reference" target="_blank" rel="noopener">Monitoring data reference</a> — <code>MemoryWorkingSet</code> and <code>AverageMemoryWorkingSet</code>.</li>
+      </ul>
+      <p class="guide-back"><a href="/azure-functions/">← Back to the Azure Functions calculator</a></p>
+    </section>
+
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div id="ethical-ads-slot" class="ethical-ads-slot"></div>
+    <div class="footer-row">
+      <!-- footer-links:start -->
+      <p class="footer-tagline">Your pasted metrics and results never leave the browser.</p>
+      <nav class="footer-links" aria-label="Project">
+        <a href="/privacy/" class="footer-link">Privacy</a>
+        <a href="/support/" class="footer-link">Support</a>
+        <a href="https://github.com/torrentalle/memorylimit-dev" class="footer-link" target="_blank" rel="noopener">★ Star on GitHub</a>
+        <a href="https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml" class="footer-link" target="_blank" rel="noopener">Report an issue</a>
+      </nav>
+      <!-- footer-links:end -->
+      <div id="donation-slot" class="donation-slot"></div>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="/js/site.js"></script>
+</body>
+</html>

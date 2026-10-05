@@ -1263,3 +1263,13 @@ body.tips-dismissed .hint-tip__text { visibility: hidden !important; opacity: 0 
 .guide-tag[id] { scroll-margin-top: 24px; }
 .guide-table tr:target td { background: var(--warn-bg); }
 .guide-tag:target { outline: 2px solid var(--warn); outline-offset: 1px; opacity: 1; }
+
+/* Long identifiers in a guide's running text (e.g. functionAppConfig.scaleAndConcurrency.instanceMemoryMB)
+   wrap instead of widening the page on a phone. */
+.guide-section p code,
+.guide-section li code,
+.guide-section td code { overflow-wrap: anywhere; }
+
+/* Near either end of the gauge, a marker's flag extends inwards so it stays inside the panel. */
+.gauge__marker-flag.is-end { transform: translateX(calc(-100% + 2px)); }
+.gauge__marker-flag.is-start { transform: translateX(-2px); }

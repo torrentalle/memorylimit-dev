@@ -157,7 +157,10 @@ export function initCalculator({ platformId, formatter }) {
         node.className = `gauge__marker gauge__marker--${marker.role}`;
         node.style.left = pct(marker.value);
         const flag = document.createElement('span');
-        flag.className = 'gauge__marker-flag';
+        // A flag centred on a marker near either end of the track would stick out of the panel on a phone,
+        // so near the ends it extends inwards instead.
+        const share = marker.value / max;
+        flag.className = `gauge__marker-flag${share > 0.7 ? ' is-end' : share < 0.3 ? ' is-start' : ''}`;
         flag.textContent = `${marker.name} ${marker.text}`;
         node.append(flag);
         return node;

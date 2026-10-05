@@ -204,6 +204,9 @@ test('Azure Functions: produces a Flex Consumption instance size command', async
 
   await expect(page.locator('#snippet-code')).toContainText('--instance-memory 2048');
   await expect(page.locator('#stat-row')).toContainText('2048 MB');
+  await expect(page.locator('#stat-row')).toContainText('1 core');
+  await expect(page.locator('#explanation .explanation-steps li')).toHaveCount(2);
+  await expect(page.locator('.explanation-panel .guide-link a')).toHaveAttribute('href', '/azure-functions/how-it-works/');
 });
 
 test('Redis: a used_memory paste produces maxmemory and host sizing', async ({ page }) => {
