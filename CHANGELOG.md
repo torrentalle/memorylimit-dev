@@ -18,6 +18,7 @@ so entries are grouped under `Unreleased` until a release is tagged.
 - Kubernetes request basis option: VPA-style, peak + 15% (#28).
 - GitHub Sponsors links, a `/support/` page and issue forms (#4).
 - Content-Security-Policy and other security headers, Open Graph share image, logo and favicon.
+- Redis: the provisioning factor (2 × maxmemory by default, about 1.25× without persistence) can be changed under Advanced.
 
 ### Changed
 
