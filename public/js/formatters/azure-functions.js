@@ -64,6 +64,11 @@ export function flexCommand(memoryMB) {
   return `az functionapp scale config set --resource-group <resource-group> --name <app> --instance-memory ${memoryMB}`;
 }
 
+/** Nested as Bicep writes it, inside a Microsoft.Web/sites resource's `properties`. */
+export function bicepSnippet(memoryMB) {
+  return ['functionAppConfig: {', '  scaleAndConcurrency: {', `    instanceMemoryMB: ${memoryMB}`, '  }', '}'].join('\n');
+}
+
 export function premiumCommand(sku) {
   return `az functionapp plan update --resource-group <resource-group> --name <plan> --sku ${sku}`;
 }
@@ -98,7 +103,7 @@ function formatFlex(raw, size, minInstanceMB) {
       { role: 'limit', name: 'instance memory', value: size.memoryMB, text: `${size.memoryMB}MB` }
     ],
     snippet: { label: 'Azure CLI (Flex Consumption)', language: 'shell', code: flexCommand(size.memoryMB) },
-    alternative: { label: 'Bicep', code: `functionAppConfig.scaleAndConcurrency.instanceMemoryMB: ${size.memoryMB}` },
+    alternative: { label: 'Bicep (in the function app’s properties)', code: bicepSnippet(size.memoryMB) },
     warnings: [],
     explanationSteps: steps,
     note: flexNote(minInstanceMB)
