@@ -3,18 +3,14 @@ import { marginTip } from '../field-tip-texts.js';
 
 export { marginTip };
 
-const WORKLOAD_LABELS = {
-  api: 'API service',
-  worker: 'worker/batch',
-  cache: 'cache',
-  jvm: 'JVM',
-  node: 'Node.js',
-  python: 'Python',
-  generic: 'generic'
-};
+/** A MiB figure for an explanation, to at most one decimal: 832.5 MiB, 410 MiB. */
+export function mib(value) {
+  return `${Number(value.toFixed(1))} MiB`;
+}
 
-export function describeProfile({ sensitivity, workloadType, environment }) {
-  return `${sensitivity} sensitivity, ${WORKLOAD_LABELS[workloadType]}, ${environment}`;
+/** A number for an explanation, to at most one decimal. */
+export function fixed(value) {
+  return Number(value.toFixed(1));
 }
 
 export function percent(fraction) {

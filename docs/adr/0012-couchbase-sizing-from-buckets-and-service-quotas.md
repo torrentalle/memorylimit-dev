@@ -78,3 +78,9 @@ cluster-wide need ÷ Data nodes, rounded up to a whole MiB with the 100 MiB floo
 node is the bucket quotas added up (at least 256 MiB). The 10% dataset check compares the bucket's quota on all
 Data nodes together with its dataset. Paste mode reads the current quota per node (`quota.rawRAM`, and
 `kv_ep_cache_size` from one node rather than summed). The text above describes the original model.
+
+The page script now shares more with `app.js`: the paste/manual toggle and the result panels (stat cards,
+warnings, the snippet and its copy button) come from `result-view.js`, which both entry points import. The
+Couchbase tooltips live in `formatters/couchbase.js` (`fieldTips`, `bucketFieldTips`), where the tooltip test
+checks them, and the advanced settings are read from the controls' `data-setting` attributes, as the other
+calculators read `data-formatter-option`.

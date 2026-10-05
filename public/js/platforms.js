@@ -61,7 +61,7 @@ export const PLATFORM_DEFINITIONS = [
     label: 'AWS Lambda',
     path: '/lambda/',
     guide: '/lambda/how-it-works/',
-    tagline: 'Find the MemorySize that balances cost per invocation against duration.'
+    tagline: 'Size a function’s MemorySize from the peak memory its invocations use.'
   },
   {
     id: 'cloudRun',
@@ -93,7 +93,7 @@ export const PLATFORM_DEFINITIONS = [
     label: 'VMware vSphere',
     path: '/vmware/',
     guide: '/vmware/how-it-works/',
-    tagline: 'Size a VM’s memory reservation and limit without ballooning or wasted host capacity.'
+    tagline: 'Size a VM’s memory and reservation, with no limit, as VMware advises.'
   },
   {
     id: 'proxmox',

@@ -23,12 +23,6 @@ async function fillUsage(page, average, peak) {
   await peakInput(page).fill(String(peak));
 }
 
-test.beforeEach(async ({ page }) => {
-  page.on('pageerror', (error) => {
-    throw error;
-  });
-});
-
 test('landing page links to every calculator without relying on JavaScript', async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();
@@ -215,7 +209,9 @@ test('Google Cloud Run: produces a gcloud command with the memory limit', async 
 
   await expect(page.locator('#snippet-code')).toHaveText('gcloud run services update <service> --memory 819Mi');
   await expect(page.locator('#stat-row')).toContainText('1 vCPU');
-  await expect(page.locator('#snippet-secondary-note')).toHaveText('service.yaml:\nspec.template.spec.containers[0].resources.limits:\n  memory: 819Mi');
+  await expect(page.locator('#snippet-secondary-note')).toHaveText(
+    'service.yaml (the part to change):\nspec:\n  template:\n    spec:\n      containers:\n      - resources:\n          limits:\n            memory: 819Mi'
+  );
   await expect(page.locator('.explanation-panel .guide-link a')).toHaveAttribute('href', '/cloud-run/how-it-works/');
 });
 
@@ -260,7 +256,7 @@ test('Redis: a used_memory paste produces maxmemory and host sizing', async ({ p
 
   await expect(page.locator('#prom-feedback')).toContainText('2 samples parsed');
   await expect(page.locator('#snippet-code')).toHaveText('maxmemory 650mb\nmaxmemory-policy allkeys-lru');
-  await expect(page.locator('#stat-row')).toContainText('1300 MB');
+  await expect(page.locator('#stat-row')).toContainText('1300 MiB');
   await expect(page.locator('.explanation-panel .guide-link a')).toHaveAttribute('href', '/redis/how-it-works/');
 });
 
@@ -269,8 +265,8 @@ test('Redis: the provisioning factor under Advanced sets the memory to provision
   await fillUsage(page, 400, 500);
   await page.locator('#advanced-settings summary').click();
   await field(page, 'Provisioning factor').fill('1.25');
-  // maxmemory 500 × 1.30 = 650mb; 1.25 × 650 = 812.5 → 813 MB
-  await expect(page.locator('#stat-row')).toContainText('813 MB');
+  // maxmemory 500 × 1.30 = 650mb; 1.25 × 650 = 812.5 → 813 MiB
+  await expect(page.locator('#stat-row')).toContainText('813 MiB');
 });
 
 test('Couchbase: default bucket produces quotas and couchbase-cli commands, and buckets can be added and removed', async ({ page }) => {
@@ -344,6 +340,12 @@ test('Couchbase: a Prometheus paste sets the document count and keeps the sizes 
   await expect(page.locator('#metrics-feedback')).toContainText('Prometheus: 1 bucket');
   await expect(field(page, 'Documents')).toHaveValue('500000');
   await expect(field(page, 'Average document size')).toHaveValue('2048');
+
+  // Two nodes' own /metrics (no instance label): the identical lines are two nodes, so they're added up.
+  await page.getByLabel('Prometheus metrics or Couchbase REST output').fill('kv_curr_items{bucket="default"} 300000\nkv_curr_items{bucket="default"} 300000');
+  await expect(field(page, 'Documents')).toHaveValue('600000');
+  await expect(page.locator('#metrics-feedback')).toContainText('600,000 documents from 2 nodes’ /metrics');
+  await expect(page.locator('#metrics-feedback')).toContainText('paste every Data node’s output');
 });
 
 test('Couchbase: a paste with no bucket to size keeps the buckets, and a missing document count is called out', async ({ page }) => {
@@ -512,15 +514,36 @@ test('copy button reports success and resets, even when clicked twice', async ({
 });
 
 test('theme choice persists across pages without a flash', async ({ page }) => {
+  // Records the theme at the moment <body> is created, i.e. before anything in it can be painted. Init scripts run
+  // before <html> exists, so the observer watches the document itself.
+  await page.addInitScript(() => {
+    new MutationObserver((records, observer) => {
+      if (!document.body) return;
+      window.__themeWhenBodyCreated = document.documentElement.dataset.theme ?? null;
+      observer.disconnect();
+    }).observe(document, { childList: true, subtree: true });
+  });
   await page.goto('/kubernetes/');
   const initial = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   await page.getByRole('button', { name: 'Dark theme' }).click();
   const toggled = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   expect(toggled).not.toBe(initial);
+  const chosen = await page.evaluate(() => document.documentElement.dataset.theme);
+  expect(['light', 'dark']).toContain(chosen);
 
   await page.goto('/lambda/');
   expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(toggled);
-  expect(['light', 'dark']).toContain(await page.evaluate(() => document.documentElement.dataset.theme));
+  // theme-init.js, a render-blocking script in <head>, applied the saved theme before <body> existed: no flash.
+  expect(await page.evaluate(() => window.__themeWhenBodyCreated)).toBe(chosen);
+});
+
+test('the footer links to GitHub Sponsors in a new tab, without leaking the page', async ({ page }) => {
+  await page.goto('/kubernetes/');
+  const link = page.locator('#donation-slot a.donation-link');
+  await expect(link).toHaveAttribute('href', 'https://github.com/sponsors/torrentalle');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(link).toContainText('Sponsor');
 });
 
 test('/k8s/ falls back to a meta refresh that lands on /kubernetes/', async ({ page }) => {

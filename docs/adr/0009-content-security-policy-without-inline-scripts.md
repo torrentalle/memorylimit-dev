@@ -1,6 +1,6 @@
 # 9. Content-Security-Policy with no inline scripts
 
-- **Status:** Accepted
+- **Status:** Superseded by [0015](0015-remove-ethicalads-single-third-party-csp.md)
 - **Date:** 2026-09-25
 
 ## Context
@@ -53,4 +53,4 @@ XSS, and the pages originally had inline scripts: the theme bootstrap and each p
 
 ## Update
 
-The EthicalAds integration was removed before it was ever enabled (kept on the `feat/ethicalads` branch). The policy now has the Cloudflare beacon as its only third party, and `style-src` is `'self'` with no `'unsafe-inline'`. The text above describes the original design.
+The EthicalAds integration was removed before it was ever enabled (kept on the `feat/ethicalads` branch). The policy now has the Cloudflare beacon as its only third party, and `style-src` is `'self'` with no `'unsafe-inline'`. The text above describes the original design. See [ADR 0015](0015-remove-ethicalads-single-third-party-csp.md), which supersedes this record.

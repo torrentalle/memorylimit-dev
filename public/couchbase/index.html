@@ -122,7 +122,7 @@
           <pre>curl -s -u Administrator:"$CB_PASSWORD" http://localhost:8091/pools/default/buckets</pre>
           <p>Nodes, node RAM and the service quotas, from the cluster API:</p>
           <pre>curl -s -u Administrator:"$CB_PASSWORD" http://localhost:8091/pools/default</pre>
-          <p>Or document counts as Prometheus metrics, from a node's <code>/metrics</code> endpoint (or a Prometheus <code>kv_curr_items</code> query, as text or API JSON):</p>
+          <p>Or document counts as Prometheus metrics, from every Data node's <code>/metrics</code> endpoint — each node counts only its own active items, so paste them all and they're added up — or from a Prometheus <code>kv_curr_items</code> query, as text or API JSON:</p>
           <pre>curl -s -u Administrator:"$CB_PASSWORD" http://localhost:8091/metrics | grep -E '^kv_(curr_items|ep_cache_size)'</pre>
           <p>Document and key sizes aren't in any of them; average a sample of your documents.</p>
         </details>
@@ -176,30 +176,30 @@
         <div class="field-grid">
           <div class="field">
             <label class="field-label" for="metadata-bytes-input">Metadata per document <span class="field-unit">bytes</span></label>
-            <input id="metadata-bytes-input" class="field-input" type="number" min="0" max="256" step="any" inputmode="decimal" value="56" />
+            <input id="metadata-bytes-input" class="field-input" type="number" min="0" max="256" step="any" inputmode="decimal" value="56" data-setting="metadataBytes" />
           </div>
           <div class="field">
             <label class="field-label" for="overhead-input">Overhead <span class="field-unit">%</span></label>
-            <input id="overhead-input" class="field-input" type="number" min="0" max="100" step="any" inputmode="decimal" value="25" data-unit="percent" />
+            <input id="overhead-input" class="field-input" type="number" min="0" max="100" step="any" inputmode="decimal" value="25" data-unit="percent" data-setting="overhead" />
           </div>
           <div class="field">
             <label class="field-label" for="high-water-input">High-water mark <span class="field-unit">%</span></label>
-            <input id="high-water-input" class="field-input" type="number" min="50" max="99" step="any" inputmode="decimal" value="85" data-unit="percent" />
+            <input id="high-water-input" class="field-input" type="number" min="50" max="99" step="any" inputmode="decimal" value="85" data-unit="percent" data-setting="highWaterMark" />
           </div>
           <div class="field">
             <label class="field-label" for="storage-engine-select">Storage engine</label>
-            <select id="storage-engine-select" class="field-input">
+            <select id="storage-engine-select" class="field-input" data-setting="storageEngine">
               <option value="couchstore" selected>Couchstore</option>
               <option value="magma">Magma</option>
             </select>
           </div>
           <div class="field">
             <label class="field-label" for="small-node-input">Small node below <span class="field-unit">GiB</span></label>
-            <input id="small-node-input" class="field-input" type="number" min="1" max="64" step="any" inputmode="decimal" value="5" />
+            <input id="small-node-input" class="field-input" type="number" min="1" max="64" step="any" inputmode="decimal" value="5" data-unit="gib" data-setting="smallNodeMiB" />
           </div>
           <div class="field">
             <label class="field-label" for="low-working-set-input">Full-ejection warning below <span class="field-unit">%</span></label>
-            <input id="low-working-set-input" class="field-input" type="number" min="1" max="100" step="any" inputmode="decimal" value="20" />
+            <input id="low-working-set-input" class="field-input" type="number" min="1" max="100" step="any" inputmode="decimal" value="20" data-setting="lowWorkingSetPct" />
           </div>
         </div>
         <button class="copy-btn advanced__reset" type="button" data-advanced-reset>Reset to defaults</button>

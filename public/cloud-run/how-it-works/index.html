@@ -237,9 +237,14 @@ memory             = planned peak × (1 + limit margin)</code></pre>
       <h2 id="output-heading" class="panel__title"><span class="panel__index">05</span> What the calculator writes</h2>
       <pre class="yaml-block"><code>gcloud run services update &lt;service&gt; --memory 6500Mi --cpu 2
 
-spec.template.spec.containers[0].resources.limits:
-  memory: 6500Mi
-  cpu: 2</code></pre>
+spec:
+  template:
+    spec:
+      containers:
+      - resources:
+          limits:
+            memory: 6500Mi
+            cpu: 2</code></pre>
       <p>
         <code>gcloud run services update SERVICE --memory SIZE</code> is the documented command, and the service YAML
         takes the same values under each container's <code>resources.limits</code>.

@@ -48,16 +48,23 @@ function seriesFromExposition(text) {
     if (!line || line.startsWith('#')) continue;
     const match = SERIES_LINE.exec(line);
     if (!match || !NUMBER.test(match[3])) continue;
-    series.push({ name: match[1], labels: match[2] ? parseLabels(match[2]) : {}, values: [Number(match[3])] });
+    const labels = match[2] ? parseLabels(match[2]) : {};
+    // A node's own /metrics has no `instance` label (Prometheus adds it when scraping), so identical lines
+    // there come from different nodes, not from one series over time.
+    series.push({ name: match[1], labels, values: [Number(match[3])], perNode: !Object.hasOwn(labels, 'instance') });
   }
   return series;
 }
 
 function seriesFromApiJson(json) {
   return json.data.result.map(({ metric = {}, value, values }) => {
-    const { __name__: name = '', ...labels } = metric;
+    const { __name__: metricName = '', ...labels } = metric;
     const samples = values ?? (value ? [value] : []);
-    return { name, labels, values: samples.map((sample) => Number(sample[1])).filter(Number.isFinite) };
+    // Aggregations such as sum by (bucket) (kv_curr_items) drop the metric name; a bucket series without
+    // one is read as an item count, and the bucket says so.
+    const unnamed = !metricName && Object.hasOwn(labels, 'bucket');
+    const name = unnamed ? 'kv_curr_items' : metricName;
+    return { name, labels, values: samples.map((sample) => Number(sample[1])).filter(Number.isFinite), unnamed };
   });
 }
 
@@ -73,14 +80,17 @@ function maxOfPeaks(series) {
   return series.reduce((max, entry) => Math.max(max, peakOf(entry)), 0);
 }
 
-/** Repeated lines with the same labels are samples of one series (a range paste), not extra nodes. */
+/**
+ * Repeated lines with the same labels, `instance` included, are samples of one series (a range paste), not
+ * extra nodes. Lines from nodes' own /metrics (no `instance`) are never merged: each is a node.
+ */
 function mergeSeries(series) {
   const merged = new Map();
-  for (const { name, labels, values } of series) {
-    const key = `${name}${JSON.stringify(Object.entries(labels).sort())}`;
+  series.forEach(({ name, labels, values, perNode = false, unnamed = false }, index) => {
+    const key = `${name}${JSON.stringify(Object.entries(labels).sort())}${perNode ? `#${index}` : ''}`;
     if (merged.has(key)) merged.get(key).values.push(...values);
-    else merged.set(key, { name, labels, values: [...values] });
-  }
+    else merged.set(key, { name, labels, values: [...values], perNode, unnamed });
+  });
   return [...merged.values()];
 }
 
@@ -95,6 +105,9 @@ function bucketsFromSeries(series) {
   return [...byBucket].map(([name, { items, quota }]) => ({
     name,
     ...(items.length ? { documents: Math.round(sumOfPeaks(items)) } : {}),
+    // From nodes' own /metrics the count covers only the nodes pasted, so say how many that was.
+    ...(items.length && items.every((entry) => entry.perNode) ? { documentsFromNodes: items.length } : {}),
+    ...(items.some((entry) => entry.unnamed) ? { documentsFromUnnamedSeries: true } : {}),
     // kv_ep_cache_size is the bucket's quota on that node, the same on every node: not summed.
     ...(quota.length ? { currentQuotaMiB: Math.round(maxOfPeaks(quota) / BYTES_IN_MIB) } : {})
   }));
@@ -159,7 +172,9 @@ function clusterFromRest(info) {
 /**
  * @param {string} text - whatever the user pasted
  * @returns {{ kind: 'prometheus'|'buckets'|'cluster'|'unknown', buckets: object[], cluster: object, skipped: object[], error?: string }}
- *   buckets: { name, documents?, replicas?, eviction?, currentQuotaMiB? }
+ *   buckets: { name, documents?, documentsFromNodes?, documentsFromUnnamedSeries?, replicas?, eviction?, currentQuotaMiB? }
+ *   documentsFromNodes: how many nodes' /metrics lines the count adds up (absent for Prometheus query results);
+ *   documentsFromUnnamedSeries: the count came from series without a metric name (an aggregated query).
  *   cluster: { nodeRamMiB?, dataNodes?, dataQuotaMiB?, services? }
  */
 export function parseCouchbaseInput(text) {

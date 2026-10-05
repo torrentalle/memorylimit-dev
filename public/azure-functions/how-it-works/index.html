@@ -238,7 +238,11 @@ size   = the smallest Flex Consumption size ≥ max(memory, 2,048 MB), else the 
       <h2 id="output-heading" class="panel__title"><span class="panel__index">05</span> What the calculator writes</h2>
       <pre class="yaml-block"><code>az functionapp scale config set --resource-group &lt;resource-group&gt; --name &lt;app&gt; --instance-memory 2048
 
-functionAppConfig.scaleAndConcurrency.instanceMemoryMB: 2048</code></pre>
+functionAppConfig: {
+  scaleAndConcurrency: {
+    instanceMemoryMB: 2048
+  }
+}</code></pre>
       <ul>
         <li>
           <code>az functionapp scale config set --instance-memory</code> changes a Flex Consumption app's size at any time.

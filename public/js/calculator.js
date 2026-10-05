@@ -23,7 +23,8 @@ export const WORKLOAD_LIMIT_ADJUSTMENT = { api: 0, worker: 0.35, cache: 0, jvm: 
 
 export const ENVIRONMENT_MULTIPLIER = { development: 0.6, staging: 0.85, production: 1.0 };
 
-// The range the pages accept for a margin override, as a fraction: 0% to 200%.
+// The range the pages accept for a margin override, as a fraction: 0% to 200%. The pages' min and max must
+// match it (tests/advanced-defaults.test.js); the core itself only rejects negative margins.
 export const MARGIN_OVERRIDE_RANGE = { min: 0, max: 2 };
 
 // Margins like 0.15 aren't exact in binary floating point, so 200 × 1.12

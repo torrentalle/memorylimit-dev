@@ -17,7 +17,7 @@
  * The method, sources and assumptions are on /cloud-run/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { marginTip, percent, PEAK_ONLY_FIELD_TIPS } from './shared.js';
+import { fixed, marginTip, PEAK_ONLY_FIELD_TIPS, percent } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
@@ -69,14 +69,18 @@ export function gcloudCommand(memoryMiB) {
 
 export function yamlSnippet(memoryMiB) {
   const cpu = minimumCpu(memoryMiB);
+  // Nested as in a real service.yaml, so it can be merged into one as written.
   return [
-    'spec.template.spec.containers[0].resources.limits:',
-    `  memory: ${formatQuantity(memoryMiB)}`,
-    ...(cpu > DEFAULT_CPU ? [`  cpu: ${cpu}`] : [])
+    'spec:',
+    '  template:',
+    '    spec:',
+    '      containers:',
+    '      - resources:',
+    '          limits:',
+    `            memory: ${formatQuantity(memoryMiB)}`,
+    ...(cpu > DEFAULT_CPU ? [`            cpu: ${cpu}`] : [])
   ].join('\n');
 }
-
-const fixed = (value) => Number(value.toFixed(1));
 
 /**
  * Google's formula applied to the samples: returns the peak to size from (MiB) and, when concurrency changes,
@@ -176,7 +180,7 @@ export function format(raw, options = {}) {
       { role: 'limit', name: 'memory', value: memory, text: formatQuantity(memory) }
     ],
     snippet: { label: 'gcloud command', language: 'shell', code: gcloudCommand(memory) },
-    alternative: { label: 'service.yaml', code: yamlSnippet(memory) },
+    alternative: { label: 'service.yaml (the part to change)', code: yamlSnippet(memory) },
     warnings,
     explanationSteps: steps,
     explanation: steps.map((step) => `${step.label}: ${step.text}.`).join(' '),
