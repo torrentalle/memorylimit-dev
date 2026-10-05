@@ -247,6 +247,15 @@ test('Redis: a used_memory paste produces maxmemory and host sizing', async ({ p
   await expect(page.locator('.explanation-panel .guide-link a')).toHaveAttribute('href', '/redis/how-it-works/');
 });
 
+test('Redis: the provisioning factor under Advanced sets the memory to provision', async ({ page }) => {
+  await page.goto('/redis/');
+  await fillUsage(page, 400, 500);
+  await page.locator('#advanced-settings summary').click();
+  await field(page, 'Provisioning factor').fill('1.25');
+  // maxmemory 500 × 1.30 = 650mb; 1.25 × 650 = 812.5 → 813 MB
+  await expect(page.locator('#stat-row')).toContainText('813 MB');
+});
+
 test('Couchbase: default bucket produces quotas and couchbase-cli commands, and buckets can be added and removed', async ({ page }) => {
   await page.goto('/couchbase/');
   await expect(currentNavLink(page)).toHaveText('Couchbase memory quotas');
