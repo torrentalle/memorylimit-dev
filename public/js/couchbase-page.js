@@ -10,6 +10,7 @@
 import './site.js';
 import { isEnabled } from './platforms.js';
 import * as couchbase from './formatters/couchbase.js';
+import { pluralize } from './formatters/shared.js';
 import { parseCouchbaseInput } from './couchbase-parser.js';
 import { attachTip } from './field-tips.js';
 import { renderExplanation } from './explanation.js';
@@ -246,8 +247,6 @@ function applyCluster({ dataNodes, nodeRamMiB, services }) {
   for (const [service, value] of Object.entries(services ?? {})) setInput(SERVICE_INPUTS[service], value);
 }
 
-const count = (n, noun) => `${n} ${noun}${n === 1 ? '' : 's'}`;
-
 function describeBucket({ name, documents, documentsFromNodes, documentsFromUnnamedSeries, currentQuotaMiB }) {
   const parts = [];
   if (documents !== undefined) {
@@ -286,9 +285,9 @@ function handlePaste() {
     const { dataNodes, nodeRamMiB, services } = parsed.cluster;
     applyCluster(parsed.cluster);
     const parts = [];
-    if (dataNodes !== undefined) parts.push(count(dataNodes, 'Data node'));
+    if (dataNodes !== undefined) parts.push(pluralize(dataNodes, 'Data node'));
     if (nodeRamMiB !== undefined) parts.push(`${Math.round((nodeRamMiB / MIB_PER_GIB) * 10) / 10} GiB per node`);
-    if (services) parts.push(`${count(Object.values(services).filter(Boolean).length, 'other service')} with a quota`);
+    if (services) parts.push(`${pluralize(Object.values(services).filter(Boolean).length, 'other service')} with a quota`);
     setFeedback(`Cluster info read — ${parts.join(' · ') || 'no node or quota fields found'}.`, parts.length ? 'ok' : 'error');
   } else if (parsed.kind === 'prometheus' || parsed.kind === 'buckets') {
     const source = parsed.kind === 'prometheus' ? 'Prometheus' : 'Bucket API';
@@ -311,7 +310,7 @@ function handlePaste() {
     const perNode = parsed.buckets.some((bucket) => bucket.documentsFromNodes !== undefined)
       ? ' A node’s /metrics counts only its own active items: paste every Data node’s output, or use the bucket API for the whole cluster.'
       : '';
-    setFeedback(`${source}: ${count(parsed.buckets.length, 'bucket')} — ${parsed.buckets.map(describeBucket).join('; ')}.${noCount}${perNode}${missing}${skipped}`, 'ok');
+    setFeedback(`${source}: ${pluralize(parsed.buckets.length, 'bucket')} — ${parsed.buckets.map(describeBucket).join('; ')}.${noCount}${perNode}${missing}${skipped}`, 'ok');
   } else {
     setFeedback('Nothing recognised. Paste kv_curr_items from /metrics, or the JSON from /pools/default/buckets or /pools/default.', 'error');
     return;

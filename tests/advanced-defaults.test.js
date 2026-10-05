@@ -69,3 +69,18 @@ test('couchbase: every advanced setting’s default on the page is calculateSizi
     else assert.equal(defaults[name], value, name);
   }
 });
+
+test('every margin override field accepts exactly MARGIN_OVERRIDE_RANGE, in percent', async () => {
+  const { MARGIN_OVERRIDE_RANGE } = await import('../public/js/calculator.js');
+  const { PLATFORM_DEFINITIONS, entryUrl } = await import('../public/js/platforms.js');
+  const dirs = PLATFORM_DEFINITIONS.filter((def) => entryUrl(def) === '/js/calculator-page.js').map((def) => def.path.slice(1, -1));
+  for (const dir of dirs) {
+    for (const id of ['request-margin-input', 'limit-margin-input']) {
+      const tag = page(dir).match(new RegExp(`<input id="${id}"[^>]*>`))?.[0];
+      assert.ok(tag, `${dir}: #${id}`);
+      assert.match(tag, new RegExp(`min="${MARGIN_OVERRIDE_RANGE.min * 100}"`), `${dir}: #${id} min`);
+      assert.match(tag, new RegExp(`max="${MARGIN_OVERRIDE_RANGE.max * 100}"`), `${dir}: #${id} max`);
+      assert.match(tag, /data-unit="percent"/, `${dir}: #${id} unit`);
+    }
+  }
+});

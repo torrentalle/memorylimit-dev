@@ -20,7 +20,7 @@
  * The method, sources and assumptions are on /vmware/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { marginTip, percent } from './shared.js';
+import { marginTip, mib, percent } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
@@ -56,8 +56,6 @@ export function govcCommand(memory, reservation) {
     `-mem.shares ${DEFAULT_SHARES.toLowerCase()}`
   );
 }
-
-const mib = (value) => `${Number(value.toFixed(1))} MiB`;
 
 function explainSteps(raw, memory, reservation, memoryRaised) {
   return [
