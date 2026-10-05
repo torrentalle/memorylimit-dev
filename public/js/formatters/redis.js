@@ -7,18 +7,22 @@
  * `used_memory` peak plus margin, never below the average-based figure —
  * rounded up to a whole mb. The process needs more than maxmemory: Redis
  * documents up to 2× while it writes an RDB snapshot or rewrites the AOF
- * under heavy writes, so the memory to provision is 2× maxmemory. Redis's
+ * under heavy writes, so the memory to provision is 2× maxmemory by default
+ * (provisionFactor; about 1.25× without persistence or replication). Redis's
  * "mb" unit is 1024×1024 bytes, i.e. MiB.
  *
  * The method, sources and assumptions are on /redis/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { percent } from './shared.js';
+import { marginTip, percent } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
   avg: 'maxmemory never goes below this plus the request margin.',
-  peak: 'maxmemory is this plus the limit margin, and the memory to provision twice that.'
+  peak: 'maxmemory is this plus the limit margin, and the memory to provision that times the provisioning factor (2× by default).',
+  requestMargin: marginTip('maxmemory never goes below the average plus it'),
+  limitMargin: marginTip('maxmemory is the peak plus it'),
+  provisionFactor: 'The memory to provision is maxmemory times this: Redis can use up to 2× while it writes an RDB snapshot or rewrites the AOF, and about 1.25× is enough without persistence or replication.'
 };
 
 // Redis's mb is MiB; the output uses whole mb.
@@ -45,7 +49,7 @@ export function runtimeCommand(maxmemory) {
 
 const mib = (value) => `${Number(value.toFixed(1))} MiB`;
 
-function explainSteps(raw, maxmemory, provision, fromAverage) {
+function explainSteps(raw, maxmemory, provision, fromAverage, factor) {
   return [
     {
       label: 'maxmemory',
@@ -53,24 +57,37 @@ function explainSteps(raw, maxmemory, provision, fromAverage) {
         ? `${mib(raw.averageMiB)} average + ${percent(raw.requestMarginPct)} = ${mib(raw.requestMiB)}, above the peak-based ${mib(raw.limitMiB)} → ${maxmemory}mb`
         : `${mib(raw.peakMiB)} peak used_memory + ${percent(raw.limitMarginPct)} = ${mib(raw.limitMiB)} → ${maxmemory}mb`
     },
-    { label: 'Memory to provision', text: `${PERSISTENCE_OVERHEAD} × ${maxmemory} MB for persistence forks = ${provision} MB` }
+    {
+      label: 'Memory to provision',
+      text:
+        factor === PERSISTENCE_OVERHEAD
+          ? `${factor} × ${maxmemory} MB for persistence forks = ${provision} MB`
+          : `${factor} × ${maxmemory} MB, your provisioning factor = ${Number((maxmemory * factor).toFixed(1))} MB → ${provision} MB`
+    }
   ];
 }
 
-/** @param {object} raw - result of calculateRawSizing() */
-export function format(raw) {
+/**
+ * @param {object} raw - result of calculateRawSizing()
+ * @param {{ provisionFactor?: number }} [options] - memory to provision ÷ maxmemory, at least 1
+ */
+export function format(raw, { provisionFactor = PERSISTENCE_OVERHEAD } = {}) {
+  if (!(provisionFactor >= 1)) throw new RangeError(`provisionFactor must be at least 1 (got ${provisionFactor})`);
   const fromAverage = raw.requestMiB > raw.limitMiB;
   const maxmemory = roundUpToMultiple(Math.max(raw.limitMiB, raw.requestMiB), ROUNDING_STEP_MB);
-  const provision = maxmemory * PERSISTENCE_OVERHEAD;
+  const provision = roundUpToMultiple(maxmemory * provisionFactor, ROUNDING_STEP_MB);
 
-  const steps = explainSteps(raw, maxmemory, provision, fromAverage);
+  const steps = explainSteps(raw, maxmemory, provision, fromAverage, provisionFactor);
   return {
     platform: 'redis',
     maxmemory,
     provision,
     figures: [
       { role: 'request', label: 'maxmemory', text: `${maxmemory}mb`, detail: `evicts keys (${EVICTION_POLICY}) above this` },
-      { role: 'total', label: 'Memory to provision', text: `${provision} MB`, detail: 'host or container, with RDB/AOF persistence' }
+      { role: 'total', label: 'Memory to provision', text: `${provision} MB`, detail:
+          provisionFactor === PERSISTENCE_OVERHEAD
+            ? 'host or container, with RDB/AOF persistence'
+            : `host or container, ${provisionFactor}× maxmemory` }
     ],
     markers: [
       { role: 'request', name: 'maxmemory', value: maxmemory, text: `${maxmemory}mb` },

@@ -169,6 +169,14 @@ test('Systemd: produces a MemoryHigh / MemoryMax drop-in with high/max gauge mar
   await expect(page.locator('#stat-row')).toContainText('Expected usage');
 });
 
+test('Systemd: the MemoryMax ratio under Advanced moves MemoryMax', async ({ page }) => {
+  await page.goto('/systemd/');
+  await fillUsage(page, 295, 390);
+  await page.locator('#advanced-settings summary').click();
+  await field(page, 'MemoryMax ratio').fill('1.4');
+  await expect(page.locator('#snippet-code')).toHaveText('[Service]\nMemoryHigh=507M\nMemoryMax=710M');
+});
+
 test('VMware vSphere: produces vSphere Client steps and a govc command', async ({ page }) => {
   await page.goto('/vmware/');
   await expect(currentNavLink(page)).toHaveText('VMware vSphere');
@@ -234,6 +242,15 @@ test('Azure Functions: produces a Flex Consumption instance size command', async
   await expect(page.locator('.explanation-panel .guide-link a')).toHaveAttribute('href', '/azure-functions/how-it-works/');
 });
 
+test('Azure Functions: a 512 MB minimum under Advanced lets a small app take the 512 MB instance', async ({ page }) => {
+  await page.goto('/azure-functions/');
+  await fillUsage(page, 200, 300);
+  await expect(page.locator('#snippet-code')).toContainText('--instance-memory 2048');
+  await page.locator('#advanced-settings summary').click();
+  await field(page, 'Minimum instance size').selectOption('512');
+  await expect(page.locator('#snippet-code')).toContainText('--instance-memory 512');
+});
+
 test('Redis: a used_memory paste produces maxmemory and host sizing', async ({ page }) => {
   await page.goto('/redis/');
   await expect(currentNavLink(page)).toHaveText('Redis maxmemory');
@@ -245,6 +262,15 @@ test('Redis: a used_memory paste produces maxmemory and host sizing', async ({ p
   await expect(page.locator('#snippet-code')).toHaveText('maxmemory 650mb\nmaxmemory-policy allkeys-lru');
   await expect(page.locator('#stat-row')).toContainText('1300 MB');
   await expect(page.locator('.explanation-panel .guide-link a')).toHaveAttribute('href', '/redis/how-it-works/');
+});
+
+test('Redis: the provisioning factor under Advanced sets the memory to provision', async ({ page }) => {
+  await page.goto('/redis/');
+  await fillUsage(page, 400, 500);
+  await page.locator('#advanced-settings summary').click();
+  await field(page, 'Provisioning factor').fill('1.25');
+  // maxmemory 500 × 1.30 = 650mb; 1.25 × 650 = 812.5 → 813 MB
+  await expect(page.locator('#stat-row')).toContainText('813 MB');
 });
 
 test('Couchbase: default bucket produces quotas and couchbase-cli commands, and buckets can be added and removed', async ({ page }) => {
@@ -332,8 +358,9 @@ test('Couchbase: each input that changes the result has a tooltip saying how', a
 
 test('shared fields have tooltips saying how they move the result, and the derivation links the sizing model', async ({ page }) => {
   await page.goto('/kubernetes/');
-  // Average, peak, workload type, replicas, sensitivity, environment, QoS and request basis.
-  await expect(page.locator('.hint-tip__btn')).toHaveCount(8);
+  // Average, peak, workload type, replicas, sensitivity, environment, QoS and request basis, plus the advanced
+  // request and limit margins, overcommit ratio, VPA margin and VPA minimum.
+  await expect(page.locator('.hint-tip__btn')).toHaveCount(13);
   const tip = page.getByRole('tooltip').filter({ hasText: 'Guaranteed sets the request equal to the limit' });
   await expect(tip).toBeHidden();
   await expect(field(page, 'QoS class')).toHaveAccessibleDescription(/Guaranteed sets the request equal to the limit/);
@@ -346,11 +373,42 @@ test('shared fields have tooltips saying how they move the result, and the deriv
   await expect(guide).toHaveAttribute('href', '/kubernetes/how-it-works/');
   await expect(guide).toHaveAttribute('target', '_blank');
 
-  // Lambda is sized from the peak alone: no tooltip on the average, and the replica field is hidden.
+  // Lambda is sized from the peak alone: no tooltip on the average, and the replica and request margin fields
+  // are hidden.
   await page.goto('/lambda/');
-  await expect(page.locator('.hint-tip__btn')).toHaveCount(4);
+  await expect(page.locator('.hint-tip__btn')).toHaveCount(5);
   await expect(averageInput(page)).not.toHaveAttribute('aria-describedby', /.+/);
   await expect(peakInput(page)).toHaveAccessibleDescription(/MemorySize is this plus the limit margin/);
+});
+
+test('advanced margins and defaults: closed by default, they change the result, and reset puts them back', async ({ page }) => {
+  await page.goto('/kubernetes/');
+  await fillUsage(page, 410, 630);
+  const section = page.locator('#advanced-settings');
+  await expect(section).not.toHaveAttribute('open', '');
+  await expect(field(page, 'Limit margin')).toBeHidden();
+
+  await section.locator('summary').click();
+  // An empty margin shows the profile's.
+  await expect(field(page, 'Limit margin')).toHaveAttribute('placeholder', '30 from profile');
+  await field(page, 'Limit margin').fill('50');
+  await expect(page.locator('#snippet-code')).toContainText('memory: "945Mi"');
+  await field(page, 'Request margin').fill('10');
+  await expect(page.locator('#snippet-code')).toContainText('memory: "451Mi"');
+  await expect(section.locator('summary')).toContainText('2 changed');
+
+  await page.getByRole('button', { name: 'Reset to defaults' }).click();
+  await expect(section.locator('summary')).not.toContainText('changed');
+  await expect(page.getByRole('button', { name: 'Reset to defaults' })).toBeDisabled();
+  await expect(page.locator('#snippet-code')).toContainText('memory: "533Mi"');
+  await expect(page.locator('#snippet-code')).toContainText('memory: "819Mi"');
+
+  // The VPA settings only show with the VPA-style request basis, and change its request.
+  await expect(field(page, 'VPA margin')).toBeHidden();
+  await field(page, 'Request basis').selectOption('vpa');
+  await field(page, 'VPA margin').fill('20');
+  await expect(page.locator('#snippet-code')).toContainText('memory: "756Mi"');
+  await expect(section.locator('summary')).toContainText('1 changed');
 });
 
 test('Proxmox VE: produces a qm command and web UI steps', async ({ page }) => {

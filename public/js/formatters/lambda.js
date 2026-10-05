@@ -13,12 +13,13 @@
  * The method, sources and assumptions are on /lambda/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { percent, PEAK_ONLY_FIELD_TIPS } from './shared.js';
+import { marginTip, percent, PEAK_ONLY_FIELD_TIPS } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
   ...PEAK_ONLY_FIELD_TIPS,
-  peak: 'MemorySize is this plus the limit margin, converted to MB.'
+  peak: 'MemorySize is this plus the limit margin, converted to MB.',
+  limitMargin: marginTip('MemorySize is the peak plus it')
 };
 
 export const BYTES_PER_MIB = 1024 * 1024;

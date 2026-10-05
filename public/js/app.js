@@ -10,6 +10,7 @@ import { copyText } from './clipboard.js';
 import { attachTip } from './field-tips.js';
 import { fieldTipsFor } from './field-tip-texts.js';
 import { renderExplanation as renderExplanationInto } from './explanation.js';
+import { initAdvancedSettings, readAdvancedNumber } from './advanced-settings.js';
 
 const GAUGE_HEADROOM = 1.15;
 const MAX_REPLICAS = 1000;
@@ -58,6 +59,9 @@ export function initCalculator({ platformId, formatter }) {
     sensitivity: element('sensitivity-select'),
     environment: element('environment-select'),
     qos: document.getElementById('qos-select'),
+    advanced: element('advanced-settings'),
+    requestMargin: element('request-margin-input'),
+    limitMargin: element('limit-margin-input'),
     disabledState: element('disabled-state'),
     outputPanels: element('output-panels'),
     gaugeTrack: element('gauge-track'),
@@ -261,9 +265,10 @@ export function initCalculator({ platformId, formatter }) {
     }
   }
 
-  // A platform's own fields (QoS on Kubernetes, concurrency on Cloud Run…) carry data-formatter-option="name"
-  // and reach the formatter as format(raw, { name: value }). Number inputs that are empty or invalid are left out,
-  // so the formatter falls back to its default.
+  // A platform's own fields (QoS on Kubernetes, concurrency on Cloud Run…) carry
+  // data-formatter-option="name" and reach the formatter as format(raw, { name: value }). Number inputs that are
+  // empty or invalid are left out, so the formatter falls back to its default; the others are kept within their
+  // min and max, and percentages (data-unit="percent") arrive as fractions.
   const optionControls = [...document.querySelectorAll('[data-formatter-option]')];
 
   function readFormatterOptions() {
@@ -271,7 +276,7 @@ export function initCalculator({ platformId, formatter }) {
     for (const control of optionControls) {
       if (control.closest('.is-hidden')) continue;
       if (control.type === 'number') {
-        const value = readPositiveNumber(control);
+        const value = readAdvancedNumber(control);
         if (value !== null) options[control.dataset.formatterOption] = value;
       } else {
         options[control.dataset.formatterOption] = control.value;
@@ -280,11 +285,46 @@ export function initCalculator({ platformId, formatter }) {
     return options;
   }
 
+  // A field with data-show-when="option=value" only shows while that option's control has that value
+  // (Kubernetes' VPA settings only matter with the VPA-style request basis).
+  const conditionalFields = [...document.querySelectorAll('[data-show-when]')].map((field) => {
+    const [option, value] = field.dataset.showWhen.split('=');
+    return { field, control: document.querySelector(`[data-formatter-option="${option}"]`), value };
+  });
+
+  function refreshConditionalFields() {
+    for (const { field, control, value } of conditionalFields) field.hidden = control?.value !== value;
+  }
+
+  // An empty margin field uses the profile's margin, so its placeholder shows that margin.
+  function showProfileMargins(profileRequestMargin, profileLimitMargin) {
+    const asPercent = (fraction) => `${Number((fraction * 100).toFixed(2))} from profile`;
+    el.requestMargin.placeholder = asPercent(profileRequestMargin);
+    el.limitMargin.placeholder = asPercent(profileLimitMargin);
+  }
+
+  function readProfile() {
+    return {
+      workloadType: el.workload.value,
+      sensitivity: el.sensitivity.value,
+      environment: el.environment.value,
+      replicas: clamp(Math.round(parseFloat(el.replicas.value) || 1), 1, MAX_REPLICAS),
+      requestMargin: readAdvancedNumber(el.requestMargin) ?? undefined,
+      limitMargin: readAdvancedNumber(el.limitMargin) ?? undefined
+    };
+  }
+
   function recalculate() {
     const averageMiB = readPositiveNumber(el.avg);
     const peakMiB = readPositiveNumber(el.peak);
 
+    const profile = readProfile();
+    refreshConditionalFields();
+
     if (averageMiB === null || peakMiB === null) {
+      // The profile's margins don't depend on the usage, so the placeholders can show them already.
+      const margins = calculateRawSizing({ averageMiB: 1, peakMiB: 1, ...profile });
+      showProfileMargins(margins.profileRequestMarginPct, margins.profileLimitMarginPct);
       resetGauge();
       el.statRow.replaceChildren();
       renderWarnings([]);
@@ -293,14 +333,8 @@ export function initCalculator({ platformId, formatter }) {
       return;
     }
 
-    const raw = calculateRawSizing({
-      averageMiB,
-      peakMiB,
-      workloadType: el.workload.value,
-      sensitivity: el.sensitivity.value,
-      environment: el.environment.value,
-      replicas: clamp(Math.round(parseFloat(el.replicas.value) || 1), 1, MAX_REPLICAS)
-    });
+    const raw = calculateRawSizing({ averageMiB, peakMiB, ...profile });
+    showProfileMargins(raw.profileRequestMarginPct, raw.profileLimitMarginPct);
     const result = formatter.format(raw, readFormatterOptions());
 
     renderGauge(raw.averageMiB, result.markers);
@@ -321,7 +355,7 @@ export function initCalculator({ platformId, formatter }) {
       fieldsFilledFromPaste = false;
     });
   }
-  for (const input of [el.avg, el.peak, el.replicas]) {
+  for (const input of [el.avg, el.peak, el.replicas, el.requestMargin, el.limitMargin]) {
     input.addEventListener('input', recalculate);
   }
   for (const select of [el.workload, el.sensitivity, el.environment]) {
@@ -345,6 +379,7 @@ export function initCalculator({ platformId, formatter }) {
   });
 
   attachFieldTips();
+  initAdvancedSettings(el.advanced, recalculate);
   setMode('manual');
   recalculate();
 }

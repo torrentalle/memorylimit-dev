@@ -107,3 +107,11 @@ test('the guide cites systemd’s documentation', () => {
   ]) assert.ok(guide.includes(url), url);
   assert.ok(guide.includes('href="/sizing-model/"'));
 });
+
+test('MemoryMax follows the ratio you set, and the ratio is at least 1', () => {
+  const result = systemd.format(raw({ averageMiB: 295, peakMiB: 390 }), { maxToHighRatio: 1.43 });
+  assert.equal(result.memoryHigh, 507);
+  assert.equal(result.memoryMax, Math.ceil(507 * 1.43));
+  assert.equal(result.explanationSteps[1].text, `1.43 × 507M = ${Number((507 * 1.43).toFixed(1))} MiB → ${Math.ceil(507 * 1.43)}M`);
+  assert.throws(() => systemd.format(raw(), { maxToHighRatio: 0.9 }), RangeError);
+});

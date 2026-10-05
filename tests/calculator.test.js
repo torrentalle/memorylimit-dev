@@ -84,3 +84,25 @@ test('rejects invalid input instead of silently coercing it', () => {
     assert.throws(() => raw(overrides), { name: 'RangeError', message: pattern }, JSON.stringify(overrides));
   }
 });
+
+test('a margin override replaces the profile’s margin, which is still reported', () => {
+  const result = raw({ workloadType: 'jvm', requestMargin: 0.1, limitMargin: 0 });
+  assert.equal(result.requestMarginPct, 0.1);
+  assert.equal(result.limitMarginPct, 0);
+  assert.ok(Math.abs(result.requestMiB - 440) < 1e-9);
+  assert.equal(result.limitMiB, 500);
+  assert.ok(Math.abs(result.profileRequestMarginPct - 0.45) < 1e-9);
+  assert.ok(Math.abs(result.profileLimitMarginPct - 0.6) < 1e-9);
+});
+
+test('without overrides the margins are the profile’s', () => {
+  const result = raw();
+  assert.equal(result.requestMarginPct, result.profileRequestMarginPct);
+  assert.equal(result.limitMarginPct, result.profileLimitMarginPct);
+});
+
+test('a margin override must be a non-negative number', () => {
+  for (const overrides of [{ requestMargin: -0.1 }, { limitMargin: Number.NaN }, { limitMargin: '0.3' }]) {
+    assert.throws(() => raw(overrides), { name: 'RangeError' }, JSON.stringify(overrides));
+  }
+});

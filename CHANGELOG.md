@@ -13,20 +13,22 @@ so entries are grouped under `Unreleased` until a release is tagged.
 - Calculators for Azure Functions (#9), Couchbase (#13), Nomad (#19), Cloud Run (#21), Lambda (#20), vSphere (#24), Proxmox VE (#25) and Redis (#26).
 - A guide page for each calculator, explaining its sizing model, plus a shared page on the common model (#14, #16, #17, #19–#26).
 - Field tooltips and links between each assumption label and its row in the table (#14, #18).
+- An "Advanced: margins and defaults" section on every calculator, closed by default, to replace the request and limit margins; each field has a tooltip and each guide a "Values you can change" table.
 - A report link under each calculator result (#10).
-- Kubernetes request basis option: VPA-style, peak + 15% (#28).
+- Kubernetes request basis option: VPA-style, peak + 15% (#28); under Advanced, the VPA margin and minimum and the overcommit warning's ratio can be changed.
 - GitHub Sponsors links, a `/support/` page and issue forms (#4).
 - Content-Security-Policy and other security headers, Open Graph share image, logo and favicon.
+- Redis: the provisioning factor (2 × maxmemory by default, about 1.25× without persistence) can be changed under Advanced.
 
 ### Changed
 
 - Calculators are grouped by category on the landing page and in the nav (#11).
 - Manual values are shown first and are the default input mode (#12).
 - Results round to whole units (M, Mi, MB, MiB) per platform, with documented minimums, for Kubernetes, Docker Compose, Nomad, Lambda, Cloud Run, systemd, vSphere, Proxmox VE and Redis (#16, #17, #19–#26).
-- Azure Functions defaults to Microsoft's 2,048 MB instance size and shows CPU per size (#22, #27).
+- Azure Functions defaults to Microsoft's 2,048 MB instance size and shows CPU per size (#22, #27); the minimum instance size can be changed under Advanced.
 - Cloud Run applies Google's concurrency formula (#21, #29).
 - vSphere follows VMware's advice: configured memory as the cap, no limit (#24, #30).
-- systemd sets `MemoryMax` to 1.25 × `MemoryHigh`, with the references behind the ratio (#23, #31).
+- systemd sets `MemoryMax` to 1.25 × `MemoryHigh`, with the references behind the ratio (#23, #31); the ratio can be changed under Advanced.
 - End-to-end tests moved from `e2e/` to `tests/e2e/`.
 
 ### Fixed

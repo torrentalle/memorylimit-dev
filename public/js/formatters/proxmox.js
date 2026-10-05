@@ -12,12 +12,14 @@
  * The method, sources and assumptions are on /proxmox/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { percent } from './shared.js';
+import { marginTip, percent } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
   avg: 'Minimum memory (balloon) is this plus the request margin.',
-  peak: 'Memory is this plus the limit margin, raised to the minimum if it would fall below it.'
+  peak: 'Memory is this plus the limit margin, raised to the minimum if it would fall below it.',
+  requestMargin: marginTip('minimum memory (balloon) is the average plus it'),
+  limitMargin: marginTip('memory is the peak plus it')
 };
 
 // Proxmox takes whole MiB.

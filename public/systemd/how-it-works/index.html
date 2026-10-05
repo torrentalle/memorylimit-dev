@@ -272,6 +272,22 @@ MemoryMax=634M</code></pre>
           </tbody>
         </table>
       </div>
+      <h3 class="guide-subheading" id="adjustable">Values you can change</h3>
+      <p>
+        The calculator’s <strong>Advanced: margins and defaults</strong> section, closed by default, lets you replace these values when your
+        setup differs. Each field’s “?” says how it moves the result; a value outside the range is used at its nearest end,
+        and “Reset to defaults” puts them all back.
+      </p>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Value</th><th scope="col">Default</th><th scope="col">Range</th><th scope="col">Where the default comes from</th></tr></thead>
+          <tbody>
+            <tr><td>Request margin</td><td>from the profile</td><td>0–200%</td><td>MemoryLimit’s default, from sensitivity, workload type and environment (<a href="/sizing-model/#margins">sizing model</a>); sizes expected usage</td></tr>
+            <tr><td>Limit margin</td><td>from the profile</td><td>0–200%</td><td>MemoryLimit’s default, from sensitivity, workload type and environment (<a href="/sizing-model/#margins">sizing model</a>); sizes <code>MemoryHigh</code></td></tr>
+            <tr><td>MemoryMax ratio</td><td>1.25 × MemoryHigh</td><td>1–2×</td><td>Our default, <a href="#assumption-1">assumption 1</a>; guides outside the official documentation suggest 1.25–1.43</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <section class="panel guide-section" id="references" aria-labelledby="references-heading">

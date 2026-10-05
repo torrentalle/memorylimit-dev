@@ -1258,3 +1258,35 @@ body.tips-dismissed .hint-tip__text { visibility: hidden !important; opacity: 0 
 /* Near either end of the gauge, a marker's flag extends inwards so it stays inside the panel. */
 .gauge__marker-flag.is-end { transform: translateX(calc(-100% + 2px)); }
 .gauge__marker-flag.is-start { transform: translateX(-2px); }
+
+/*
+ * "Advanced: margins and defaults": closed by default under the inputs, holding the values the result relies on that are
+ * MemoryLimit's own defaults or vendor defaults (advanced-settings.js). The summary counts the ones changed.
+ */
+.advanced {
+  margin-top: 18px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+.advanced__summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.advanced__summary:hover,
+.advanced__summary:focus-visible { color: var(--text-primary); }
+.advanced[open] .advanced__summary { margin-bottom: 10px; }
+.advanced__count {
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--warn);
+}
+.advanced__reset { margin-top: 10px; }
+.advanced__reset:disabled { opacity: 0.5; cursor: default; }
+.field[hidden] { display: none; }
+
+/* A number outside the field's min/max is used at the nearest end of the range; the border says so. */
+.advanced .field-input:invalid { border-color: var(--warn); }

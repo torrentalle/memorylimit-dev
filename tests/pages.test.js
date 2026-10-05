@@ -220,3 +220,14 @@ for (const page of GUIDE_PAGES) {
     for (const kind of kinds) assert.ok(ASSUMPTION_KINDS.includes(kind), kind);
   });
 }
+
+test('every calculator on the shared page has its advanced section, closed by default, with a reset button', () => {
+  for (const page of CALCULATOR_PAGES.filter((def) => entryUrl(def) === '/js/calculator-page.js')) {
+    const html = read(page.dir);
+    const section = html.match(/<details class="advanced" id="advanced-settings"[^>]*>([\s\S]*?)<\/details>/);
+    assert.ok(section, page.path);
+    assert.doesNotMatch(section[0].split('>')[0], /\sopen\b/, `${page.path}: closed by default`);
+    assert.match(section[1], /data-advanced-count/, page.path);
+    assert.match(section[1], /<button[^>]*data-advanced-reset[^>]*>Reset to defaults<\/button>/, page.path);
+  }
+});

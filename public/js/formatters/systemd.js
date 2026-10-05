@@ -8,7 +8,8 @@
  *                peaks run unthrottled; throttling and aggressive reclaim
  *                only start when usage grows past anything seen so far.
  *   MemoryMax  — 1.25× MemoryHigh, so MemoryHigh sits 20% below it (our choice,
- *                at the low end of the 20–30% gap guides suggest). The gap is warning time: a
+ *                at the low end of the 20–30% gap guides suggest, and adjustable:
+ *                maxToHighRatio). The gap is warning time: a
  *                leak slows the service down before the kernel OOM-kills it.
  * The average-based request has nothing to reserve without a scheduler, so
  * it's reported as "expected usage" only, and MemoryHigh never goes below it.
@@ -19,12 +20,15 @@
  * The method, sources and assumptions are on /systemd/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { percent } from './shared.js';
+import { marginTip, percent } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
   avg: 'Only sets Expected usage, which isn’t enforced, and keeps MemoryHigh from going below it.',
-  peak: 'MemoryHigh is this plus the limit margin, and MemoryMax 1.25× MemoryHigh.'
+  peak: 'MemoryHigh is this plus the limit margin, and MemoryMax the MemoryMax ratio times MemoryHigh (1.25× by default).',
+  requestMargin: marginTip('expected usage is the average plus it, and MemoryHigh never goes below that'),
+  limitMargin: marginTip('MemoryHigh is the peak plus it'),
+  maxToHighRatio: 'MemoryMax is MemoryHigh times this, and the gap is warning time between throttling and an OOM kill: 1.25 is our choice, at the low end of the 1.25–1.43 guides suggest.'
 };
 
 // systemd's M is MiB; the drop-in uses whole M.
@@ -52,7 +56,7 @@ export function setPropertyCommand(memoryHigh, memoryMax) {
 
 const mib = (value) => `${Number(value.toFixed(1))} MiB`;
 
-function explainSteps(raw, expectedUsage, memoryHigh, memoryMax, highRaised) {
+function explainSteps(raw, expectedUsage, memoryHigh, memoryMax, highRaised, ratio) {
   return [
     {
       label: 'MemoryHigh',
@@ -60,20 +64,24 @@ function explainSteps(raw, expectedUsage, memoryHigh, memoryMax, highRaised) {
         ? `${mib(raw.peakMiB)} peak + ${percent(raw.limitMarginPct)} = ${mib(raw.limitMiB)}, raised to expected usage → ${memoryHigh}M`
         : `${mib(raw.peakMiB)} peak + ${percent(raw.limitMarginPct)} = ${mib(raw.limitMiB)} → ${memoryHigh}M`
     },
-    { label: 'MemoryMax', text: `${MAX_TO_HIGH_RATIO} × ${memoryHigh}M = ${mib(memoryHigh * MAX_TO_HIGH_RATIO)} → ${memoryMax}M` },
+    { label: 'MemoryMax', text: `${ratio} × ${memoryHigh}M = ${mib(memoryHigh * ratio)} → ${memoryMax}M` },
     { label: 'Expected usage', text: `${mib(raw.averageMiB)} average + ${percent(raw.requestMarginPct)} = ${mib(raw.requestMiB)} → ${expectedUsage}M, not enforced` }
   ];
 }
 
-/** @param {object} raw - result of calculateRawSizing() */
-export function format(raw) {
+/**
+ * @param {object} raw - result of calculateRawSizing()
+ * @param {{ maxToHighRatio?: number }} [options] - MemoryMax ÷ MemoryHigh, at least 1
+ */
+export function format(raw, { maxToHighRatio = MAX_TO_HIGH_RATIO } = {}) {
+  if (!(maxToHighRatio >= 1)) throw new RangeError(`maxToHighRatio must be at least 1 (got ${maxToHighRatio})`);
   const expectedUsage = roundUpToMultiple(raw.requestMiB, ROUNDING_STEP_MIB);
   // Never throttle below expected usage, even when peak ≈ average.
   const highRaised = raw.requestMiB > raw.limitMiB;
   const memoryHigh = roundUpToMultiple(Math.max(raw.limitMiB, raw.requestMiB), ROUNDING_STEP_MIB);
-  const memoryMax = roundUpToMultiple(memoryHigh * MAX_TO_HIGH_RATIO, ROUNDING_STEP_MIB);
+  const memoryMax = roundUpToMultiple(memoryHigh * maxToHighRatio, ROUNDING_STEP_MIB);
 
-  const steps = explainSteps(raw, expectedUsage, memoryHigh, memoryMax, highRaised);
+  const steps = explainSteps(raw, expectedUsage, memoryHigh, memoryMax, highRaised, maxToHighRatio);
   return {
     platform: 'systemd',
     expectedUsage,
