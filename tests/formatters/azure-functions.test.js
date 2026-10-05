@@ -106,3 +106,15 @@ test('the guide cites Microsoft’s documentation', () => {
   ]) assert.ok(guide.includes(url), url);
   assert.ok(guide.includes('href="/sizing-model/"'));
 });
+
+test('a 512 MB minimum lets a small app take the 512 MB instance; any other value is rejected', () => {
+  const small = raw({ averageMiB: 200, peakMiB: 300 });
+  assert.equal(azureFunctions.format(small).memory, 2048);
+  const result = azureFunctions.format(small, { minInstanceMB: '512' });
+  assert.equal(result.memory, 512);
+  assert.match(result.note, /^The floor here is your 512 MB minimum/);
+  const raised = azureFunctions.format(small, { minInstanceMB: 4096 });
+  assert.equal(raised.memory, 4096);
+  assert.match(raised.explanationSteps[1].text, /^fits 512 MB, but your 4096 MB minimum applies/);
+  assert.throws(() => azureFunctions.format(small, { minInstanceMB: 1024 }), RangeError);
+});

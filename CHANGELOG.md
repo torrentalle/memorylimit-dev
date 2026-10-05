@@ -24,7 +24,7 @@ so entries are grouped under `Unreleased` until a release is tagged.
 - Calculators are grouped by category on the landing page and in the nav (#11).
 - Manual values are shown first and are the default input mode (#12).
 - Results round to whole units (M, Mi, MB, MiB) per platform, with documented minimums, for Kubernetes, Docker Compose, Nomad, Lambda, Cloud Run, systemd, vSphere, Proxmox VE and Redis (#16, #17, #19–#26).
-- Azure Functions defaults to Microsoft's 2,048 MB instance size and shows CPU per size (#22, #27).
+- Azure Functions defaults to Microsoft's 2,048 MB instance size and shows CPU per size (#22, #27); the minimum instance size can be changed under Advanced.
 - Cloud Run applies Google's concurrency formula (#21, #29).
 - vSphere follows VMware's advice: configured memory as the cap, no limit (#24, #30).
 - systemd sets `MemoryMax` to 1.25 × `MemoryHigh`, with the references behind the ratio (#23, #31).

@@ -234,6 +234,15 @@ test('Azure Functions: produces a Flex Consumption instance size command', async
   await expect(page.locator('.explanation-panel .guide-link a')).toHaveAttribute('href', '/azure-functions/how-it-works/');
 });
 
+test('Azure Functions: a 512 MB minimum under Advanced lets a small app take the 512 MB instance', async ({ page }) => {
+  await page.goto('/azure-functions/');
+  await fillUsage(page, 200, 300);
+  await expect(page.locator('#snippet-code')).toContainText('--instance-memory 2048');
+  await page.locator('#advanced-settings summary').click();
+  await field(page, 'Minimum instance size').selectOption('512');
+  await expect(page.locator('#snippet-code')).toContainText('--instance-memory 512');
+});
+
 test('Redis: a used_memory paste produces maxmemory and host sizing', async ({ page }) => {
   await page.goto('/redis/');
   await expect(currentNavLink(page)).toHaveText('Redis maxmemory');

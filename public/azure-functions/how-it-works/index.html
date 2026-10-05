@@ -317,6 +317,7 @@ functionAppConfig.scaleAndConcurrency.instanceMemoryMB: 2048</code></pre>
           <thead><tr><th scope="col">Value</th><th scope="col">Default</th><th scope="col">Range</th><th scope="col">Where the default comes from</th></tr></thead>
           <tbody>
             <tr><td>Limit margin</td><td>from the profile</td><td>0–200%</td><td>MemoryLimit’s default, from sensitivity, workload type and environment (<a href="/sizing-model/#margins">sizing model</a>); sizes the memory the instance size must fit</td></tr>
+            <tr><td>Minimum instance size</td><td>2,048 MB</td><td>512, 2,048 or 4,096 MB</td><td>Microsoft’s suggestion for most apps, <a href="#assumption-2">assumption 2</a>; 512 MB suits a small, low-concurrency app</td></tr>
           </tbody>
         </table>
       </div>
