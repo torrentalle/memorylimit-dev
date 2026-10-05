@@ -30,8 +30,9 @@ Three layers, all run in CI (`.github/workflows/ci.yml`) on every push and pull 
      there is no inline script and no stray HTML file;
    - `tests/headers.test.js` pins the security headers.
 3. **Browser tests** with Playwright:
-   - `tests/e2e/smoke.spec.js` covers real user flows for every platform: pasting, manual entry, the nav dropdown,
-     disabling platforms, the copy button and theme persistence;
+   - `tests/e2e/smoke.spec.js` covers real user flows: manual entry on every platform, pasting on some (Kubernetes,
+     Redis, Couchbase; the parsing itself is unit-tested for every format), the nav dropdown, disabling platforms,
+     the copy button and theme persistence;
    - `tests/e2e/csp.spec.js` enforces the production CSP
      ([ADR 0009](0009-content-security-policy-without-inline-scripts.md)).
 

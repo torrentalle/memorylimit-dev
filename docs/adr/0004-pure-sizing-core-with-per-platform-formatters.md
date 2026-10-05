@@ -51,3 +51,12 @@ Split the code into a pure core and a thin shell:
 - The same modules could run on a server or in a CLI without changes.
 - All formatters must return the same shape. Nothing enforces that beyond the tests and copying an existing
   formatter.
+
+## Update
+
+Two details above have changed. Every formatter now rounds up to the platform's smallest accepted unit (whole
+Mi, M, MB or MiB; a multiple of 4 MB for a vSphere VM's memory) instead of coarse steps, so the rounding steps
+named in the context are out of date. And `app.js` is no longer the only module that touches a calculator
+page's DOM: Couchbase has its own page script ([ADR 0012](0012-couchbase-sizing-from-buckets-and-service-quotas.md)),
+and the "Advanced" section has `advanced-settings.js` ([ADR 0014](0014-let-users-change-assumed-values.md)). The
+core and the formatters stay free of the DOM.
