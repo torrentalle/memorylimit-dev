@@ -280,7 +280,7 @@ margin  = (sensitivity base + workload adjustment) × environment multiplier</co
             <tr><td><a href="/cloud-run/">Google Cloud Run</a></td><td>Not used</td><td>Memory limit</td></tr>
             <tr><td><a href="/azure-functions/">Azure Functions</a></td><td>Not used</td><td>Instance size</td></tr>
             <tr><td><a href="/systemd/">Systemd / Bare Metal / VM</a></td><td>Expected usage (shown, not enforced)</td><td><code>MemoryHigh</code>, and <code>MemoryMax</code> above it</td></tr>
-            <tr><td><a href="/vmware/">VMware vSphere</a></td><td>Reservation</td><td>Limit</td></tr>
+            <tr><td><a href="/vmware/">VMware vSphere</a></td><td>Reservation</td><td>The VM's memory size; no limit, as VMware advises</td></tr>
             <tr><td><a href="/proxmox/">Proxmox VE</a></td><td>Minimum memory (<code>balloon</code>)</td><td>Memory</td></tr>
             <tr><td><a href="/redis/">Redis maxmemory</a></td><td colspan="2"><code>maxmemory</code>: the larger of the two</td></tr>
           </tbody>

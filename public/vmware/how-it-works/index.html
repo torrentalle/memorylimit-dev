@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>How the VMware vSphere Memory Calculator Works | MemoryLimit</title>
-<meta name="description" content="How the vSphere calculator sets a VM's memory reservation, limit and shares: rounding, the power-on rule, VMware's own advice on limits, govc, and what to paste, with links to the vSphere docs." />
+<meta name="description" content="How the vSphere calculator sets a VM's memory size, reservation and shares the way VMware advises, with no limit: rounding, govc, hot add, and what to paste, with links to the vSphere docs." />
 <link rel="canonical" href="https://memorylimit.dev/vmware/how-it-works/" />
 <link rel="icon" href="/favicon.ico" sizes="32x32" />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -12,14 +12,14 @@
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="MemoryLimit" />
 <meta property="og:title" content="How the VMware vSphere Memory Calculator Works" />
-<meta property="og:description" content="How the vSphere calculator sets a VM's memory reservation, limit and shares: rounding, the power-on rule, VMware's own advice on limits, govc, and what to paste, with links to the vSphere docs." />
+<meta property="og:description" content="How the vSphere calculator sets a VM's memory size, reservation and shares the way VMware advises, with no limit: rounding, govc, hot add, and what to paste, with links to the vSphere docs." />
 <meta property="og:url" content="https://memorylimit.dev/vmware/how-it-works/" />
 <meta property="og:image" content="https://memorylimit.dev/og-image.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="How the VMware vSphere Memory Calculator Works" />
-<meta name="twitter:description" content="How the vSphere calculator sets a VM's memory reservation, limit and shares: rounding, the power-on rule, VMware's own advice on limits, govc, and what to paste, with links to the vSphere docs." />
+<meta name="twitter:description" content="How the vSphere calculator sets a VM's memory size, reservation and shares the way VMware advises, with no limit: rounding, govc, hot add, and what to paste, with links to the vSphere docs." />
 <meta name="twitter:image" content="https://memorylimit.dev/og-image.png" />
 <link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="/css/styles.css" />
@@ -88,12 +88,12 @@
     <p class="guide-back"><a href="/vmware/">← VMware vSphere memory calculator</a></p>
     <h1 class="intro-title">How the VMware vSphere calculator works</h1>
     <p class="intro-text">
-      This page walks through how the <a href="/vmware/">vSphere calculator</a> turns your usage data into a VM's memory
-      reservation, limit and shares. The reservation and limit start from the <a href="/sizing-model/">shared sizing model</a>;
-      this page covers what happens after that. Statements backed by VMware's documentation end with a
-      <span class="guide-tag guide-tag--doc">vSphere docs</span> link to it. Choices the documentation doesn't make for us
-      are explained and marked <span class="guide-tag guide-tag--assumption">Assumption</span>, which links to its row in the
-      table of all of them.
+      This page walks through how the <a href="/vmware/">vSphere calculator</a> turns your usage data into a VM's memory size,
+      reservation and shares, following VMware's own advice. The values start from the
+      <a href="/sizing-model/">shared sizing model</a>; this page covers what happens after that. Statements backed by
+      VMware's documentation end with a <span class="guide-tag guide-tag--doc">vSphere docs</span> link to it. Choices the
+      documentation doesn't make for us are explained and marked
+      <span class="guide-tag guide-tag--assumption">Assumption</span>, which links to its row in the table of all of them.
     </p>
   </div>
 
@@ -102,9 +102,9 @@
     <nav class="panel guide-toc" aria-labelledby="toc-heading">
       <h2 id="toc-heading" class="panel__title panel__title--tight">On this page</h2>
       <ol>
-        <li><a href="#settings">Reservation, limit and shares</a></li>
-        <li><a href="#steps">From usage to reservation and limit</a></li>
-        <li><a href="#guidance">VMware's own guidance</a></li>
+        <li><a href="#settings">Memory, reservation, limit and shares</a></li>
+        <li><a href="#guidance">VMware's advice, and how the calculator follows it</a></li>
+        <li><a href="#steps">From usage to memory and reservation</a></li>
         <li><a href="#output">What the calculator writes</a></li>
         <li><a href="#warnings">Every warning, and why</a></li>
         <li><a href="#paste">What to paste</a></li>
@@ -114,7 +114,7 @@
     </nav>
 
     <section class="panel guide-section" id="settings" aria-labelledby="settings-heading">
-      <h2 id="settings-heading" class="panel__title"><span class="panel__index">01</span> Reservation, limit and shares</h2>
+      <h2 id="settings-heading" class="panel__title"><span class="panel__index">01</span> Memory, reservation, limit and shares</h2>
       <ul>
         <li>
           <strong>Reservation</strong> is the guaranteed minimum allocation, in megabytes. A VM whose reservation can't be
@@ -125,11 +125,8 @@
           <strong>Limit</strong> is the upper bound, in megabytes. With no limit, the VM's configured memory is its effective
           limit.
           <a class="guide-tag guide-tag--doc" href="https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/9-0/vsphere-resource-management/configuring-resource-allocation-settings.html" target="_blank" rel="noopener">vSphere docs</a>
-          The host takes memory back from VMs with the balloon driver and with host swapping.
-          <a class="guide-tag guide-tag--doc" href="https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/9-0/vsphere-resource-management/administering-memory-resources.html" target="_blank" rel="noopener">vSphere docs</a>
-          So a VM configured with more memory than its limit sees all of it, but past the limit that memory comes back through
-          ballooning and swapping instead of failing fast.
-          <a class="guide-tag guide-tag--assumption" id="assumption-5-ref" href="#assumption-5">Assumption</a>
+          In the API, a limit of −1 means exactly that.
+          <a class="guide-tag guide-tag--doc" href="https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere-sdks-tools/7-0/web-services-sdk-programming-guide/virtual-machine-configuration/configuring-a-virtual-machine/cpu-and-memory-information/configuring-resource-allocation-constraints-for-virtual-machines.html" target="_blank" rel="noopener">vSphere docs</a>
         </li>
         <li>
           <strong>Shares</strong> set a VM's priority against the others when memory is contended: High, Normal and Low are
@@ -139,22 +136,38 @@
       </ul>
     </section>
 
+    <section class="panel guide-section" id="guidance" aria-labelledby="guidance-heading">
+      <h2 id="guidance-heading" class="panel__title"><span class="panel__index">02</span> VMware's advice, and how the calculator follows it</h2>
+      <p>
+        VMware's resource-management guidance:
+        <a class="guide-tag guide-tag--doc" href="https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/9-0/vsphere-resource-management/configuring-resource-allocation-settings.html" target="_blank" rel="noopener">vSphere docs</a>
+      </p>
+      <ul>
+        <li>A limit can waste idle memory: the VM can't use more than the limit even when the host has plenty.</li>
+        <li>Reserve the <em>minimum acceptable</em> amount of memory, not the amount you'd like to have available.</li>
+        <li>Leave at least 10% of the host unreserved, so later changes still fit.</li>
+      </ul>
+      <p>
+        So the calculator sets no limit and sizes the VM's <strong>configured memory</strong> from the peak instead: that
+        becomes the cap. The reservation comes from the average plus its margin, the memory the VM needs under normal load,
+        which is how the calculator reads "minimum acceptable".
+        <a class="guide-tag guide-tag--assumption" id="assumption-2-ref" href="#assumption-2">Assumption</a>
+      </p>
+    </section>
+
     <section class="panel guide-section" id="steps" aria-labelledby="steps-heading">
-      <h2 id="steps-heading" class="panel__title"><span class="panel__index">02</span> From usage to reservation and limit</h2>
+      <h2 id="steps-heading" class="panel__title"><span class="panel__index">03</span> From usage to memory and reservation</h2>
       <pre class="yaml-block guide-formula"><code>reservation = average × (1 + request margin)                  rounded up to a whole MB
-limit       = max(peak × (1 + limit margin), reservation)     rounded up to a whole MB
+memory      = max(peak × (1 + limit margin), reservation)     rounded up to a whole MB
+limit       = Unlimited (−1)
 shares      = Normal</code></pre>
       <p>
         The margins come from the sensitivity, workload type and environment you choose; the
         <a href="/sizing-model/">sizing model</a> explains them, and they are assumptions too. vSphere's MB are taken as MiB,
         so values pass through unconverted.
         <a class="guide-tag guide-tag--assumption" id="assumption-1-ref" href="#assumption-1">Assumption</a>
-      </p>
-      <p>
-        A VM whose memory reservation is above its limit fails to power on in a DRS cluster, with an
-        <code>InvalidArgument</code> on <code>memoryAllocation.reservation</code>. So when the peak is so close to the average that
-        the peak-based limit falls below the reservation, the limit is raised to it.
-        <a class="guide-tag guide-tag--doc" href="https://knowledge.broadcom.com/external/article/338772" target="_blank" rel="noopener">Broadcom KB</a>
+        A reservation can't exceed the configured memory, so when the peak is so close to the average that the peak-based
+        memory falls below the reservation, the memory is raised to it.
       </p>
 
       <h3 class="guide-subheading">Worked example</h3>
@@ -162,55 +175,45 @@ shares      = Normal</code></pre>
       <div class="guide-table-wrap">
         <table class="guide-table guide-table--numbers" data-example="390 700 generic medium production">
           <tbody>
+            <tr><th scope="row">memory</th><td>700 MiB × 1.30 = 910 MiB</td><td data-check="memory">910 MB</td></tr>
             <tr><th scope="row">reservation</th><td>390 MiB × 1.30 = 507 MiB</td><td data-check="reservation">507 MB</td></tr>
-            <tr><th scope="row">limit</th><td>700 MiB × 1.30 = 910 MiB</td><td data-check="limit">910 MB</td></tr>
+            <tr><th scope="row">limit</th><td>none</td><td>Unlimited</td></tr>
           </tbody>
         </table>
       </div>
-      <p>A steady cache, averaging 1000 MiB with a 1020 MiB peak, where the reservation decides the limit:</p>
+      <p>A steady cache, averaging 1000 MiB with a 1020 MiB peak, where the reservation decides the memory:</p>
       <div class="guide-table-wrap">
         <table class="guide-table guide-table--numbers" data-example="1000 1020 cache medium production">
           <tbody>
             <tr><th scope="row">reservation</th><td>1000 MiB × 1.35 = 1350 MiB</td><td data-check="reservation">1350 MB</td></tr>
-            <tr><th scope="row">limit</th><td>1020 MiB × 1.30 = 1326 MiB, below the reservation</td><td data-check="limit">1350 MB</td></tr>
+            <tr><th scope="row">memory</th><td>1020 MiB × 1.30 = 1326 MiB, below the reservation</td><td data-check="memory">1350 MB</td></tr>
           </tbody>
         </table>
       </div>
     </section>
 
-    <section class="panel guide-section" id="guidance" aria-labelledby="guidance-heading">
-      <h2 id="guidance-heading" class="panel__title"><span class="panel__index">03</span> VMware's own guidance</h2>
-      <p>
-        VMware's advice points the other way from a tight sizing:
-        <a class="guide-tag guide-tag--doc" href="https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/9-0/vsphere-resource-management/configuring-resource-allocation-settings.html" target="_blank" rel="noopener">vSphere docs</a>
-      </p>
-      <ul>
-        <li>Reserve the <em>minimum acceptable</em> amount of memory, not the amount you'd like to have available.</li>
-        <li>A limit can waste idle memory: the VM can't use more than the limit even when the host has plenty.</li>
-        <li>Leave at least 10% of the host unreserved, so later changes still fit.</li>
-      </ul>
-      <p>
-        The calculator still gives a reservation from the average plus a margin, and a limit from the peak, because that's what
-        it's for. It keeps VMware's advice in the note under the result: if you'd rather not cap the VM, leave the limit
-        unlimited and the configured memory is the cap; if the reservation only needs to cover the minimum, set it lower.
-        <a class="guide-tag guide-tag--assumption" id="assumption-2-ref" href="#assumption-2">Assumption</a>
-      </p>
-    </section>
-
     <section class="panel guide-section" id="output" aria-labelledby="output-heading">
       <h2 id="output-heading" class="panel__title"><span class="panel__index">04</span> What the calculator writes</h2>
-      <pre class="yaml-block"><code>govc vm.change -vm "&lt;vm-name&gt;" -mem.reservation 507 -mem.limit 910 -mem.shares normal</code></pre>
-      <p>
-        <code>govc vm.change</code> takes the memory reservation and limit in MB and the shares as a level or a number. It
-        doesn't use <code>-m</code>, which would resize the VM's memory instead.
-        <a class="guide-tag guide-tag--doc" href="https://github.com/vmware/govmomi/blob/main/govc/USAGE.md" target="_blank" rel="noopener">govc docs</a>
-        The same values go in the vSphere Client under Edit Settings → Virtual Hardware → Memory.
-      </p>
-      <p>
-        Shares stay at Normal. The calculator has no way to know how this VM should rank against its neighbours, and doesn't
-        claim Normal is vSphere's default.
-        <a class="guide-tag guide-tag--assumption" id="assumption-3-ref" href="#assumption-3">Assumption</a>
-      </p>
+      <pre class="yaml-block"><code>govc vm.change -vm "&lt;vm-name&gt;" -m 910 -mem.reservation 507 -mem.limit -1 -mem.shares normal</code></pre>
+      <ul>
+        <li>
+          <code>govc vm.change</code> takes the memory size with <code>-m</code>, and the reservation and limit with
+          <code>-mem.reservation</code> and <code>-mem.limit</code>, all in MB; shares as a level or a number.
+          <a class="guide-tag guide-tag--doc" href="https://github.com/vmware/govmomi/blob/main/govc/USAGE.md" target="_blank" rel="noopener">govc docs</a>
+          The same values go in the vSphere Client under Edit Settings → Virtual Hardware → Memory.
+        </li>
+        <li>
+          Memory hot add lets you add memory to a powered-on VM; turning it on needs the VM powered off.
+          <a class="guide-tag guide-tag--doc" href="https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/7-0/vsphere-virtual-machine-administration/configuring-virtual-machine-hardwarevm-admin/virtual-memory-configurationvm-admin/change-memory-hot-add-settingsvm-admin.html" target="_blank" rel="noopener">vSphere docs</a>
+          Lowering a VM's memory isn't covered by hot add, so it needs the VM off.
+          <a class="guide-tag guide-tag--assumption" id="assumption-4-ref" href="#assumption-4">Assumption</a>
+        </li>
+        <li>
+          Shares stay at Normal: the calculator has no way to know how this VM should rank against its neighbours, and doesn't
+          claim Normal is vSphere's default.
+          <a class="guide-tag guide-tag--assumption" id="assumption-3-ref" href="#assumption-3">Assumption</a>
+        </li>
+      </ul>
     </section>
 
     <section class="panel guide-section" id="warnings" aria-labelledby="warnings-heading">
@@ -220,9 +223,9 @@ shares      = Normal</code></pre>
           <thead><tr><th scope="col">Message about</th><th scope="col">Shown when</th><th scope="col">Basis</th></tr></thead>
           <tbody>
             <tr>
-              <td>Limit raised to the reservation <span class="guide-level">warning</span></td>
-              <td>The peak-based limit came out below the reservation</td>
-              <td>Such a VM can fail to power on. <a class="guide-tag guide-tag--doc" href="https://knowledge.broadcom.com/external/article/338772" target="_blank" rel="noopener">Broadcom KB</a></td>
+              <td>Memory raised to the reservation <span class="guide-level">warning</span></td>
+              <td>The peak-based memory came out below the reservation</td>
+              <td>A reservation can't be larger than the configured memory. <a class="guide-tag guide-tag--doc" href="https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-virtual-machine-administration/configuring-virtual-machine-hardwarevsphere-vm-admin/virtual-memory-configurationvsphere-vm-admin/allocate-memory-resourcesvsphere-vm-admin.html" target="_blank" rel="noopener">vSphere docs</a></td>
             </tr>
             <tr>
               <td>Peak below average <span class="guide-level guide-level--error">error</span></td>
@@ -247,7 +250,7 @@ shares      = Normal</code></pre>
         <li>
           The calculator asks for guest-side numbers rather than vSphere's own "active" or "consumed" memory, which describe the
           host's view of the VM rather than what the guest needs.
-          <a class="guide-tag guide-tag--assumption" id="assumption-4-ref" href="#assumption-4">Assumption</a>
+          <a class="guide-tag guide-tag--assumption" id="assumption-5-ref" href="#assumption-5">Assumption</a>
         </li>
       </ul>
     </section>
@@ -261,10 +264,10 @@ shares      = Normal</code></pre>
           <thead><tr><th scope="col">Assumption</th><th scope="col">Kind</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
           <tbody>
             <tr id="assumption-1"><td>vSphere's MB are MiB <a class="guide-backref" href="#assumption-1-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our reading</td><td>vSphere sizes memory in powers of two and never defines MB</td><td>If they were decimal, values would be about 5% too small.</td></tr>
-            <tr id="assumption-2"><td>Reservation from the average, and a limit, despite VMware's advice <a class="guide-backref" href="#assumption-2-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>The calculator sizes both from usage; the note gives VMware's view</td><td>A limit can leave host memory idle; a large reservation can stop other VMs powering on.</td></tr>
+            <tr id="assumption-2"><td>"Minimum acceptable" is the average plus its margin <a class="guide-backref" href="#assumption-2-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our reading</td><td>It's the memory the VM needs under normal load</td><td>A VM that runs acceptably on less can reserve less, leaving more of the host unreserved.</td></tr>
             <tr id="assumption-3"><td>Shares stay at Normal <a class="guide-backref" href="#assumption-3-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>Priority between VMs isn't something usage data shows</td><td>Under contention, this VM gets the same share per MB as other Normal VMs.</td></tr>
-            <tr id="assumption-4"><td>Measure inside the guest, not with vSphere's active or consumed memory <a class="guide-backref" href="#assumption-4-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>The guest's own view is what the application needs</td><td>Host-side figures can read lower or higher than what the guest uses.</td></tr>
-            <tr id="assumption-5"><td>Past the limit, the VM is ballooned and swapped <a class="guide-backref" href="#assumption-5-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our reading</td><td>Those are the host's reclaim techniques; the docs don't tie them to the limit in so many words</td><td>Either way the guest can't use more than the limit; only how it slows down differs.</td></tr>
+            <tr id="assumption-4"><td>Lowering memory needs the VM off <a class="guide-backref" href="#assumption-4-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our reading</td><td>Hot add only adds memory</td><td>If your setup can remove memory live, you won't need the restart.</td></tr>
+            <tr id="assumption-5"><td>Measure inside the guest <a class="guide-backref" href="#assumption-5-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>The guest's own view is what the application needs</td><td>Host-side figures can read lower or higher than what the guest uses.</td></tr>
           </tbody>
         </table>
       </div>
@@ -275,9 +278,9 @@ shares      = Normal</code></pre>
       <ul class="guide-references">
         <li><a href="https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/9-0/vsphere-resource-management/configuring-resource-allocation-settings.html" target="_blank" rel="noopener">Configure resource allocation settings</a> — reservation, limit, and VMware's advice on both.</li>
         <li><a href="https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-virtual-machine-administration/configuring-virtual-machine-hardwarevsphere-vm-admin/virtual-memory-configurationvsphere-vm-admin/allocate-memory-resourcesvsphere-vm-admin.html" target="_blank" rel="noopener">Allocate memory resources</a> — units and the reservation's limits.</li>
+        <li><a href="https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere-sdks-tools/7-0/web-services-sdk-programming-guide/virtual-machine-configuration/configuring-a-virtual-machine/cpu-and-memory-information/configuring-resource-allocation-constraints-for-virtual-machines.html" target="_blank" rel="noopener">Resource allocation constraints (SDK)</a> — −1 for no limit.</li>
         <li><a href="https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/7-0/vsphere-resource-management/configuring-resource-allocation-settings/resource-allocation-shares.html" target="_blank" rel="noopener">Resource allocation shares</a> — High, Normal, Low.</li>
-        <li><a href="https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/9-0/vsphere-resource-management/administering-memory-resources.html" target="_blank" rel="noopener">Administer memory resources</a> — ballooning and swapping past the limit.</li>
-        <li><a href="https://knowledge.broadcom.com/external/article/338772" target="_blank" rel="noopener">Broadcom KB 338772</a> — power-on fails when the reservation is above the limit.</li>
+        <li><a href="https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/7-0/vsphere-virtual-machine-administration/configuring-virtual-machine-hardwarevm-admin/virtual-memory-configurationvm-admin/change-memory-hot-add-settingsvm-admin.html" target="_blank" rel="noopener">Change memory hot add settings</a> — adding memory to a running VM.</li>
         <li><a href="https://github.com/vmware/govmomi/blob/main/govc/USAGE.md" target="_blank" rel="noopener">govc USAGE</a> — <code>vm.change</code> flags.</li>
         <li><a href="https://docs.kernel.org/filesystems/proc.html" target="_blank" rel="noopener">The /proc filesystem</a> (kernel) — <code>MemTotal</code> and <code>MemAvailable</code>.</li>
       </ul>

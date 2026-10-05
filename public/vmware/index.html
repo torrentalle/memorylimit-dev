@@ -3,23 +3,23 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>VMware vSphere Memory Sizing Calculator — Reservation & Limit | MemoryLimit</title>
-<meta name="description" content="Right-size a vSphere VM's memory reservation and limit from real usage data — avoid ballooning and swapping without locking away host capacity the VM never uses. Outputs vSphere Client steps and a govc command." />
+<title>VMware vSphere Memory Sizing Calculator — Memory & Reservation | MemoryLimit</title>
+<meta name="description" content="Right-size a vSphere VM's memory and reservation from real usage data, the way VMware advises: no limit, the configured memory as the cap. Outputs vSphere Client steps and a govc command." />
 <link rel="canonical" href="https://memorylimit.dev/vmware/" />
 <link rel="icon" href="/favicon.ico" sizes="32x32" />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="MemoryLimit" />
-<meta property="og:title" content="VMware vSphere Memory Sizing Calculator — Reservation & Limit" />
-<meta property="og:description" content="Right-size a vSphere VM's memory reservation and limit from real usage data — avoid ballooning and swapping without locking away host capacity the VM never uses. Outputs vSphere Client steps and a govc command." />
+<meta property="og:title" content="VMware vSphere Memory Sizing Calculator — Memory & Reservation" />
+<meta property="og:description" content="Right-size a vSphere VM's memory and reservation from real usage data, the way VMware advises: no limit, the configured memory as the cap. Outputs vSphere Client steps and a govc command." />
 <meta property="og:url" content="https://memorylimit.dev/vmware/" />
 <meta property="og:image" content="https://memorylimit.dev/og-image.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="VMware vSphere Memory Sizing Calculator — Reservation & Limit" />
-<meta name="twitter:description" content="Right-size a vSphere VM's memory reservation and limit from real usage data — avoid ballooning and swapping without locking away host capacity the VM never uses. Outputs vSphere Client steps and a govc command." />
+<meta name="twitter:title" content="VMware vSphere Memory Sizing Calculator — Memory & Reservation" />
+<meta name="twitter:description" content="Right-size a vSphere VM's memory and reservation from real usage data, the way VMware advises: no limit, the configured memory as the cap. Outputs vSphere Client steps and a govc command." />
 <meta name="twitter:image" content="https://memorylimit.dev/og-image.png" />
 <link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="/css/styles.css" />
@@ -88,11 +88,11 @@
   <div class="wrap intro-section">
     <h1 class="intro-title">VMware vSphere Memory Sizing Calculator</h1>
     <p class="intro-text">
-      vSphere gives each VM three memory controls. The <strong>reservation</strong> is memory the host guarantees and
-      never takes back; the <strong>limit</strong> is a ceiling the VM can't use more than; <strong>shares</strong> only
-      decide who wins when VMs compete for the same host's memory. Unlike a container runtime, hitting the limit
-      doesn't kill anything — the hypervisor starts ballooning and swapping the VM, so it slows down gradually instead
-      of failing fast. This calculator sizes the reservation and limit from real usage.
+      vSphere gives each VM a configured memory size and three controls: the <strong>reservation</strong> the host
+      guarantees, a <strong>limit</strong> it can't use more than, and <strong>shares</strong> that decide who wins when VMs
+      compete for memory. VMware advises against limits, since they can waste idle memory, so this calculator follows that:
+      it sizes the VM's <strong>memory</strong> from the peak, as the cap, and the <strong>reservation</strong> from the
+      average, with the limit left unlimited.
     </p>
   </div>
 
