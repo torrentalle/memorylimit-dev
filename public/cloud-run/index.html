@@ -173,6 +173,18 @@
             <option value="production" selected>Production</option>
           </select>
         </div>
+        <div class="field">
+          <label class="field-label" for="idle-memory-input">Idle memory per instance <span class="field-unit">MiB</span></label>
+          <input id="idle-memory-input" class="field-input" type="number" min="0" step="any" inputmode="decimal" placeholder="optional, e.g. 120" data-formatter-option="standingMiB" />
+        </div>
+        <div class="field">
+          <label class="field-label" for="current-concurrency-input">Max concurrency now</label>
+          <input id="current-concurrency-input" class="field-input" type="number" min="1" max="1000" step="1" inputmode="numeric" value="80" data-formatter-option="currentConcurrency" />
+        </div>
+        <div class="field">
+          <label class="field-label" for="target-concurrency-input">Max concurrency planned</label>
+          <input id="target-concurrency-input" class="field-input" type="number" min="1" max="1000" step="1" inputmode="numeric" placeholder="same as now" data-formatter-option="targetConcurrency" />
+        </div>
       </div>
     </section>
 
