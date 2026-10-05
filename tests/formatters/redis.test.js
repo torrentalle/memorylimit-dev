@@ -75,3 +75,12 @@ test('the guide cites the Redis documentation', () => {
   ]) assert.ok(guide.includes(url), url);
   assert.ok(guide.includes('href="/sizing-model/"'));
 });
+
+test('the memory to provision follows the provisioning factor, rounded up to a whole MB', () => {
+  // maxmemory 650mb; 1.25 × 650 = 812.5 → 813 MB
+  const result = redis.format(raw(), { provisionFactor: 1.25 });
+  assert.equal(result.maxmemory, 650);
+  assert.equal(result.provision, 813);
+  assert.equal(result.explanationSteps[1].text, '1.25 × 650 MB, your provisioning factor = 812.5 MB → 813 MB');
+  assert.throws(() => redis.format(raw(), { provisionFactor: 0.5 }), RangeError);
+});
