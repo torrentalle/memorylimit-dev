@@ -35,6 +35,30 @@
 import { roundUpToMultiple } from '../calculator.js';
 import { pluralize } from './shared.js';
 
+// How each input moves the result, one sentence each (the page's tooltips; tests/field-tips.test.js checks them).
+// The page's own fields by their element key, the advanced settings by their calculateSizing() setting name.
+// The other services' quotas all work the same way, so one sentence in their section's hint covers them.
+export const fieldTips = {
+  dataNodes: 'Each bucket’s need is spread over this many nodes to give its quota per node, and the Data quota per node is those added up: more nodes, smaller quotas on each.',
+  nodeRam: 'Doesn’t change any quota; the quotas are checked against it (at most 90% recommended, never above RAM − 1 GiB).',
+  metadataBytes: 'Added to every document’s key length to give the metadata it keeps in RAM; 56 bytes is the metadata_per_document of Couchbase’s sizing guidelines.',
+  overhead: 'Every bucket quota is multiplied by 1 plus this; 25% is the overhead_percentage of Couchbase’s sizing guidelines.',
+  highWaterMark: 'Every bucket quota is divided by this, so the working set stays below the point where Couchbase starts ejecting items; 85% is Couchbase’s default high-water mark.',
+  storageEngine: 'Only moves a warning: Couchbase recommends a bucket quota of at least 10% of the dataset for Couchstore, and 1% for Magma.',
+  smallNodeMiB: 'Only moves a warning: below this much RAM the recommended share for quotas drops from 90% to 80%, and 5 GiB is our reading of Couchbase’s “little memory”.',
+  lowWorkingSetPct: 'Only moves a warning, shown for a full-ejection bucket that keeps less than this share in RAM; 20% is our own threshold.'
+};
+
+// The same for each bucket row's fields. The bucket name has none: it doesn't affect the numbers.
+export const bucketFieldTips = {
+  documents: 'Metadata and data both grow with it: twice the documents, twice the quota.',
+  keyBytes: 'Added to the metadata each document keeps in RAM (56 bytes by default), so longer keys raise the quota for every document.',
+  documentBytes: 'Only the working-set share of it is held in RAM, so it raises the quota by size × working set %.',
+  replicas: 'Each replica is a full extra copy of data and metadata: 1 replica doubles the quota, 2 triple it.',
+  workingSetPct: 'The share of the data kept in RAM: the quota grows with it, and reads outside it go to disk.',
+  eviction: 'Value ejection keeps every document’s metadata in RAM; full ejection only the working set’s, for a smaller quota but more disk reads.'
+};
+
 // Couchbase takes quotas in whole MiB; any value above the minimum is valid, so round up no further.
 export const STEP_MIB = 1;
 export const METADATA_BYTES = 56;
@@ -119,6 +143,12 @@ const REST_FIELDS = {
 };
 
 // Kept short on purpose: the details, sources and assumptions are on the guide page (/couchbase/how-it-works/).
+// Couchbase refuses a Data quota below the bucket quotas already set, and a bucket quota above the Data quota,
+// so which command goes first depends on whether the quotas grow or shrink. The page doesn't know the current
+// quotas, so the snippet says so; a comment line keeps it runnable as pasted.
+const ORDER_COMMENT =
+  '# Raising quotas: run these in order. Lowering them: run the bucket-edit lines first, since Couchbase refuses a Data quota below the bucket quotas already set.';
+
 const NOTE =
   'Index, Search, Eventing and Analytics quotas are the values you entered. Full-ejection buckets count only the ' +
   'metadata of documents kept in RAM — an assumption. bucket-edit only changes buckets that already exist.';
@@ -129,6 +159,8 @@ function assertNonNegativeNumber(name, value) {
   }
 }
 
+const BUCKET_NAME = /^[A-Za-z0-9._%-]{1,100}$/;
+
 function assertPositiveInteger(name, value) {
   if (!Number.isInteger(value) || value < 1) throw new RangeError(`${name} must be a positive integer (got ${value})`);
 }
@@ -136,6 +168,11 @@ function assertPositiveInteger(name, value) {
 function sizeBucket(bucket, { metadataBytes, overhead, highWaterMark }, dataNodes) {
   const { name, documents, keyBytes, documentBytes, replicas, workingSetPct, eviction } = bucket;
   if (typeof name !== 'string' || !name.trim()) throw new RangeError('bucket name must not be empty');
+  // Couchbase's own rule for bucket names. It also keeps the name safe in the shell commands below, which
+  // quote nothing: a pasted name like x$(…) can't reach them.
+  if (!BUCKET_NAME.test(name.trim())) {
+    throw new RangeError(`bucket name "${name.trim()}" may only use letters, digits, ".", "_", "%" and "-", up to 100 characters`);
+  }
   assertNonNegativeNumber(`${name}: documents`, documents);
   assertNonNegativeNumber(`${name}: keyBytes`, keyBytes);
   assertNonNegativeNumber(`${name}: documentBytes`, documentBytes);
@@ -353,7 +390,7 @@ export function format(input) {
     snippet: {
       label: 'couchbase-cli',
       language: 'text',
-      code: [clusterCommand(quotas), ...buckets.map(bucketCommand)].join('\n')
+      code: [ORDER_COMMENT, clusterCommand(quotas), ...buckets.map(bucketCommand)].join('\n')
     },
     alternative: { label: 'Cluster quotas through the REST API', code: restCommand(quotas) },
     warnings: [...sizing.warnings],

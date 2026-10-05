@@ -22,6 +22,9 @@ so entries are grouped under `Unreleased` until a release is tagged.
 
 ### Changed
 
+- ADR 0015 records the EthicalAds removal and supersedes ADRs 0008 and 0009 (#47).
+- Browser tests: page errors fail the test they happen in, the dormant-analytics test checks its own control, the theme test checks there is no flash, and the donation link and `/k8s/` under the CSP are covered. CI runs with a read-only token that it doesn't leave on disk (#48).
+- The Couchbase page shares the result panels and the paste/manual toggle with the other calculators (`result-view.js`), its tooltips moved into its formatter and are tested, and its advanced settings are read from `data-setting` attributes. A test ties every advanced field's default on a page to the formatter's, and the margin fields' range to `MARGIN_OVERRIDE_RANGE` (#49).
 - Calculators are grouped by category on the landing page and in the nav (#11).
 - Manual values are shown first and are the default input mode (#12).
 - Results round to whole units (M, Mi, MB, MiB) per platform, with documented minimums, for Kubernetes, Docker Compose, Nomad, Lambda, Cloud Run, systemd, vSphere, Proxmox VE and Redis (#16, #17, #19–#26).
@@ -46,6 +49,12 @@ so entries are grouped under `Unreleased` until a release is tagged.
 - The favicon keeps its light and dark colours under the stricter CSP: `/favicon.svg` drops the page policy, whose `style-src 'self'` blocked its inline `<style>`.
 - Couchbase: a pasted bucket list with nothing to size (only ephemeral or Memcached buckets) no longer removes the buckets entered, and a Prometheus paste without `kv_curr_items` for a bucket says its document count wasn't read.
 - The count of changed advanced settings updates when the Kubernetes VPA settings are shown or hidden.
+- Couchbase: identical `kv_curr_items` lines from nodes' own `/metrics` are added up as different nodes instead of merged as one series, which counted only one node's documents; the feedback says how many nodes a count covers. An aggregated query result without a metric name is read as the item count (#45).
+- A Grafana CSV with a date column no longer drops a steadily growing first series in the 1–9 GiB range as a time column, and a whole `redis-cli INFO memory` paste reads only `used_memory` (#45).
+- Couchbase: the `couchbase-cli` snippet says to run `bucket-edit` first when lowering quotas, and bucket names outside Couchbase's rule are rejected, so nothing unquoted reaches the shell commands (#46).
+- Cloud Run's `service.yaml` and Azure Functions' Bicep snippets are nested as the real files are, instead of dotted paths (#47).
+- Redis shows the memory to provision in MiB, the unit of its `mb` (#47).
+- Out-of-date README, ADR and tagline statements after the recent changes, and the privacy page now mentions the stored theme choice (#47).
 - Phone layout issues on the Azure Functions page (#22).
 
 ### Removed

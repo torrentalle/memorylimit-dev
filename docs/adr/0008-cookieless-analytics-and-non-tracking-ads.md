@@ -1,6 +1,6 @@
 # 8. Cookieless analytics and non-tracking ads, dormant until configured
 
-- **Status:** Accepted
+- **Status:** Superseded by [0015](0015-remove-ethicalads-single-third-party-csp.md)
 - **Date:** 2026-09-25
 
 ## Context
@@ -41,4 +41,4 @@ stance of [ADR 0002](0002-static-client-side-site-without-build-step.md).
 
 ## Update
 
-The EthicalAds part was removed before it was ever enabled (kept on the `feat/ethicalads` branch). Analytics and the donation link stand.
+The EthicalAds part was removed before it was ever enabled (kept on the `feat/ethicalads` branch). Analytics and the donation link stand. See [ADR 0015](0015-remove-ethicalads-single-third-party-csp.md), which supersedes this record.

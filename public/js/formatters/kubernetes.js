@@ -23,7 +23,7 @@
  * The method, sources and assumptions are on /kubernetes/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { percent, pluralize } from './shared.js';
+import { mib, percent, pluralize } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
@@ -71,8 +71,6 @@ export function generateYaml(request, limit) {
     `    memory: "${limit}Mi"`
   ].join('\n');
 }
-
-const mib = (value) => `${Number(value.toFixed(1))} MiB`;
 
 function requestSource(raw, basis, requestMiB, vpa) {
   if (basis !== 'vpa') return `${mib(raw.averageMiB)} average + ${percent(raw.requestMarginPct)} = ${mib(requestMiB)}`;

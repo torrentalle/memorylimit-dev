@@ -11,7 +11,7 @@ const raw = (overrides = {}) => calculateRawSizing({ ...BASE, ...overrides });
 test('golden: exact Flex Consumption command for a known input', () => {
   const result = azureFunctions.format(raw({ averageMiB: 450.4, peakMiB: 629.4 }));
   assert.equal(result.snippet.code, 'az functionapp scale config set --resource-group <resource-group> --name <app> --instance-memory 2048');
-  assert.equal(result.alternative.code, 'functionAppConfig.scaleAndConcurrency.instanceMemoryMB: 2048');
+  assert.equal(result.alternative.code, 'functionAppConfig: {\n  scaleAndConcurrency: {\n    instanceMemoryMB: 2048\n  }\n}');
   assert.equal(result.plan, 'flex');
 });
 

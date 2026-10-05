@@ -49,6 +49,20 @@ test('Prometheus range data uses each series’ peak, not the sum of every sampl
   assert.equal(parseCouchbaseInput(text).buckets[0].documents, 220);
 });
 
+test('nodes’ own /metrics (no instance label) are added up, one line per node, and the count says how many nodes', () => {
+  const node = 'kv_curr_items{bucket="orders"} 1000000';
+  assert.deepEqual(parseCouchbaseInput(node).buckets, [{ name: 'orders', documents: 1000000, documentsFromNodes: 1 }]);
+  // Three nodes' output pasted together: identical lines, which are nodes, not samples over time.
+  const quota = 'kv_ep_cache_size{bucket="orders"} 1073741824';
+  const three = [node, node, node, quota, quota, quota].join('\n');
+  assert.deepEqual(parseCouchbaseInput(three).buckets, [{ name: 'orders', documents: 3000000, documentsFromNodes: 3, currentQuotaMiB: 1024 }]);
+});
+
+test('an aggregated query result, which has no metric name, is read as the item count and flagged', () => {
+  const json = { status: 'success', data: { resultType: 'vector', result: [{ metric: { bucket: 'orders' }, value: [1727260000, '3000000'] }] } };
+  assert.deepEqual(parseCouchbaseInput(JSON.stringify(json)).buckets, [{ name: 'orders', documents: 3000000, documentsFromUnnamedSeries: true }]);
+});
+
 test('Prometheus exposition accepts timestamps, escaped label values and CRLF line endings', () => {
   const text = 'kv_curr_items{bucket="my\\"b",instance="n1"} 1.5e3 1727260000123\r\n';
   assert.deepEqual(parseCouchbaseInput(text).buckets, [{ name: 'my"b', documents: 1500 }]);
@@ -112,5 +126,5 @@ test('unrecognised input is reported as unknown, invalid JSON as an error', () =
 
 test('series without a bucket label, and other metrics, are ignored', () => {
   const result = parseCouchbaseInput('kv_curr_items 5\nkv_curr_items{bucket="a"} 7\ncm_http_requests_total{bucket="a"} 9');
-  assert.deepEqual(result.buckets, [{ name: 'a', documents: 7 }]);
+  assert.deepEqual(result.buckets, [{ name: 'a', documents: 7, documentsFromNodes: 1 }]);
 });

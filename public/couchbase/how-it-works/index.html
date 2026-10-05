@@ -362,7 +362,7 @@ quota     = need ÷ Data nodes                           per node</code></pre>
             <tr>
               <td>Prometheus: <a href="https://docs.couchbase.com/server/current/metrics-reference/data-service-metrics.html" target="_blank" rel="noopener"><code>kv_curr_items</code></a>, from a node's <code>/metrics</code> or a Prometheus query</td>
               <td>Document count per bucket; shows the current quota per node from <code>kv_ep_cache_size</code>, the same on every node</td>
-              <td><code>kv_curr_items</code> counts items in <em>active</em> vBuckets, so one value per node is summed. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/metrics-reference/data-service-metrics.html" target="_blank" rel="noopener">Couchbase docs</a> For range data, each node's peak is used. Metrics don't include replicas or ejection policy. <a class="guide-tag guide-tag--assumption" href="#assumption-9">Assumption</a></td>
+              <td><code>kv_curr_items</code> counts items in <em>active</em> vBuckets, so one value per node is summed. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/metrics-reference/data-service-metrics.html" target="_blank" rel="noopener">Couchbase docs</a> A node's own <code>/metrics</code> has no <code>instance</code> label, so identical lines there are read as different nodes and added up, and the feedback says how many nodes the count covers; paste every Data node's output. An aggregated query such as <code>sum by (bucket) (kv_curr_items)</code> drops the metric name and is read as the item count. For range data, each node's peak is used. Metrics don't include replicas or ejection policy. <a class="guide-tag guide-tag--assumption" href="#assumption-9">Assumption</a></td>
             </tr>
           </tbody>
         </table>
@@ -372,7 +372,8 @@ quota     = need ÷ Data nodes                           per node</code></pre>
     <section class="panel guide-section" id="commands" aria-labelledby="commands-heading">
       <h2 id="commands-heading" class="panel__title"><span class="panel__index">09</span> The commands</h2>
       <p>For the worked example, the calculator writes:</p>
-      <pre class="yaml-block"><code>couchbase-cli setting-cluster -c localhost:8091 -u Administrator -p "$CB_PASSWORD" \
+      <pre class="yaml-block"><code># Raising quotas: run these in order. Lowering them: run the bucket-edit lines first, since Couchbase refuses a Data quota below the bucket quotas already set.
+couchbase-cli setting-cluster -c localhost:8091 -u Administrator -p "$CB_PASSWORD" \
   --cluster-ramsize 278 \
   --cluster-index-ramsize 512
 couchbase-cli bucket-edit -c localhost:8091 -u Administrator -p "$CB_PASSWORD" --bucket orders --bucket-ramsize 278</code></pre>
@@ -387,6 +388,16 @@ couchbase-cli bucket-edit -c localhost:8091 -u Administrator -p "$CB_PASSWORD" -
           <a href="https://docs.couchbase.com/server/current/cli/cbcli/couchbase-cli-bucket-edit.html" target="_blank" rel="noopener"><code>bucket-edit</code></a>
           sets each bucket's quota. It only changes buckets that already exist (create new ones with <code>bucket-create</code>), and
           it can't lower a quota below what the bucket currently uses.
+        </li>
+        <li>
+          The order matters. Couchbase refuses a Data quota below the bucket quotas already set, and a bucket quota above the
+          Data quota. When the quotas grow, set the Data quota first; when they shrink, edit the buckets first. The calculator
+          doesn't know the current quotas, so the first line of the snippet, a shell comment, says so.
+        </li>
+        <li>
+          Bucket names follow Couchbase's rule: letters, digits, <code>.</code>, <code>_</code>, <code>%</code> and
+          <code>-</code>, up to 100 characters. The calculator rejects any other name, so the commands, which don't quote the
+          name, are safe to run as written.
         </li>
         <li>
           The same service quotas through the REST API,

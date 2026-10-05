@@ -11,7 +11,10 @@ const raw = (overrides = {}) => calculateRawSizing({ ...BASE, ...overrides });
 test('golden: exact gcloud command and service.yaml for a known input', () => {
   const result = cloudRun.format(raw({ averageMiB: 450.4, peakMiB: 629.4 }));
   assert.equal(result.snippet.code, 'gcloud run services update <service> --memory 819Mi');
-  assert.equal(result.alternative.code, 'spec.template.spec.containers[0].resources.limits:\n  memory: 819Mi');
+  assert.equal(
+    result.alternative.code,
+    'spec:\n  template:\n    spec:\n      containers:\n      - resources:\n          limits:\n            memory: 819Mi'
+  );
 });
 
 test('is peak-based and rounds up to a whole Mi and no further', () => {
@@ -32,7 +35,10 @@ test('adds the minimum CPU Cloud Run requires above 4 GiB, in the command and th
   assert.equal(cloudRun.minimumCpu(32768), 8);
   const result = cloudRun.format(raw({ averageMiB: 4000, peakMiB: 5000 }));
   assert.equal(result.snippet.code, 'gcloud run services update <service> --memory 6500Mi --cpu 2');
-  assert.equal(result.alternative.code, 'spec.template.spec.containers[0].resources.limits:\n  memory: 6500Mi\n  cpu: 2');
+  assert.equal(
+    result.alternative.code,
+    'spec:\n  template:\n    spec:\n      containers:\n      - resources:\n          limits:\n            memory: 6500Mi\n            cpu: 2'
+  );
   assert.equal(result.explanationSteps[1].text, '6500Mi needs at least 2 vCPU');
 });
 
