@@ -191,8 +191,10 @@ test('Google Cloud Run: produces a gcloud command with the memory limit', async 
   await expect(currentNavLink(page)).toHaveText('Google Cloud Run');
   await fillUsage(page, 400, 629.4);
 
-  await expect(page.locator('#snippet-code')).toHaveText('gcloud run services update <service> --memory 832Mi');
+  await expect(page.locator('#snippet-code')).toHaveText('gcloud run services update <service> --memory 819Mi');
   await expect(page.locator('#stat-row')).toContainText('1 vCPU');
+  await expect(page.locator('#snippet-secondary-note')).toHaveText('service.yaml:\nspec.template.spec.containers[0].resources.limits:\n  memory: 819Mi');
+  await expect(page.locator('.explanation-panel .guide-link a')).toHaveAttribute('href', '/cloud-run/how-it-works/');
 });
 
 test('Azure Functions: produces a Flex Consumption instance size command', async ({ page }) => {

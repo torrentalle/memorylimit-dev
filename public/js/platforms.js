@@ -68,6 +68,7 @@ export const PLATFORM_DEFINITIONS = [
     category: 'serverless',
     label: 'Google Cloud Run',
     path: '/cloud-run/',
+    guide: '/cloud-run/how-it-works/',
     tagline: 'Pick a Cloud Run memory limit, with the CPU it needs, from real instance usage.'
   },
   {

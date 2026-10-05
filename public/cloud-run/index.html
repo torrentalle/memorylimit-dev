@@ -117,7 +117,7 @@
         <div class="prom-feedback" id="prom-feedback" aria-live="polite">Paste raw samples above — every numeric value is parsed automatically.</div>
         <details class="query-hint">
           <summary>Where do I get these numbers?</summary>
-          <p>Cloud Monitoring reports Cloud Run memory as a <strong>percentage of the current limit</strong>, not in bytes. Multiply the service's "Container memory utilization" p50 and p99 over a representative period by its current limit, and enter them under <em>Manual values</em>.</p>
+          <p>Cloud Monitoring charts Cloud Run memory as a <strong>share of the current limit</strong>, not in bytes. Multiply the service's "Container memory utilization" p50 and p99 over a representative period by its current limit, and enter them under <em>Manual values</em>. Only the p99 (the peak) changes the result.</p>
           <p>If you export container metrics to Prometheus, or have per-instance values with units (<code>412 MiB</code>), paste those here instead.</p>
         </details>
       </div>
@@ -217,7 +217,7 @@
           <div class="explanation" id="explanation">Enter usage data to see the calculation.</div>
           <p class="explanation-note is-hidden" id="explanation-note"></p>
           <!-- guide-link:start -->
-          <p class="guide-link"><a href="/sizing-model/" target="_blank" rel="noopener">How the request and limit margins work, and which values are assumptions<span class="visually-hidden"> (opens in a new tab)</span> ↗</a></p>
+          <p class="guide-link"><a href="/cloud-run/how-it-works/" target="_blank" rel="noopener">How every number is calculated, with sources and assumptions<span class="visually-hidden"> (opens in a new tab)</span> ↗</a></p>
           <!-- guide-link:end -->
           <!-- report-result:start -->
           <p class="report-link">Result looks wrong? <a href="https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml&amp;platform=Google%20Cloud%20Run&amp;title=%5BBug%5D%20Google%20Cloud%20Run%3A%20" target="_blank" rel="noopener">Report it</a></p>
