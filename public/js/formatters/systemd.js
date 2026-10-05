@@ -19,12 +19,14 @@
  * The method, sources and assumptions are on /systemd/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { percent } from './shared.js';
+import { marginTip, percent } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
   avg: 'Only sets Expected usage, which isn’t enforced, and keeps MemoryHigh from going below it.',
-  peak: 'MemoryHigh is this plus the limit margin, and MemoryMax 1.25× MemoryHigh.'
+  peak: 'MemoryHigh is this plus the limit margin, and MemoryMax 1.25× MemoryHigh.',
+  requestMargin: marginTip('expected usage is the average plus it, and MemoryHigh never goes below that'),
+  limitMargin: marginTip('MemoryHigh is the peak plus it')
 };
 
 // systemd's M is MiB; the drop-in uses whole M.

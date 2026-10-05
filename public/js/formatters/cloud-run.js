@@ -17,12 +17,13 @@
  * The method, sources and assumptions are on /cloud-run/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { percent, PEAK_ONLY_FIELD_TIPS } from './shared.js';
+import { marginTip, percent, PEAK_ONLY_FIELD_TIPS } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
   ...PEAK_ONLY_FIELD_TIPS,
   peak: 'The memory limit is this plus the limit margin; above 4 GiB it also sets the minimum CPU.',
+  limitMargin: marginTip('the memory limit is the (planned) peak plus it'),
   standingMiB: 'The memory an instance uses with no requests; the rest of the peak is split per request to scale it to the planned concurrency.',
   currentConcurrency: 'The maximum concurrent requests per instance when the samples were taken; the peak is divided by it to get memory per request.',
   targetConcurrency: 'The maximum concurrent requests per instance you plan; memory per request is multiplied by it, so a higher value needs more memory.'

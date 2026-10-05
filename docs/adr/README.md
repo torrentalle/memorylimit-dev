@@ -22,6 +22,7 @@ From here on, add an ADR when you make the decision.
 | [0011](0011-logo-as-generated-svg.md) | The logo as SVG generated from measured geometry | Accepted |
 | [0012](0012-couchbase-sizing-from-buckets-and-service-quotas.md) | Couchbase: size quotas from buckets and services, with its own page script | Accepted |
 | [0013](0013-explain-each-calculator-with-sourced-guides.md) | Explain each calculator with a sourced guide page | Accepted |
+| [0014](0014-let-users-change-assumed-values.md) | Let users change the values we assumed | Accepted |
 
 ## Adding an ADR
 

@@ -11,12 +11,14 @@
  * The method, sources and assumptions are on /nomad/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { percent, pluralize } from './shared.js';
+import { marginTip, percent, pluralize } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
   avg: 'memory is this plus the request margin.',
   peak: 'memory_max is this plus the limit margin, and never below memory.',
+  requestMargin: marginTip('memory is the average plus it'),
+  limitMargin: marginTip('memory_max is the peak plus it'),
   replicas: 'Only the total changes: it’s memory per allocation times this.'
 };
 

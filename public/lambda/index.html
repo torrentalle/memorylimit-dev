@@ -176,6 +176,22 @@
           </select>
         </div>
       </div>
+
+      <details class="advanced" id="advanced-settings">
+        <summary class="advanced__summary">Advanced: margins and defaults <span class="advanced__count" data-advanced-count></span></summary>
+        <p class="field-hint">Values the result relies on that are our own defaults, or vendor defaults your setup may change. Each “?” says how one moves the result; the guide says where it comes from.</p>
+        <div class="field-grid">
+          <div class="field is-hidden">
+            <label class="field-label" for="request-margin-input">Request margin <span class="field-unit">%</span></label>
+            <input id="request-margin-input" class="field-input" type="number" min="0" max="200" step="any" inputmode="decimal" placeholder="from profile" data-unit="percent" />
+          </div>
+          <div class="field">
+            <label class="field-label" for="limit-margin-input">Limit margin <span class="field-unit">%</span></label>
+            <input id="limit-margin-input" class="field-input" type="number" min="0" max="200" step="any" inputmode="decimal" placeholder="from profile" data-unit="percent" />
+          </div>
+        </div>
+        <button class="copy-btn advanced__reset" type="button" data-advanced-reset>Reset to defaults</button>
+      </details>
     </section>
 
     <section class="results" aria-labelledby="results-heading">
