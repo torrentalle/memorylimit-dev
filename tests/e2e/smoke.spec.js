@@ -514,13 +514,14 @@ test('copy button reports success and resets, even when clicked twice', async ({
 });
 
 test('theme choice persists across pages without a flash', async ({ page }) => {
-  // Records the theme at the moment <body> is created, i.e. before anything in it can be painted.
+  // Records the theme at the moment <body> is created, i.e. before anything in it can be painted. Init scripts run
+  // before <html> exists, so the observer watches the document itself.
   await page.addInitScript(() => {
     new MutationObserver((records, observer) => {
       if (!document.body) return;
       window.__themeWhenBodyCreated = document.documentElement.dataset.theme ?? null;
       observer.disconnect();
-    }).observe(document.documentElement, { childList: true });
+    }).observe(document, { childList: true, subtree: true });
   });
   await page.goto('/kubernetes/');
   const initial = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
