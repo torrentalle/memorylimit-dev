@@ -9,22 +9,16 @@
  */
 import './site.js';
 import { isEnabled } from './platforms.js';
-import { copyText } from './clipboard.js';
 import * as couchbase from './formatters/couchbase.js';
 import { parseCouchbaseInput } from './couchbase-parser.js';
 import { attachTip } from './field-tips.js';
 import { renderExplanation } from './explanation.js';
 import { initAdvancedSettings, readAdvancedNumber } from './advanced-settings.js';
+import { element, initModeToggle, createResultView } from './result-view.js';
 
 const MIB_PER_GIB = 1024;
 const MAX_BUCKETS = 30;
 const DEFAULT_BUCKET = { name: 'default', documents: 1000000, keyBytes: 36, documentBytes: 1024, replicas: 1, workingSetPct: 20, eviction: 'value' };
-
-function element(id) {
-  const el = document.getElementById(id);
-  if (!el) throw new Error(`MemoryLimit: #${id} is missing from this page`);
-  return el;
-}
 
 function readNumber(input) {
   const value = parseFloat(input.value);
@@ -47,12 +41,6 @@ const el = {
   eventingQuota: element('eventing-quota-input'),
   analyticsQuota: element('analytics-quota-input'),
   advanced: element('advanced-settings'),
-  metadataBytes: element('metadata-bytes-input'),
-  overhead: element('overhead-input'),
-  highWaterMark: element('high-water-input'),
-  storageEngine: element('storage-engine-select'),
-  smallNode: element('small-node-input'),
-  lowWorkingSet: element('low-working-set-input'),
   disabledState: element('disabled-state'),
   outputPanels: element('output-panels'),
   statRow: element('stat-row'),
@@ -65,34 +53,15 @@ const el = {
   explanationNote: element('explanation-note')
 };
 
+// "Advanced: sizing defaults and thresholds": each control carries data-setting="<calculateSizing() setting>".
+const settingControls = [...el.advanced.querySelectorAll('[data-setting]')];
+
+// The paste/manual toggle and the result panels work as on the other calculators (./result-view.js).
+// The form stays visible in both modes, so a paste can be reviewed and edited.
+const setMode = initModeToggle(el);
+const { renderFigures, renderWarnings, renderSnippet } = createResultView(el);
+
 let bucketSerial = 0;
-let currentSnippet = null;
-let copyResetTimer = null;
-let renderedWarnings = '';
-
-// ---- tooltips --------------------------------------------------------------
-
-// One sentence per input on how it moves the result. The bucket name has none: it doesn't affect the numbers.
-const BUCKET_TIPS = {
-  documents: 'Metadata and data both grow with it: twice the documents, twice the quota.',
-  keyBytes: 'Added to the metadata each document keeps in RAM (56 bytes by default), so longer keys raise the quota for every document.',
-  documentBytes: 'Only the working-set share of it is held in RAM, so it raises the quota by size × working set %.',
-  replicas: 'Each replica is a full extra copy of data and metadata: 1 replica doubles the quota, 2 triple it.',
-  workingSetPct: 'The share of the data kept in RAM: the quota grows with it, and reads outside it go to disk.',
-  eviction: 'Value ejection keeps every document’s metadata in RAM; full ejection only the working set’s, for a smaller quota but more disk reads.'
-};
-const FIELD_TIPS = {
-  dataNodes: 'Each bucket’s need is spread over this many nodes to give its quota per node, and the Data quota per node is those added up: more nodes, smaller quotas on each.',
-  nodeRam: 'Doesn’t change any quota; the quotas are checked against it (at most 90% recommended, never above RAM − 1 GiB).',
-  // The other services' quotas all work the same way, so one sentence in the section's hint covers them.
-  // "Advanced: sizing defaults and thresholds":
-  metadataBytes: 'Added to every document’s key length to give the metadata it keeps in RAM; 56 bytes is the metadata_per_document of Couchbase’s sizing guidelines.',
-  overhead: 'Every bucket quota is multiplied by 1 plus this; 25% is the overhead_percentage of Couchbase’s sizing guidelines.',
-  highWaterMark: 'Every bucket quota is divided by this, so the working set stays below the point where Couchbase starts ejecting items; 85% is Couchbase’s default high-water mark.',
-  storageEngine: 'Only moves a warning: Couchbase recommends a bucket quota of at least 10% of the dataset for Couchstore, and 1% for Magma.',
-  smallNode: 'Only moves a warning: below this much RAM the recommended share for quotas drops from 90% to 80%, and 5 GiB is our reading of Couchbase’s “little memory”.',
-  lowWorkingSet: 'Only moves a warning, shown for a full-ejection bucket that keeps less than this share in RAM; 20% is our own threshold.'
-};
 
 // ---- bucket rows ---------------------------------------------------------
 
@@ -170,39 +139,39 @@ function addBucketRow(values = {}) {
       id: `bucket-${serial}-documents`,
       label: 'Documents',
       control: numberInput('documents', bucket.documents),
-      tip: BUCKET_TIPS.documents
+      tip: couchbase.bucketFieldTips.documents
     }),
     fieldNode({
       id: `bucket-${serial}-key`,
       label: 'Average key length',
       unit: 'bytes',
       control: numberInput('keyBytes', bucket.keyBytes),
-      tip: BUCKET_TIPS.keyBytes
+      tip: couchbase.bucketFieldTips.keyBytes
     }),
     fieldNode({
       id: `bucket-${serial}-size`,
       label: 'Average document size',
       unit: 'bytes',
       control: numberInput('documentBytes', bucket.documentBytes),
-      tip: BUCKET_TIPS.documentBytes
+      tip: couchbase.bucketFieldTips.documentBytes
     }),
     fieldNode({
       id: `bucket-${serial}-replicas`,
       label: 'Replicas',
       control: selectInput('replicas', [0, 1, 2, 3].map((n) => [String(n), String(n)]), bucket.replicas),
-      tip: BUCKET_TIPS.replicas
+      tip: couchbase.bucketFieldTips.replicas
     }),
     fieldNode({
       id: `bucket-${serial}-working-set`,
       label: 'Working set in RAM',
       unit: '%',
       control: numberInput('workingSetPct', bucket.workingSetPct, { min: 1, step: 1 }),
-      tip: BUCKET_TIPS.workingSetPct
+      tip: couchbase.bucketFieldTips.workingSetPct
     }),
     fieldNode({
       id: `bucket-${serial}-eviction`,
       label: 'Eviction policy',
-      tip: BUCKET_TIPS.eviction,
+      tip: couchbase.bucketFieldTips.eviction,
       control: selectInput(
         'eviction',
         [
@@ -244,15 +213,6 @@ function readBuckets() {
 }
 
 // ---- paste ---------------------------------------------------------------
-
-// Same toggle as the other calculators; the form stays visible in both modes so a paste can be reviewed and edited.
-function setMode(mode) {
-  const paste = mode === 'paste';
-  el.modePaste.setAttribute('aria-pressed', String(paste));
-  el.modeManual.setAttribute('aria-pressed', String(!paste));
-  el.pastePanel.classList.toggle('is-hidden', !paste);
-  el.manualPanel.classList.toggle('is-hidden', paste);
-}
 
 const BUCKET_FIELDS = { documents: 'documents', replicas: 'replicas', eviction: 'eviction' };
 const SERVICE_INPUTS = { index: el.indexQuota, search: el.searchQuota, eventing: el.eventingQuota, analytics: el.analyticsQuota };
@@ -361,61 +321,6 @@ function handlePaste() {
 
 // ---- rendering -----------------------------------------------------------
 
-function renderFigures(figures) {
-  el.statRow.replaceChildren(
-    ...figures.map(({ role, label, text, detail }) => {
-      const card = document.createElement('div');
-      card.className = `stat-card${role === 'total' ? ' stat-card--accent' : ''}`;
-      const parts = [
-        ['stat-card__label', label],
-        ['stat-card__value', text],
-        ['stat-card__sub', detail]
-      ].map(([className, content]) => {
-        const p = document.createElement('p');
-        p.className = className;
-        p.textContent = content;
-        return p;
-      });
-      card.append(...parts);
-      return card;
-    })
-  );
-}
-
-// The warnings region is aria-live, so only touch it when the warnings
-// actually change; re-rendering on every keystroke re-announces them.
-function renderWarnings(warnings) {
-  const signature = warnings.map((w) => `${w.code}:${w.message}`).join('|');
-  if (signature === renderedWarnings) return;
-  renderedWarnings = signature;
-
-  el.warnings.replaceChildren(
-    ...warnings.map((warning) => {
-      const item = document.createElement('div');
-      item.className = `warning-item${warning.level === 'error' ? ' is-error' : ''}`;
-      const icon = document.createElement('span');
-      icon.className = 'warning-item__icon';
-      icon.setAttribute('aria-hidden', 'true');
-      icon.textContent = warning.level === 'error' ? '✕' : '▲';
-      const text = document.createElement('span');
-      text.textContent = warning.message;
-      item.append(icon, text);
-      return item;
-    })
-  );
-}
-
-function renderSnippet(snippet, alternative) {
-  currentSnippet = snippet;
-  el.snippetTitle.textContent = snippet ? snippet.label : 'Snippet';
-  el.snippetCode.textContent = snippet ? snippet.code : '—';
-  el.copyButton.disabled = !snippet;
-  if (copyResetTimer === null) el.copyButton.textContent = 'Copy snippet';
-
-  el.snippetNote.textContent = alternative ? `${alternative.label}:\n${alternative.code}` : '';
-  el.snippetNote.classList.toggle('is-hidden', !alternative);
-}
-
 function renderEmpty(message) {
   el.statRow.replaceChildren();
   renderWarnings([]);
@@ -425,17 +330,10 @@ function renderEmpty(message) {
 
 /** The values of "Advanced: sizing defaults and thresholds", as calculateSizing() takes them; an empty field keeps its default. */
 function readSettings() {
-  const settings = { storageEngine: el.storageEngine.value };
-  const numbers = {
-    metadataBytes: el.metadataBytes,
-    overhead: el.overhead,
-    highWaterMark: el.highWaterMark,
-    smallNodeMiB: el.smallNode,
-    lowWorkingSetPct: el.lowWorkingSet
-  };
-  for (const [key, input] of Object.entries(numbers)) {
-    const value = readAdvancedNumber(input);
-    if (value !== null) settings[key] = key === 'smallNodeMiB' ? value * MIB_PER_GIB : value;
+  const settings = {};
+  for (const control of settingControls) {
+    const value = control.tagName === 'SELECT' ? control.value : readAdvancedNumber(control);
+    if (value !== null) settings[control.dataset.setting] = value;
   }
   return settings;
 }
@@ -476,8 +374,6 @@ function recalculate() {
 
 // ---- events --------------------------------------------------------------
 
-el.modePaste.addEventListener('click', () => setMode('paste'));
-el.modeManual.addEventListener('click', () => setMode('manual'));
 el.metricsInput.addEventListener('input', handlePaste);
 
 el.addBucket.addEventListener('click', () => {
@@ -498,30 +394,18 @@ el.bucketList.addEventListener('change', recalculate);
 for (const input of [el.dataNodes, el.nodeRam, el.indexQuota, el.searchQuota, el.eventingQuota, el.analyticsQuota]) {
   input.addEventListener('input', recalculate);
 }
-for (const input of [el.metadataBytes, el.overhead, el.highWaterMark, el.smallNode, el.lowWorkingSet]) {
-  input.addEventListener('input', recalculate);
+for (const control of settingControls) {
+  control.addEventListener(control.tagName === 'SELECT' ? 'change' : 'input', recalculate);
 }
-el.storageEngine.addEventListener('change', recalculate);
-
-el.copyButton.addEventListener('click', async () => {
-  if (!currentSnippet) return;
-  const copied = await copyText(currentSnippet.code);
-  clearTimeout(copyResetTimer);
-  el.copyButton.textContent = copied ? 'Copied' : 'Copy failed — select the text';
-  el.copyButton.classList.toggle('is-copied', copied);
-  copyResetTimer = setTimeout(() => {
-    copyResetTimer = null;
-    el.copyButton.textContent = 'Copy snippet';
-    el.copyButton.classList.remove('is-copied');
-  }, 1600);
-});
 
 const live = isEnabled('couchbase');
 el.disabledState.classList.toggle('is-hidden', live);
 el.outputPanels.classList.toggle('is-hidden', !live);
 if (live) {
-  for (const [key, text] of Object.entries(FIELD_TIPS)) {
-    attachTip(document.querySelector(`label[for="${el[key].id}"]`), el[key], text);
+  // The formatter's tooltips name the page's own fields and the advanced settings (by their data-setting).
+  for (const [key, text] of Object.entries(couchbase.fieldTips)) {
+    const control = el[key] ?? el.advanced.querySelector(`[data-setting="${key}"]`);
+    attachTip(document.querySelector(`label[for="${control.id}"]`), control, text);
   }
   initAdvancedSettings(el.advanced, recalculate);
   setMode('manual');
