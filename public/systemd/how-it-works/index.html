@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>How the Systemd Memory Limits Calculator Works | MemoryLimit</title>
+<meta name="description" content="How the systemd calculator sets MemoryHigh and MemoryMax: systemd's own advice, the 1.2× gap, cgroup v2, the drop-in and set-property, and what to paste, with links to the systemd and kernel docs." />
+<link rel="canonical" href="https://memorylimit.dev/systemd/how-it-works/" />
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="MemoryLimit" />
+<meta property="og:title" content="How the Systemd Memory Limits Calculator Works" />
+<meta property="og:description" content="How the systemd calculator sets MemoryHigh and MemoryMax: systemd's own advice, the 1.2× gap, cgroup v2, the drop-in and set-property, and what to paste, with links to the systemd and kernel docs." />
+<meta property="og:url" content="https://memorylimit.dev/systemd/how-it-works/" />
+<meta property="og:image" content="https://memorylimit.dev/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="How the Systemd Memory Limits Calculator Works" />
+<meta name="twitter:description" content="How the systemd calculator sets MemoryHigh and MemoryMax: systemd's own advice, the 1.2× gap, cgroup v2, the drop-in and set-property, and what to paste, with links to the systemd and kernel docs." />
+<meta name="twitter:image" content="https://memorylimit.dev/og-image.png" />
+<link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/css/styles.css" />
+<script src="/js/theme-init.js"></script>
+</head>
+<body>
+
+<div class="skyline" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="brand" href="/" aria-label="MemoryLimit home">
+      <img class="brand__mark brand__mark--light" src="/brand/memorylimit-mark.svg" alt="" width="37" height="28" />
+      <img class="brand__mark brand__mark--dark" src="/brand/memorylimit-mark-on-dark.svg" alt="" width="37" height="28" />
+      <div><p class="brand__name">MemoryLimit</p><p class="brand__tagline">Memory request/limit sizing</p></div>
+    </a>
+    <!-- platform-nav:start -->
+    <nav class="site-nav" aria-label="Calculators">
+      <details class="site-nav__menu">
+        <summary class="site-nav__toggle">Calculators</summary>
+        <div class="site-nav__panel">
+          <div class="site-nav__group" data-platform-group="containers">
+            <p class="site-nav__group-title">Containers &amp; orchestration</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/kubernetes/" data-platform-link="kubernetes">Kubernetes</a></li>
+              <li><a class="site-nav__link" href="/docker-compose/" data-platform-link="dockerCompose">Docker Compose</a></li>
+              <li><a class="site-nav__link" href="/nomad/" data-platform-link="nomad">HashiCorp Nomad</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="serverless">
+            <p class="site-nav__group-title">Serverless</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/lambda/" data-platform-link="lambda">AWS Lambda</a></li>
+              <li><a class="site-nav__link" href="/cloud-run/" data-platform-link="cloudRun">Google Cloud Run</a></li>
+              <li><a class="site-nav__link" href="/azure-functions/" data-platform-link="azureFunctions">Azure Functions</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="vms">
+            <p class="site-nav__group-title">VMs &amp; bare metal</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/systemd/" data-platform-link="systemd">Systemd / Bare Metal / VM</a></li>
+              <li><a class="site-nav__link" href="/vmware/" data-platform-link="vmware">VMware vSphere</a></li>
+              <li><a class="site-nav__link" href="/proxmox/" data-platform-link="proxmox">Proxmox VE</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="datastores">
+            <p class="site-nav__group-title">Data stores</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/redis/" data-platform-link="redis">Redis maxmemory</a></li>
+              <li><a class="site-nav__link" href="/couchbase/" data-platform-link="couchbase">Couchbase memory quotas</a></li>
+            </ul>
+          </div>
+        </div>
+      </details>
+    </nav>
+    <!-- platform-nav:end -->
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Dark theme">
+      <span class="theme-toggle__icon" aria-hidden="true">◐</span><span class="theme-toggle__label">theme</span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <div class="wrap intro-section">
+    <p class="guide-back"><a href="/systemd/">← Systemd memory limits calculator</a></p>
+    <h1 class="intro-title">How the systemd calculator works</h1>
+    <p class="intro-text">
+      This page walks through how the <a href="/systemd/">systemd calculator</a> turns your usage data into a service's
+      <code>MemoryHigh</code> and <code>MemoryMax</code>. Both start from the <a href="/sizing-model/">shared sizing model</a>;
+      this page covers what happens after that. Statements backed by the systemd or kernel documentation end with a
+      <span class="guide-tag guide-tag--doc">systemd docs</span> link to it. Choices the documentation doesn't make for us
+      are explained and marked <span class="guide-tag guide-tag--assumption">Assumption</span>, which links to its row in the
+      table of all of them.
+    </p>
+  </div>
+
+  <div class="wrap guide">
+
+    <nav class="panel guide-toc" aria-labelledby="toc-heading">
+      <h2 id="toc-heading" class="panel__title panel__title--tight">On this page</h2>
+      <ol>
+        <li><a href="#settings">What the two settings do</a></li>
+        <li><a href="#steps">MemoryHigh, MemoryMax and expected usage</a></li>
+        <li><a href="#output">What the calculator writes</a></li>
+        <li><a href="#cgroups">cgroup v2 only</a></li>
+        <li><a href="#warnings">Every warning, and why</a></li>
+        <li><a href="#paste">What to paste</a></li>
+        <li><a href="#assumptions">All assumptions in one place</a></li>
+        <li><a href="#references">References</a></li>
+      </ol>
+    </nav>
+
+    <section class="panel guide-section" id="settings" aria-labelledby="settings-heading">
+      <h2 id="settings-heading" class="panel__title"><span class="panel__index">01</span> What the two settings do</h2>
+      <ul>
+        <li>
+          <strong><code>MemoryHigh</code></strong> is the throttling limit: above it the service's processes are heavily slowed
+          down and memory is taken away aggressively. systemd calls it the main mechanism to control a unit's memory.
+          <a class="guide-tag guide-tag--doc" href="https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html" target="_blank" rel="noopener">systemd docs</a>
+        </li>
+        <li>
+          <strong><code>MemoryMax</code></strong> is the absolute limit: if usage can't be kept under it, the OOM killer runs
+          inside the unit. systemd recommends it as the last line of defense.
+          <a class="guide-tag guide-tag--doc" href="https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html" target="_blank" rel="noopener">systemd docs</a>
+        </li>
+      </ul>
+      <p>
+        They set the kernel's <code>memory.high</code> and <code>memory.max</code>. The kernel's own documentation calls
+        <code>memory.max</code> the main way to limit a cgroup's memory; systemd's advice is the one the calculator follows,
+        because it's about services.
+        <a class="guide-tag guide-tag--doc" href="https://docs.kernel.org/admin-guide/cgroup-v2.html" target="_blank" rel="noopener">Kernel docs</a>
+      </p>
+      <p>
+        There's no scheduler, so nothing reserves memory for the service: the average-based value is shown as
+        <em>expected usage</em>, for reference only.
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="steps" aria-labelledby="steps-heading">
+      <h2 id="steps-heading" class="panel__title"><span class="panel__index">02</span> MemoryHigh, MemoryMax and expected usage</h2>
+      <pre class="yaml-block guide-formula"><code>expected usage = average × (1 + request margin)                     rounded up to a whole M
+MemoryHigh     = max(peak × (1 + limit margin), expected usage)     rounded up to a whole M
+MemoryMax      = 1.2 × MemoryHigh                                    rounded up to a whole M</code></pre>
+      <p>
+        The margins come from the sensitivity, workload type and environment you choose; the
+        <a href="/sizing-model/">sizing model</a> explains them, and they are assumptions too. systemd reads the
+        <code>M</code> suffix with base 1024, so <code>M</code> is MiB.
+        <a class="guide-tag guide-tag--doc" href="https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html" target="_blank" rel="noopener">systemd docs</a>
+      </p>
+      <ul>
+        <li>
+          <code>MemoryHigh</code> sits just above the observed peak, so normal peaks run unthrottled and throttling only starts
+          when usage grows past anything seen so far, typically a leak. It never goes below expected usage, so a steady
+          service isn't throttled at its normal level.
+          <a class="guide-tag guide-tag--assumption" id="assumption-2-ref" href="#assumption-2">Assumption</a>
+        </li>
+        <li>
+          <code>MemoryMax</code> is 20% above <code>MemoryHigh</code>. The gap is warning time: a leak slows the service down
+          before the kernel kills it. systemd doesn't give a ratio; 1.2× is ours.
+          <a class="guide-tag guide-tag--assumption" id="assumption-1-ref" href="#assumption-1">Assumption</a>
+        </li>
+      </ul>
+
+      <h3 class="guide-subheading">Worked example</h3>
+      <p>Average 295 MiB, peak 390 MiB, generic workload, medium sensitivity, production:</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-example="295 390 generic medium production">
+          <tbody>
+            <tr><th scope="row">MemoryHigh</th><td>390 MiB × 1.30 = 507 MiB</td><td data-check="memoryHigh">507M</td></tr>
+            <tr><th scope="row">MemoryMax</th><td>1.2 × 507 = 608.4</td><td data-check="memoryMax">609M</td></tr>
+            <tr><th scope="row">expected usage</th><td>295 MiB × 1.30 = 383.5 MiB</td><td data-check="expectedUsage">384M</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>A steady cache, averaging 1000 MiB with a 1020 MiB peak, where expected usage decides MemoryHigh:</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-example="1000 1020 cache medium production">
+          <tbody>
+            <tr><th scope="row">expected usage</th><td>1000 MiB × 1.35</td><td data-check="expectedUsage">1350M</td></tr>
+            <tr><th scope="row">MemoryHigh</th><td>1020 MiB × 1.30 = 1326 MiB, below expected usage</td><td data-check="memoryHigh">1350M</td></tr>
+            <tr><th scope="row">MemoryMax</th><td>1.2 × 1350</td><td data-check="memoryMax">1620M</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="output" aria-labelledby="output-heading">
+      <h2 id="output-heading" class="panel__title"><span class="panel__index">03</span> What the calculator writes</h2>
+      <pre class="yaml-block"><code>[Service]
+MemoryHigh=507M
+MemoryMax=609M</code></pre>
+      <ul>
+        <li>
+          Saved as <code>/etc/systemd/system/&lt;service&gt;.service.d/override.conf</code>, it's a drop-in: systemd reads every
+          <code>.conf</code> file in the unit's <code>.service.d/</code> directory on top of the unit file.
+          <a class="guide-tag guide-tag--doc" href="https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html" target="_blank" rel="noopener">systemd docs</a>
+          Then <code>systemctl daemon-reload &amp;&amp; systemctl restart &lt;service&gt;</code>.
+        </li>
+        <li>
+          Or, without a restart: <code>systemctl set-property &lt;service&gt;.service MemoryHigh=507M MemoryMax=609M</code> changes
+          resource settings at runtime and keeps them for future boots.
+          <a class="guide-tag guide-tag--doc" href="https://www.freedesktop.org/software/systemd/man/latest/systemctl.html" target="_blank" rel="noopener">systemd docs</a>
+        </li>
+      </ul>
+    </section>
+
+    <section class="panel guide-section" id="cgroups" aria-labelledby="cgroups-heading">
+      <h2 id="cgroups-heading" class="panel__title"><span class="panel__index">04</span> cgroup v2 only</h2>
+      <p>
+        Both settings control the memory controller of the unified hierarchy, cgroup v2.
+        <a class="guide-tag guide-tag--doc" href="https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html" target="_blank" rel="noopener">systemd docs</a>
+        Since systemd 258, cgroup v1 isn't supported at all. On older hosts still running it, the only setting is
+        <code>MemoryLimit=</code>, deprecated since systemd 252.
+        <a class="guide-tag guide-tag--doc" href="https://github.com/systemd/systemd/blob/main/NEWS" target="_blank" rel="noopener">systemd NEWS</a>
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="warnings" aria-labelledby="warnings-heading">
+      <h2 id="warnings-heading" class="panel__title"><span class="panel__index">05</span> Every warning, and why</h2>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Message about</th><th scope="col">Shown when</th><th scope="col">Basis</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Peak below average <span class="guide-level guide-level--error">error</span></td>
+              <td>The peak you entered is lower than the average</td>
+              <td>Impossible with real samples; it usually means two different series. See the <a href="/sizing-model/#inputs">sizing model</a>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="paste" aria-labelledby="paste-heading">
+      <h2 id="paste-heading" class="panel__title"><span class="panel__index">06</span> What to paste</h2>
+      <pre class="yaml-block"><code>container_memory_working_set_bytes{id="/system.slice/myapp.service"}</code></pre>
+      <ul>
+        <li>
+          With cAdvisor on the host, its <code>id</code> label is the cgroup path, so a service is
+          <code>/system.slice/&lt;name&gt;.service</code>.
+          <a class="guide-tag guide-tag--doc" href="https://github.com/google/cadvisor/blob/master/lib/metrics/prometheus.go" target="_blank" rel="noopener">cAdvisor source</a>
+        </li>
+        <li>
+          Without Prometheus, sample <code>systemctl show -P MemoryCurrent myapp.service</code> every minute and paste the bytes.
+          <code>MemoryCurrent</code> reports the unit's <code>memory.current</code>, the cgroup's total usage, which counts page
+          cache too; so it reads a little higher than the working set.
+          <a class="guide-tag guide-tag--doc" href="https://docs.kernel.org/admin-guide/cgroup-v2.html" target="_blank" rel="noopener">Kernel docs</a>
+          systemd's documentation lists the property without describing it.
+          <a class="guide-tag guide-tag--assumption" id="assumption-3-ref" href="#assumption-3">Assumption</a>
+        </li>
+      </ul>
+    </section>
+
+    <section class="panel guide-section" id="assumptions" aria-labelledby="assumptions-heading">
+      <h2 id="assumptions-heading" class="panel__title"><span class="panel__index">07</span> All assumptions in one place</h2>
+      <p>Besides the margins of the <a href="/sizing-model/#assumptions">shared sizing model</a>:</p>
+      <p class="guide-kind-legend"><strong>Our default</strong>: a value we chose. <strong>Our reading</strong>: how we read documentation that isn't explicit. <strong>About your setup</strong>: something we take for granted about your data or cluster.</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Assumption</th><th scope="col">Kind</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
+          <tbody>
+            <tr id="assumption-1"><td>MemoryMax is 1.2× MemoryHigh <a class="guide-backref" href="#assumption-1-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>Leaves warning time between throttling and an OOM kill</td><td>A smaller gap kills sooner after throttling starts; a larger one lets a leak take more of the host first.</td></tr>
+            <tr id="assumption-2"><td>MemoryHigh never goes below expected usage <a class="guide-backref" href="#assumption-2-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>A steady service shouldn't be throttled at its normal level</td><td>Only matters when peak and average are close; MemoryHigh is then a little higher.</td></tr>
+            <tr id="assumption-3"><td><code>MemoryCurrent</code> is the unit's <code>memory.current</code> <a class="guide-backref" href="#assumption-3-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our reading</td><td>systemd lists the property without describing it</td><td>If it counted less than <code>memory.current</code>, the values would be too small.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="references" aria-labelledby="references-heading">
+      <h2 id="references-heading" class="panel__title"><span class="panel__index">08</span> References</h2>
+      <ul class="guide-references">
+        <li><a href="https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html" target="_blank" rel="noopener">systemd.resource-control</a> (<a href="https://github.com/systemd/systemd/blob/main/man/systemd.resource-control.xml" target="_blank" rel="noopener">source</a>) — <code>MemoryHigh=</code>, <code>MemoryMax=</code>, units, and the deprecated <code>MemoryLimit=</code>.</li>
+        <li><a href="https://github.com/systemd/systemd/blob/main/NEWS" target="_blank" rel="noopener">systemd NEWS</a> — cgroup v1 removed in systemd 258.</li>
+        <li><a href="https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html" target="_blank" rel="noopener">systemd.unit</a> — drop-in directories.</li>
+        <li><a href="https://www.freedesktop.org/software/systemd/man/latest/systemctl.html" target="_blank" rel="noopener">systemctl</a> — <code>set-property</code> and <code>show -P</code>.</li>
+        <li><a href="https://docs.kernel.org/admin-guide/cgroup-v2.html" target="_blank" rel="noopener">Control Group v2</a> (kernel) — <code>memory.current</code>, <code>memory.high</code>, <code>memory.max</code>.</li>
+        <li><a href="https://github.com/google/cadvisor/blob/master/lib/metrics/prometheus.go" target="_blank" rel="noopener">cAdvisor source</a> — the <code>id</code> label.</li>
+      </ul>
+      <p class="guide-back"><a href="/systemd/">← Back to the systemd calculator</a></p>
+    </section>
+
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div id="ethical-ads-slot" class="ethical-ads-slot"></div>
+    <div class="footer-row">
+      <!-- footer-links:start -->
+      <p class="footer-tagline">Your pasted metrics and results never leave the browser.</p>
+      <nav class="footer-links" aria-label="Project">
+        <a href="/privacy/" class="footer-link">Privacy</a>
+        <a href="/support/" class="footer-link">Support</a>
+        <a href="https://github.com/torrentalle/memorylimit-dev" class="footer-link" target="_blank" rel="noopener">★ Star on GitHub</a>
+        <a href="https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml" class="footer-link" target="_blank" rel="noopener">Report an issue</a>
+      </nav>
+      <!-- footer-links:end -->
+      <div id="donation-slot" class="donation-slot"></div>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="/js/site.js"></script>
+</body>
+</html>
