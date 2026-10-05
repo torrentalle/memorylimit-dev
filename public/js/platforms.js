@@ -76,6 +76,7 @@ export const PLATFORM_DEFINITIONS = [
     category: 'serverless',
     label: 'Azure Functions',
     path: '/azure-functions/',
+    guide: '/azure-functions/how-it-works/',
     tagline: 'Pick the Flex Consumption instance size, or the Premium SKU, a function app needs.'
   },
   {

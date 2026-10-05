@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { calculateRawSizing } from '../../public/js/calculator.js';
 import * as azureFunctions from '../../public/js/formatters/azure-functions.js';
 
@@ -55,4 +57,49 @@ test('every Flex size is a Flex size and every Premium size grows', () => {
 
 test('notes that memory is shared by concurrent executions', () => {
   assert.match(azureFunctions.format(raw()).note, /concurrency/);
+});
+
+test('explains the derivation in two short steps with the real numbers', () => {
+  assert.deepEqual(azureFunctions.format(raw({ averageMiB: 410, peakMiB: 630 })).explanationSteps, [
+    { label: 'Memory', text: '630 MiB peak + 30% = 819 MiB' },
+    { label: 'Instance size', text: 'the smallest Flex Consumption size that fits → 2048 MB, 1 core' }
+  ]);
+  assert.match(azureFunctions.format(raw({ averageMiB: 4000, peakMiB: 5000 })).explanationSteps[1].text, /→ EP2 \(7168 MiB, 2 cores\)$/);
+});
+
+test('shows the CPU cores that come with the Flex size', () => {
+  const result = azureFunctions.format(raw({ averageMiB: 10, peakMiB: 50, sensitivity: 'low' }));
+  assert.equal(result.cores, 0.25);
+  assert.ok(result.figures.some((f) => f.text === '0.25 cores'));
+});
+
+test('the Flex note mentions Microsoft’s 2,048 MB suggestion within three sentences', () => {
+  const { note } = azureFunctions.format(raw());
+  assert.match(note, /2,048 MB for most apps/);
+  assert.ok(note.split(/(?<=\.) /).length <= 3);
+});
+
+// The guide's worked examples are checked against this formatter, so the page can't drift from it.
+const guide = readFileSync(join(import.meta.dirname, '..', '..', 'public', 'azure-functions', 'how-it-works', 'index.html'), 'utf8');
+
+test('every number in the guide’s examples is what the formatter gives', () => {
+  const tables = [...guide.matchAll(/<table[^>]*data-example="([^"]+)"[^>]*>([\s\S]*?)<\/table>/g)];
+  assert.ok(tables.length >= 2);
+  for (const [, example, body] of tables) {
+    const [averageMiB, peakMiB, workloadType, sensitivity, environment] = example.split(' ');
+    const result = azureFunctions.format(calculateRawSizing({ averageMiB: Number(averageMiB), peakMiB: Number(peakMiB), workloadType, sensitivity, environment }));
+    const expected = { size: result.plan === 'flex' ? `${result.memory} MB` : result.sku, cores: azureFunctions.coresText(result.cores) };
+    const checks = [...body.matchAll(/data-check="(\w+)">([^<]+)</g)];
+    assert.ok(checks.length >= 1, example);
+    for (const [, key, text] of checks) assert.equal(text, expected[key], `${example} ${key}`);
+  }
+});
+
+test('the guide cites Microsoft’s documentation', () => {
+  for (const url of [
+    'https://learn.microsoft.com/en-us/azure/azure-functions/flex-consumption-plan',
+    'https://learn.microsoft.com/en-us/azure/azure-functions/functions-premium-plan',
+    'https://learn.microsoft.com/en-us/azure/azure-functions/functions-concurrency'
+  ]) assert.ok(guide.includes(url), url);
+  assert.ok(guide.includes('href="/sizing-model/"'));
 });

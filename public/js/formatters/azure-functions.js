@@ -7,8 +7,13 @@
  * (EP1–EP3). Running out of memory recycles the instance, so, like Lambda and
  * Cloud Run, the size is peak-based and rounds up to the next available step.
  * The legacy Consumption plan has a fixed 1.5 GB and nothing to size.
+ *
+ * Microsoft suggests 2,048 MB for most apps; this picks the smallest size
+ * that fits and says so in the note.
+ *
+ * The method, sources and assumptions are on /azure-functions/how-it-works/.
  */
-import { describeProfile, percent, PEAK_ONLY_FIELD_TIPS } from './shared.js';
+import { percent, PEAK_ONLY_FIELD_TIPS } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
@@ -16,9 +21,15 @@ export const fieldTips = {
   peak: 'The instance size is the smallest one that fits this plus the limit margin.'
 };
 
-export const FLEX_SIZES_MB = [512, 2048, 4096];
+// Flex Consumption instance sizes (MB, read as MiB) and their typical CPU cores.
+export const FLEX_SIZES = [
+  { memoryMB: 512, cores: 0.25 },
+  { memoryMB: 2048, cores: 1 },
+  { memoryMB: 4096, cores: 2 }
+];
+export const FLEX_SIZES_MB = FLEX_SIZES.map((size) => size.memoryMB);
 
-// Elastic Premium instances; the plan documents memory in GB.
+// Elastic Premium instances; the plan documents memory in GB (3.5, 7, 14), read as GiB.
 export const PREMIUM_SKUS = [
   { sku: 'EP1', memoryMiB: 3584, cores: 1 },
   { sku: 'EP2', memoryMiB: 7168, cores: 2 },
@@ -26,10 +37,10 @@ export const PREMIUM_SKUS = [
 ];
 
 const FLEX_NOTE =
-  'Memory per instance is shared by every execution running on it, so this fits the concurrency your samples were ' +
-  'collected under. HTTP triggers default to 4, 16 and 32 concurrent requests on 512, 2048 and 4096 MB instances ' +
-  '(1 for Python), and raising concurrency needs more memory or lower per-instance limits. The legacy Consumption plan ' +
-  'is fixed at 1.5 GB and isn’t sized here.';
+  'Microsoft suggests 2,048 MB for most apps; this picks the smallest size that fits, and smaller sizes get less ' +
+  'CPU and lower default HTTP concurrency (4, 16 and 32 requests on 512, 2048 and 4096 MB; 1 for Python). Memory ' +
+  'per instance is shared by every execution on it, so this fits the concurrency your samples ran at; the legacy ' +
+  'Consumption plan (fixed at 1.5 GB) isn’t sized here.';
 
 const PREMIUM_NOTE =
   'Elastic Premium instances are billed whether or not functions are running, and every function app in the plan ' +
@@ -44,25 +55,37 @@ export function premiumCommand(sku) {
   return `az functionapp plan update --resource-group <resource-group> --name <plan> --sku ${sku}`;
 }
 
-function explainBase(raw) {
-  return `Memory = ${Math.round(raw.peakMiB)}MiB peak + ${percent(raw.limitMarginPct)} margin (${describeProfile(raw)}) = ${Math.round(raw.limitMiB)}MiB`;
+const fixed = (value) => Number(value.toFixed(1));
+
+export function coresText(cores) {
+  return `${cores} ${cores === 1 ? 'core' : 'cores'}`;
 }
 
-function formatFlex(raw, memoryMB) {
+function peakStep(raw) {
+  return { label: 'Memory', text: `${fixed(raw.peakMiB)} MiB peak + ${percent(raw.limitMarginPct)} = ${fixed(raw.limitMiB)} MiB` };
+}
+
+function formatFlex(raw, size) {
+  const steps = [
+    peakStep(raw),
+    { label: 'Instance size', text: `the smallest Flex Consumption size that fits → ${size.memoryMB} MB, ${coresText(size.cores)}` }
+  ];
   return {
     plan: 'flex',
-    memory: memoryMB,
+    memory: size.memoryMB,
+    cores: size.cores,
     figures: [
-      { role: 'total', label: 'Instance memory', text: `${memoryMB} MB`, detail: 'Flex Consumption, per instance' }
+      { role: 'total', label: 'Instance memory', text: `${size.memoryMB} MB`, detail: 'Flex Consumption, per instance' },
+      { role: 'info', label: 'CPU', text: coresText(size.cores), detail: 'typical for this instance size' }
     ],
     markers: [
       { role: 'peak', name: 'peak', value: raw.peakMiB, text: `${Math.round(raw.peakMiB)}Mi` },
-      { role: 'limit', name: 'instance memory', value: memoryMB, text: `${memoryMB}MB` }
+      { role: 'limit', name: 'instance memory', value: size.memoryMB, text: `${size.memoryMB}MB` }
     ],
-    snippet: { label: 'Azure CLI (Flex Consumption)', language: 'shell', code: flexCommand(memoryMB) },
-    alternative: { label: 'Bicep', code: `functionAppConfig.scaleAndConcurrency.instanceMemoryMB: ${memoryMB}` },
+    snippet: { label: 'Azure CLI (Flex Consumption)', language: 'shell', code: flexCommand(size.memoryMB) },
+    alternative: { label: 'Bicep', code: `functionAppConfig.scaleAndConcurrency.instanceMemoryMB: ${size.memoryMB}` },
     warnings: [],
-    explanation: `${explainBase(raw)} → next Flex Consumption instance size: ${memoryMB}MB.`,
+    explanationSteps: steps,
     note: FLEX_NOTE
   };
 }
@@ -84,10 +107,20 @@ function formatPremium(raw) {
       message: `${Math.round(raw.limitMiB)}MiB is above the largest Elastic Premium instance (${tier.sku}, ${tier.memoryMiB}MiB); no Azure Functions instance size on these plans fits.`
     });
   }
+  const steps = [
+    peakStep(raw),
+    {
+      label: 'Instance size',
+      text: fit
+        ? `above Flex Consumption’s 4096 MB, so the smallest Elastic Premium SKU that fits → ${tier.sku} (${tier.memoryMiB} MiB, ${coresText(tier.cores)})`
+        : `above every size, so the largest Elastic Premium SKU → ${tier.sku} (${tier.memoryMiB} MiB, ${coresText(tier.cores)})`
+    }
+  ];
   return {
     plan: 'premium',
     memory: tier.memoryMiB,
     sku: tier.sku,
+    cores: tier.cores,
     figures: [
       { role: 'total', label: 'Premium instance', text: tier.sku, detail: `${tier.memoryMiB} MiB, ${tier.cores} vCPU` }
     ],
@@ -98,14 +131,19 @@ function formatPremium(raw) {
     snippet: { label: 'Azure CLI (Elastic Premium)', language: 'shell', code: premiumCommand(tier.sku) },
     alternative: null,
     warnings,
-    explanation: `${explainBase(raw)} → above Flex Consumption’s 4096MB, so the smallest Elastic Premium SKU that fits: ${tier.sku} (${tier.memoryMiB}MiB).`,
+    explanationSteps: steps,
     note: PREMIUM_NOTE
   };
 }
 
 /** @param {object} raw - result of calculateRawSizing() */
 export function format(raw) {
-  const flexSize = FLEX_SIZES_MB.find((size) => size >= raw.limitMiB);
+  const flexSize = FLEX_SIZES.find((size) => size.memoryMB >= raw.limitMiB);
   const result = flexSize ? formatFlex(raw, flexSize) : formatPremium(raw);
-  return { platform: 'azureFunctions', ...result, warnings: [...raw.warnings, ...result.warnings] };
+  return {
+    platform: 'azureFunctions',
+    ...result,
+    warnings: [...raw.warnings, ...result.warnings],
+    explanation: result.explanationSteps.map((step) => `${step.label}: ${step.text}.`).join(' ')
+  };
 }
