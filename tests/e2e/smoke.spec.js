@@ -342,8 +342,8 @@ test('Couchbase: each input that changes the result has a tooltip saying how', a
 test('shared fields have tooltips saying how they move the result, and the derivation links the sizing model', async ({ page }) => {
   await page.goto('/kubernetes/');
   // Average, peak, workload type, replicas, sensitivity, environment, QoS and request basis, plus the advanced
-  // request and limit margins.
-  await expect(page.locator('.hint-tip__btn')).toHaveCount(10);
+  // request and limit margins, overcommit ratio, VPA margin and VPA minimum.
+  await expect(page.locator('.hint-tip__btn')).toHaveCount(13);
   const tip = page.getByRole('tooltip').filter({ hasText: 'Guaranteed sets the request equal to the limit' });
   await expect(tip).toBeHidden();
   await expect(field(page, 'QoS class')).toHaveAccessibleDescription(/Guaranteed sets the request equal to the limit/);
@@ -385,6 +385,13 @@ test('advanced margins and defaults: closed by default, they change the result, 
   await expect(page.getByRole('button', { name: 'Reset to defaults' })).toBeDisabled();
   await expect(page.locator('#snippet-code')).toContainText('memory: "533Mi"');
   await expect(page.locator('#snippet-code')).toContainText('memory: "819Mi"');
+
+  // The VPA settings only show with the VPA-style request basis, and change its request.
+  await expect(field(page, 'VPA margin')).toBeHidden();
+  await field(page, 'Request basis').selectOption('vpa');
+  await field(page, 'VPA margin').fill('20');
+  await expect(page.locator('#snippet-code')).toContainText('memory: "756Mi"');
+  await expect(section.locator('summary')).toContainText('1 changed');
 });
 
 test('Proxmox VE: produces a qm command and web UI steps', async ({ page }) => {

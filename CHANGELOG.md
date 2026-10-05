@@ -15,7 +15,7 @@ so entries are grouped under `Unreleased` until a release is tagged.
 - Field tooltips and links between each assumption label and its row in the table (#14, #18).
 - An "Advanced: margins and defaults" section on every calculator, closed by default, to replace the request and limit margins; each field has a tooltip and each guide a "Values you can change" table.
 - A report link under each calculator result (#10).
-- Kubernetes request basis option: VPA-style, peak + 15% (#28).
+- Kubernetes request basis option: VPA-style, peak + 15% (#28); under Advanced, the VPA margin and minimum and the overcommit warning's ratio can be changed.
 - GitHub Sponsors links, a `/support/` page and issue forms (#4).
 - Content-Security-Policy and other security headers, Open Graph share image, logo and favicon.
 - Redis: the provisioning factor (2 × maxmemory by default, about 1.25× without persistence) can be changed under Advanced.
