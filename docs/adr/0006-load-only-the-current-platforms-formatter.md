@@ -22,7 +22,7 @@ external file.
 - **Preload:** each page also has `<link rel="modulepreload">` for its formatter. The browser then fetches it
   in parallel with the entry point, so the dynamic import adds no network round trip.
 - **Readiness flag:** the window `load` event doesn't wait for dynamic imports. So once the calculator is wired
-  up, the page sets `<html data-calculator-ready>`. Browser tests wait for it through `e2e/fixtures.js`
+  up, the page sets `<html data-calculator-ready>`. Browser tests wait for it through `tests/e2e/fixtures.js`
   instead of typing into a page that isn't listening yet.
 
 ## Alternatives considered
