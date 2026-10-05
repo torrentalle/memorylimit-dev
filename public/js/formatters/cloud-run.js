@@ -8,8 +8,11 @@
  * default 1 vCPU is enough.
  *
  * Google's own sizing formula is standing memory + memory per request ×
- * concurrency: the samples already include the concurrency they ran at,
- * which the note points out.
+ * concurrency. The measured peak already contains it for the concurrency the
+ * samples ran at; given the instance's idle (standing) memory and a planned
+ * concurrency, the calculator applies the formula: memory per request =
+ * (peak − idle) ÷ current concurrency, and the planned peak = idle + memory
+ * per request × planned concurrency, before the margin.
  *
  * The method, sources and assumptions are on /cloud-run/how-it-works/.
  */
@@ -19,7 +22,10 @@ import { percent, PEAK_ONLY_FIELD_TIPS } from './shared.js';
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
   ...PEAK_ONLY_FIELD_TIPS,
-  peak: 'The memory limit is this plus the limit margin; above 4 GiB it also sets the minimum CPU.'
+  peak: 'The memory limit is this plus the limit margin; above 4 GiB it also sets the minimum CPU.',
+  standingMiB: 'The memory an instance uses with no requests; the rest of the peak is split per request to scale it to the planned concurrency.',
+  currentConcurrency: 'The maximum concurrent requests per instance when the samples were taken; the peak is divided by it to get memory per request.',
+  targetConcurrency: 'The maximum concurrent requests per instance you plan; memory per request is multiplied by it, so a higher value needs more memory.'
 };
 
 // Cloud Run takes any Mi value; the output uses whole Mi.
@@ -28,6 +34,9 @@ export const MIN_MEMORY_MIB = 128;
 export const MIN_GEN2_MEMORY_MIB = 512;
 export const MAX_MEMORY_MIB = 32768;
 export const DEFAULT_CPU = 1;
+// Cloud Run's default maximum concurrency (console; the CLI sets 80 × vCPUs), and its maximum.
+export const DEFAULT_CONCURRENCY = 80;
+export const MAX_CONCURRENCY = 1000;
 
 // The fewest vCPUs Cloud Run allows for a memory size (in MiB), from 1 vCPU up. Below 1 vCPU, Cloud Run also
 // allows 0.5 vCPU up to 1 GiB and 0.08 vCPU up to 512 MiB, with extra restrictions; the default is 1 vCPU.
@@ -40,9 +49,9 @@ const CPU_FOR_MEMORY = [
 ];
 
 const NOTE =
-  'Google sizes memory as standing memory + memory per request × concurrency, so this fits the concurrency your ' +
-  'samples ran at: raise it if you raise concurrency. Files written to the container’s filesystem are held in ' +
-  'memory and count against this limit too.';
+  'Google sizes memory as standing memory + memory per request × concurrency: fill in the idle memory and the ' +
+  'planned concurrency to apply it, otherwise this fits the concurrency your samples ran at. Files written to the ' +
+  'container’s filesystem are held in memory and count against this limit too.';
 
 export function minimumCpu(memoryMiB) {
   return CPU_FOR_MEMORY.find((tier) => memoryMiB <= tier.upToMiB).cpu;
@@ -68,9 +77,31 @@ export function yamlSnippet(memoryMiB) {
 
 const fixed = (value) => Number(value.toFixed(1));
 
-function explainSteps(raw, rounded, memory, cpu) {
-  const base = `${fixed(raw.peakMiB)} MiB peak + ${percent(raw.limitMarginPct)} = ${fixed(raw.limitMiB)} MiB`;
+/**
+ * Google's formula applied to the samples: returns the peak to size from (MiB) and, when concurrency changes,
+ * the per-request figures behind it.
+ */
+export function plannedPeak(peakMiB, { standingMiB = 0, currentConcurrency = DEFAULT_CONCURRENCY, targetConcurrency } = {}) {
+  const current = Math.min(MAX_CONCURRENCY, Math.max(1, Math.round(currentConcurrency)));
+  const target = targetConcurrency === undefined ? current : Math.min(MAX_CONCURRENCY, Math.max(1, Math.round(targetConcurrency)));
+  const standing = Math.min(standingMiB, peakMiB);
+  if (target === current) return { peakMiB, scaled: false, current, target, standing };
+  const perRequestMiB = (peakMiB - standing) / current;
+  return { peakMiB: standing + perRequestMiB * target, scaled: true, current, target, standing, perRequestMiB };
+}
+
+function explainSteps(raw, plan, sizedMiB, rounded, memory, cpu) {
+  const base = plan.scaled
+    ? `${fixed(plan.peakMiB)} MiB planned peak + ${percent(raw.limitMarginPct)} = ${fixed(sizedMiB)} MiB`
+    : `${fixed(raw.peakMiB)} MiB peak + ${percent(raw.limitMarginPct)} = ${fixed(raw.limitMiB)} MiB`;
+  const concurrency = plan.scaled
+    ? [{
+        label: 'Concurrency',
+        text: `${fixed(plan.standing)} MiB idle + (${fixed(raw.peakMiB)} − ${fixed(plan.standing)}) ÷ ${plan.current} × ${plan.target} requests = ${fixed(plan.peakMiB)} MiB planned peak`
+      }]
+    : [];
   return [
+    ...concurrency,
     {
       label: 'Memory',
       text: memory === rounded
@@ -86,9 +117,14 @@ function explainSteps(raw, rounded, memory, cpu) {
   ];
 }
 
-/** @param {object} raw - result of calculateRawSizing() */
-export function format(raw) {
-  const rounded = roundUpToMultiple(raw.limitMiB, ROUNDING_STEP_MIB);
+/**
+ * @param {object} raw - result of calculateRawSizing()
+ * @param {{ standingMiB?: number, currentConcurrency?: number, targetConcurrency?: number }} [options]
+ */
+export function format(raw, options = {}) {
+  const plan = plannedPeak(raw.peakMiB, options);
+  const sizedMiB = plan.peakMiB * (1 + raw.limitMarginPct);
+  const rounded = roundUpToMultiple(sizedMiB, ROUNDING_STEP_MIB);
   const memory = Math.min(MAX_MEMORY_MIB, Math.max(MIN_MEMORY_MIB, rounded));
   const clamped = memory !== rounded;
   const cpu = minimumCpu(memory);
@@ -109,11 +145,22 @@ export function format(raw) {
     });
   }
 
-  const steps = explainSteps(raw, rounded, memory, cpu);
+  if (plan.scaled && !(options.standingMiB > 0)) {
+    warnings.push({
+      level: 'warning',
+      code: 'cloud-run-no-idle-memory',
+      message:
+        'Without the idle memory per instance, the whole peak is treated as per-request memory, so the result scales ' +
+        `fully with concurrency: ${plan.target > plan.current ? 'an upper' : 'a lower'} bound.`
+    });
+  }
+
+  const steps = explainSteps(raw, plan, sizedMiB, rounded, memory, cpu);
   return {
     platform: 'cloudRun',
     memory,
     cpu,
+    plannedPeakMiB: plan.peakMiB,
     figures: [
       { role: 'total', label: 'Memory limit', text: formatQuantity(memory), detail: 'per instance' },
       {

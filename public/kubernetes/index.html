@@ -176,9 +176,16 @@
         </div>
         <div class="field">
           <label class="field-label" for="qos-select">QoS class</label>
-          <select id="qos-select" class="field-input">
+          <select id="qos-select" class="field-input" data-formatter-option="qos">
             <option value="burstable" selected>Burstable — request below limit</option>
             <option value="guaranteed">Guaranteed — request equals limit</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label" for="request-basis-select">Request basis</label>
+          <select id="request-basis-select" class="field-input" data-formatter-option="requestBasis">
+            <option value="average" selected>Average + margin</option>
+            <option value="vpa">VPA-style — peak + 15%</option>
           </select>
         </div>
       </div>
