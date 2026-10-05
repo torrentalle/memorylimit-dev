@@ -176,18 +176,33 @@ test('every font referenced by the stylesheet exists', () => {
 });
 
 for (const page of GUIDE_PAGES) {
-  test(`${page.path} marks sources with links: docs to the document, assumptions to the table`, () => {
+  test(`${page.path} marks sources with links: docs to the document, assumptions to their row and back`, () => {
     const html = read(page.dir);
     const body = html.slice(html.indexOf('<div class="wrap guide">'));
+    const ids = new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]));
     // Only the intro's legend may show a tag that isn't a link.
     assert.doesNotMatch(body, /<span class="guide-tag/);
     const docs = [...body.matchAll(/<a class="guide-tag guide-tag--doc" href="([^"]+)"/g)].map((m) => m[1]);
     assert.ok(docs.length > 0);
     for (const href of docs) assert.match(href, /^https:\/\//);
-    const assumptions = [...body.matchAll(/<a class="guide-tag guide-tag--assumption" href="([^"]+)"/g)].map((m) => m[1]);
-    assert.ok(assumptions.length > 0);
-    assert.ok(assumptions.every((href) => href === '#assumptions'));
     assert.match(body, /id="assumptions"/);
+
+    // Each "Assumption" label links to its own row of the table…
+    const labels = [...body.matchAll(/<a class="guide-tag guide-tag--assumption"(?: id="[^"]+")? href="#([^"]+)"/g)].map((m) => m[1]);
+    assert.ok(labels.length > 0);
+    for (const target of labels) {
+      assert.match(target, /^assumption-\d+$/);
+      assert.ok(ids.has(target), `#${target} is missing`);
+    }
+    // …and every row links back to a label in the text.
+    const table = body.slice(body.indexOf('id="assumptions"'));
+    const rows = [...table.slice(0, table.indexOf('</table>')).matchAll(/<tr id="(assumption-\d+)"><td>([\s\S]*?)<\/td>/g)];
+    assert.equal(rows.length, [...table.slice(0, table.indexOf('</table>')).matchAll(/<tr[ >]/g)].length - 1, 'every row has an id');
+    for (const [, rowId, cell] of rows) {
+      assert.ok(labels.includes(rowId) || /href="#assumption-\d+-ref"/.test(cell), rowId);
+      const back = cell.match(/<a class="guide-backref" href="#([^"]+)"/)?.[1];
+      assert.ok(back && ids.has(back), `${rowId} links back to a missing #${back}`);
+    }
   });
 }
 
@@ -199,7 +214,7 @@ for (const page of GUIDE_PAGES) {
     const section = html.slice(html.indexOf('id="assumptions"'));
     const table = section.slice(0, section.indexOf('</table>'));
     assert.match(table, /<th scope="col">Assumption<\/th><th scope="col">Kind<\/th>/);
-    const rows = [...table.matchAll(/<tr><td>/g)].length;
+    const rows = [...table.matchAll(/<tr(?: id="[^"]+")?><td>/g)].length;
     const kinds = [...table.matchAll(/<td class="guide-kind">([^<]+)<\/td>/g)].map((m) => m[1]);
     assert.ok(rows > 0);
     assert.equal(kinds.length, rows);

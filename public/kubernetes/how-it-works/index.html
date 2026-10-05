@@ -182,9 +182,9 @@ limit   = max(peak × (1 + limit margin), request)        rounded up to a whole 
       </p>
       <p>
         Google's GKE guidance recommends the same amount of memory for the request and the limit, because memory
-        can't be compressed: when it runs out, the Pod has to be taken down.
+        can't be compressed: when it runs out, the Pod has to be taken down. <a class="guide-tag guide-tag--doc" href="https://docs.cloud.google.com/architecture/best-practices-for-running-cost-effective-kubernetes-applications-on-gke" target="_blank" rel="noopener">GKE docs</a>
         The calculator still defaults to Burstable, which packs more Pods per node; choose Guaranteed for workloads
-        that mustn't be evicted. <a class="guide-tag guide-tag--doc" href="https://docs.cloud.google.com/architecture/best-practices-for-running-cost-effective-kubernetes-applications-on-gke" target="_blank" rel="noopener">GKE docs</a>
+        that mustn't be evicted. <a class="guide-tag guide-tag--assumption" id="assumption-3-ref" href="#assumption-3">Assumption</a>
       </p>
       <div class="guide-table-wrap">
         <table class="guide-table guide-table--numbers" data-example="410 630 generic medium production 3 guaranteed">
@@ -205,7 +205,7 @@ limit   = max(peak × (1 + limit margin), request)        rounded up to a whole 
             <tr>
               <td>Limit far above the request <span class="guide-level">warning</span></td>
               <td>The limit is more than 4× the request</td>
-              <td>The scheduler places Pods by their requests, and under node memory pressure Pods above their requests are evicted first. <a class="guide-tag guide-tag--doc" href="https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/" target="_blank" rel="noopener">Kubernetes docs</a> A LimitRange can cap the ratio (<code>maxLimitRequestRatio</code>) but has no default. <a class="guide-tag guide-tag--doc" href="https://kubernetes.io/docs/reference/kubernetes-api/policy-resources/limit-range-v1/" target="_blank" rel="noopener">Kubernetes docs</a> The 4× threshold is ours. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a></td>
+              <td>The scheduler places Pods by their requests, and under node memory pressure Pods above their requests are evicted first. <a class="guide-tag guide-tag--doc" href="https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/" target="_blank" rel="noopener">Kubernetes docs</a> A LimitRange can cap the ratio (<code>maxLimitRequestRatio</code>) but has no default. <a class="guide-tag guide-tag--doc" href="https://kubernetes.io/docs/reference/kubernetes-api/policy-resources/limit-range-v1/" target="_blank" rel="noopener">Kubernetes docs</a> The 4× threshold is ours. <a class="guide-tag guide-tag--assumption" id="assumption-1-ref" href="#assumption-1">Assumption</a></td>
             </tr>
             <tr>
               <td>Peak below average <span class="guide-level guide-level--error">error</span></td>
@@ -256,7 +256,7 @@ limit   = max(peak × (1 + limit margin), request)        rounded up to a whole 
         time above its request, where it can be evicted under node memory pressure. The calculator keeps the
         average because it works from as few as one or two samples; reproducing VPA needs at least a day of samples
         with timestamps. If eviction is a concern, choose a higher sensitivity or Guaranteed QoS, or let VPA size
-        the request once the workload has history.
+        the request once the workload has history. <a class="guide-tag guide-tag--assumption" id="assumption-2-ref" href="#assumption-2">Assumption</a>
       </p>
     </section>
 
@@ -276,7 +276,7 @@ limit   = max(peak × (1 + limit margin), request)        rounded up to a whole 
           A range query over a representative period (a week is a good default) gives the best average and peak.
           Series with <code>container=""</code> (the whole Pod) and <code>container="POD"</code> (the pause container)
           are skipped. These are the label values cAdvisor
-          commonly exports for them; we haven't found them documented. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a>
+          commonly exports for them; we haven't found them documented. <a class="guide-tag guide-tag--assumption" id="assumption-4-ref" href="#assumption-4">Assumption</a>
         </li>
       </ul>
     </section>
@@ -289,10 +289,10 @@ limit   = max(peak × (1 + limit margin), request)        rounded up to a whole 
         <table class="guide-table">
           <thead><tr><th scope="col">Assumption</th><th scope="col">Kind</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
           <tbody>
-            <tr><td>Warn when the limit is over 4× the request</td><td class="guide-kind">Our default</td><td>A judgment call on when overcommit makes evictions likely</td><td>Only the warning moves; a LimitRange in your namespace may set a stricter cap.</td></tr>
-            <tr><td>The request comes from the average, not from daily peaks like VPA</td><td class="guide-kind">Our default</td><td>Works with few samples</td><td>The Pod is more often above its request, so more likely to be evicted under node pressure.</td></tr>
-            <tr><td>Burstable by default</td><td class="guide-kind">Our default</td><td>Packs more Pods per node</td><td>GKE recommends request = limit for memory; choose Guaranteed for workloads that mustn't be evicted.</td></tr>
-            <tr><td><code>container=""</code> and <code>container="POD"</code> are Pod-level and pause series</td><td class="guide-kind">Our reading</td><td>What cAdvisor commonly exports</td><td>If your setup labels them differently, they're averaged in and skew the result; filter them out in the query.</td></tr>
+            <tr id="assumption-1"><td>Warn when the limit is over 4× the request <a class="guide-backref" href="#assumption-1-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>A judgment call on when overcommit makes evictions likely</td><td>Only the warning moves; a LimitRange in your namespace may set a stricter cap.</td></tr>
+            <tr id="assumption-2"><td>The request comes from the average, not from daily peaks like VPA <a class="guide-backref" href="#assumption-2-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>Works with few samples</td><td>The Pod is more often above its request, so more likely to be evicted under node pressure.</td></tr>
+            <tr id="assumption-3"><td>Burstable by default <a class="guide-backref" href="#assumption-3-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>Packs more Pods per node</td><td>GKE recommends request = limit for memory; choose Guaranteed for workloads that mustn't be evicted.</td></tr>
+            <tr id="assumption-4"><td><code>container=""</code> and <code>container="POD"</code> are Pod-level and pause series <a class="guide-backref" href="#assumption-4-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our reading</td><td>What cAdvisor commonly exports</td><td>If your setup labels them differently, they're averaged in and skew the result; filter them out in the query.</td></tr>
           </tbody>
         </table>
       </div>

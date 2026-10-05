@@ -181,10 +181,15 @@ quota     = (metadata + working) × (1 + 25%) ÷ 85%</code></pre>
             <tr><td>High-water mark</td><td>85%</td><td>Sizing Guidelines and <a href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Memory</a>: once a bucket's memory use reaches 85% of its quota, Couchbase starts ejecting items. Dividing by 0.85 keeps the working set below that line. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Couchbase docs</a></td></tr>
             <tr><td>Replicas</td><td>0–3</td><td>Every replica is a full extra copy of the bucket's data and metadata, held in the same cluster-wide quota. <code>bucket-edit</code> accepts 0 to 3. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/cli/cbcli/couchbase-cli-bucket-edit.html" target="_blank" rel="noopener">Couchbase docs</a></td></tr>
             <tr><td>Working set %</td><td>Your input</td><td>The share of the data you want served from RAM. Higher means fewer disk reads and a bigger quota.</td></tr>
-            <tr><td>Key length, document size</td><td>Your input</td><td>Averages you supply from a sample of real documents. Nothing in the metrics or REST APIs gives them reliably, so the calculator never guesses them. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a></td></tr>
+            <tr><td>Key length, document size</td><td>Your input</td><td>Averages you supply from a sample of real documents. Nothing in the metrics or REST APIs gives them reliably, so the calculator never guesses them. <a class="guide-tag guide-tag--assumption" id="assumption-2-ref" href="#assumption-2">Assumption</a></td></tr>
           </tbody>
         </table>
       </div>
+
+      <p>
+        The formula, and the 10% minimum it's checked against, are written for the Couchstore storage engine, so the
+        calculator assumes buckets use it. Magma buckets can run with much less memory. <a class="guide-tag guide-tag--assumption" id="assumption-10-ref" href="#assumption-10">Assumption</a>
+      </p>
 
       <h3 class="guide-subheading">Rounding</h3>
       <p>
@@ -228,7 +233,7 @@ quota     = (metadata + working) × (1 + 25%) ÷ 85%</code></pre>
       </p>
       <p>
         This assumes a bucket's data spreads evenly over the Data nodes. Couchbase distributes a bucket's vBuckets
-        across them, so after a rebalance that holds closely; a cluster that hasn't been rebalanced may be uneven. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a>
+        across them, so after a rebalance that holds closely; a cluster that hasn't been rebalanced may be uneven. <a class="guide-tag guide-tag--assumption" id="assumption-4-ref" href="#assumption-4">Assumption</a>
       </p>
       <p>Worked example, with 3 Data nodes: 833 MiB ÷ 3 = 277.67 → <strong>278 MiB</strong> per node.</p>
     </section>
@@ -239,7 +244,7 @@ quota     = (metadata + working) × (1 + 25%) ÷ 85%</code></pre>
         The Index, Search, Eventing and Analytics quotas are the values you enter, not calculated. How much
         memory an index needs depends on the index definitions and the shape of the documents, which a few form
         fields can't describe; an estimate would look more authoritative than it is. 0 means the service doesn't run
-        on these nodes. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a>
+        on these nodes. <a class="guide-tag guide-tag--assumption" id="assumption-3-ref" href="#assumption-3">Assumption</a>
       </p>
       <p>
         A service that runs needs at least 256 MiB (Index, Search, Eventing) or 1024 MiB (Analytics); below that the
@@ -270,7 +275,7 @@ quota     = (metadata + working) × (1 + 25%) ÷ 85%</code></pre>
       <p>
         Both rules come from <a href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Memory</a>.
         The documentation doesn't say what "little memory" means. The calculator uses under 5 GiB: below that,
-        80% of RAM is already more than RAM − 1 GiB, so the firm limit itself is 80% and the two rules agree. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a>
+        80% of RAM is already more than RAM − 1 GiB, so the firm limit itself is 80% and the two rules agree. <a class="guide-tag guide-tag--assumption" id="assumption-5-ref" href="#assumption-5">Assumption</a>
       </p>
       <p>
         Worked example, on a 16 GiB node with a 512 MiB Index quota: 278 + 512 = 790 MiB, 4.8% of 16,384 MiB. The firm
@@ -291,7 +296,7 @@ quota     = (metadata + working) × (1 + 25%) ÷ 85%</code></pre>
         The sizing formula has no separate case for full ejection. Since full ejection evicts a document's metadata
         together with its value, the calculator counts metadata only for the documents that stay resident:
         metadata × working set %, instead of all of it. That follows from the documented behaviour, but the
-        documentation doesn't spell it out as a formula. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a>
+        documentation doesn't spell it out as a formula. <a class="guide-tag guide-tag--assumption" id="assumption-1-ref" href="#assumption-1">Assumption</a>
       </p>
       <div class="guide-table-wrap">
         <table class="guide-table guide-table--numbers">
@@ -318,11 +323,11 @@ quota     = (metadata + working) × (1 + 25%) ÷ 85%</code></pre>
           <thead><tr><th scope="col">Message about</th><th scope="col">Shown when</th><th scope="col">Basis</th></tr></thead>
           <tbody>
             <tr><td>Quotas above the firm limit <span class="guide-level guide-level--error">error</span></td><td>The node's quotas total more than max(RAM − 1 GiB, 80% × RAM)</td><td>Couchbase refuses them. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Couchbase docs</a></td></tr>
-            <tr><td>Quotas above the recommended share <span class="guide-level">warning</span></td><td>Above 90% of RAM (80% under 5 GiB)</td><td>Couchbase's recommendation. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Couchbase docs</a> The 5 GiB line is ours. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a></td></tr>
+            <tr><td>Quotas above the recommended share <span class="guide-level">warning</span></td><td>Above 90% of RAM (80% under 5 GiB)</td><td>Couchbase's recommendation. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Couchbase docs</a> The 5 GiB line is ours. <a class="guide-tag guide-tag--assumption" href="#assumption-5">Assumption</a></td></tr>
             <tr><td>Service quota below its minimum <span class="guide-level guide-level--error">error</span></td><td>Index, Search or Eventing under 256 MiB, Analytics under 1024 MiB</td><td>Couchbase's minimums. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/rest-api/rest-configure-memory.html" target="_blank" rel="noopener">Couchbase docs</a></td></tr>
             <tr><td>Bucket raised to the minimum <span class="guide-level">warning</span></td><td>A bucket's result is under 100 MiB</td><td>The <code>--bucket-ramsize</code> minimum. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/cli/cbcli/couchbase-cli-bucket-edit.html" target="_blank" rel="noopener">Couchbase docs</a></td></tr>
-            <tr><td>Bucket quota under 10% of its dataset <span class="guide-level">warning</span></td><td>The quota is less than 10% of the bucket's data, replicas included</td><td>Couchbase recommends at least 10% for Couchstore, 1% for Magma. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Couchbase docs</a> Comparing against the data <em>with</em> replicas is our reading: the docs say "dataset size" without defining it. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a></td></tr>
-            <tr><td>Full ejection with a small working set <span class="guide-level">warning</span></td><td>Full ejection and a working set under 20%</td><td>The disk reads are documented behaviour; the 20% threshold is ours. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a></td></tr>
+            <tr><td>Bucket quota under 10% of its dataset <span class="guide-level">warning</span></td><td>The quota is less than 10% of the bucket's data, replicas included</td><td>Couchbase recommends at least 10% for Couchstore, 1% for Magma. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Couchbase docs</a> Comparing against the data <em>with</em> replicas is our reading: the docs say "dataset size" without defining it. <a class="guide-tag guide-tag--assumption" id="assumption-6-ref" href="#assumption-6">Assumption</a></td></tr>
+            <tr><td>Full ejection with a small working set <span class="guide-level">warning</span></td><td>Full ejection and a working set under 20%</td><td>The disk reads are documented behaviour; the 20% threshold is ours. <a class="guide-tag guide-tag--assumption" id="assumption-7-ref" href="#assumption-7">Assumption</a></td></tr>
           </tbody>
         </table>
       </div>
@@ -341,17 +346,17 @@ quota     = (metadata + working) × (1 + 25%) ÷ 85%</code></pre>
             <tr>
               <td><a href="https://docs.couchbase.com/server/current/rest-api/rest-bucket-info.html" target="_blank" rel="noopener"><code>GET /pools/default/buckets</code></a></td>
               <td>Bucket names, document count (<code>basicStats.itemCount</code>), replicas, ejection policy; shows the current quota</td>
-              <td>Ephemeral and Memcached buckets are skipped: they don't use this formula. <code>itemCount</code> is read as the number of documents without replicas; the documentation shows the field but doesn't define it. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a></td>
+              <td>Ephemeral and Memcached buckets are skipped: they don't use this formula. <code>itemCount</code> is read as the number of documents without replicas; the documentation shows the field but doesn't define it. <a class="guide-tag guide-tag--assumption" id="assumption-8-ref" href="#assumption-8">Assumption</a></td>
             </tr>
             <tr>
               <td><a href="https://docs.couchbase.com/server/current/rest-api/rest-configure-memory.html" target="_blank" rel="noopener"><code>GET /pools/default</code></a></td>
               <td>Data nodes, RAM per node, Index/Search/Eventing/Analytics quotas</td>
-              <td>Data nodes are the nodes listing the <code>kv</code> service; RAM is the smallest Data node's <code>systemStats.mem_total</code>, so the result fits every node. A service no node runs gets 0. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a></td>
+              <td>Data nodes are the nodes listing the <code>kv</code> service; RAM is the smallest Data node's <code>systemStats.mem_total</code>, so the result fits every node. A service no node runs gets 0. <a class="guide-tag guide-tag--assumption" id="assumption-9-ref" href="#assumption-9">Assumption</a></td>
             </tr>
             <tr>
               <td>Prometheus: <a href="https://docs.couchbase.com/server/current/metrics-reference/data-service-metrics.html" target="_blank" rel="noopener"><code>kv_curr_items</code></a>, from a node's <code>/metrics</code> or a Prometheus query</td>
               <td>Document count per bucket; shows the current quota from <code>kv_ep_cache_size</code></td>
-              <td><code>kv_curr_items</code> counts items in <em>active</em> vBuckets, so one value per node is summed. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/metrics-reference/data-service-metrics.html" target="_blank" rel="noopener">Couchbase docs</a> For range data, each node's peak is used. Metrics don't include replicas or ejection policy. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a></td>
+              <td><code>kv_curr_items</code> counts items in <em>active</em> vBuckets, so one value per node is summed. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/metrics-reference/data-service-metrics.html" target="_blank" rel="noopener">Couchbase docs</a> For range data, each node's peak is used. Metrics don't include replicas or ejection policy. <a class="guide-tag guide-tag--assumption" href="#assumption-9">Assumption</a></td>
             </tr>
           </tbody>
         </table>
@@ -394,16 +399,16 @@ couchbase-cli bucket-edit -c localhost:8091 -u Administrator -p "$CB_PASSWORD" -
         <table class="guide-table">
           <thead><tr><th scope="col">Assumption</th><th scope="col">Kind</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
           <tbody>
-            <tr><td>Full ejection counts only resident metadata</td><td class="guide-kind">Our reading</td><td>Full ejection evicts metadata with the document; the formula has no case for it</td><td>Quotas for full-ejection buckets are too small. Set the policy to value ejection in the form to get the formula's upper bound.</td></tr>
-            <tr><td>Key and document sizes are the averages you enter</td><td class="guide-kind">About your setup</td><td>No API gives them reliably</td><td>The quota scales with them; measure a real sample.</td></tr>
-            <tr><td>Index, Search, Eventing, Analytics quotas are entered, not calculated</td><td class="guide-kind">Our default</td><td>They depend on index definitions and document shape</td><td>Size them from the services' own memory use.</td></tr>
-            <tr><td>Buckets spread evenly over the Data nodes</td><td class="guide-kind">About your setup</td><td>vBuckets are distributed across nodes</td><td>A node holding more than its share needs a larger Data quota; rebalance first.</td></tr>
-            <tr><td>"Little memory" means under 5 GiB</td><td class="guide-kind">Our reading</td><td>Where the firm limit itself drops to 80%</td><td>Only the warning threshold moves; the firm-limit error is exact.</td></tr>
-            <tr><td>The 10% check uses the data with replicas</td><td class="guide-kind">Our reading</td><td>The bucket quota also holds the replicas</td><td>Only the warning moves.</td></tr>
-            <tr><td>Full ejection warns under a 20% working set</td><td class="guide-kind">Our default</td><td>A judgment call on when disk reads dominate</td><td>Only the warning moves.</td></tr>
-            <tr><td><code>itemCount</code> counts documents without replicas</td><td class="guide-kind">Our reading</td><td>The documentation shows the field without defining it</td><td>If it included replicas, pasted counts would be too high and quotas oversized.</td></tr>
-            <tr><td>Peak per node for Prometheus range data; smallest Data node's RAM</td><td class="guide-kind">Our default</td><td>Size for the worst case</td><td>Quotas are a little larger than an average would give.</td></tr>
-            <tr><td>Couchstore, not Magma</td><td class="guide-kind">About your setup</td><td>The 10% guidance and the formula are written for it</td><td>Magma buckets can run with much less memory (1% of the dataset); this sizing is conservative for them.</td></tr>
+            <tr id="assumption-1"><td>Full ejection counts only resident metadata <a class="guide-backref" href="#assumption-1-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our reading</td><td>Full ejection evicts metadata with the document; the formula has no case for it</td><td>Quotas for full-ejection buckets are too small. Set the policy to value ejection in the form to get the formula's upper bound.</td></tr>
+            <tr id="assumption-2"><td>Key and document sizes are the averages you enter <a class="guide-backref" href="#assumption-2-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">About your setup</td><td>No API gives them reliably</td><td>The quota scales with them; measure a real sample.</td></tr>
+            <tr id="assumption-3"><td>Index, Search, Eventing, Analytics quotas are entered, not calculated <a class="guide-backref" href="#assumption-3-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>They depend on index definitions and document shape</td><td>Size them from the services' own memory use.</td></tr>
+            <tr id="assumption-4"><td>Buckets spread evenly over the Data nodes <a class="guide-backref" href="#assumption-4-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">About your setup</td><td>vBuckets are distributed across nodes</td><td>A node holding more than its share needs a larger Data quota; rebalance first.</td></tr>
+            <tr id="assumption-5"><td>"Little memory" means under 5 GiB <a class="guide-backref" href="#assumption-5-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our reading</td><td>Where the firm limit itself drops to 80%</td><td>Only the warning threshold moves; the firm-limit error is exact.</td></tr>
+            <tr id="assumption-6"><td>The 10% check uses the data with replicas <a class="guide-backref" href="#assumption-6-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our reading</td><td>The bucket quota also holds the replicas</td><td>Only the warning moves.</td></tr>
+            <tr id="assumption-7"><td>Full ejection warns under a 20% working set <a class="guide-backref" href="#assumption-7-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>A judgment call on when disk reads dominate</td><td>Only the warning moves.</td></tr>
+            <tr id="assumption-8"><td><code>itemCount</code> counts documents without replicas <a class="guide-backref" href="#assumption-8-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our reading</td><td>The documentation shows the field without defining it</td><td>If it included replicas, pasted counts would be too high and quotas oversized.</td></tr>
+            <tr id="assumption-9"><td>Peak per node for Prometheus range data; smallest Data node's RAM <a class="guide-backref" href="#assumption-9-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>Size for the worst case</td><td>Quotas are a little larger than an average would give.</td></tr>
+            <tr id="assumption-10"><td>Couchstore, not Magma <a class="guide-backref" href="#assumption-10-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">About your setup</td><td>The 10% guidance and the formula are written for it</td><td>Magma buckets can run with much less memory (1% of the dataset); this sizing is conservative for them.</td></tr>
           </tbody>
         </table>
       </div>

@@ -217,7 +217,7 @@ limit       = max(peak × (1 + limit margin), reservation, 6M)   rounded up to a
       <p>
         The calculator leaves swap as Docker sets it: whether a service should swap or fail fast depends on the service,
         and the note under the result points it out.
-        <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a>
+        <a class="guide-tag guide-tag--assumption" id="assumption-1-ref" href="#assumption-1">Assumption</a>
       </p>
     </section>
 
@@ -257,12 +257,12 @@ limit       = max(peak × (1 + limit margin), reservation, 6M)   rounded up to a
           above matches every replica of the <code>api</code> service in the <code>myproject</code> project.
           <a class="guide-tag guide-tag--doc" href="https://github.com/docker/compose/blob/main/pkg/compose/service_containers.go" target="_blank" rel="noopener">Docker source</a>
           A service with its own <code>container_name</code> needs that name instead.
-          <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a>
+          <a class="guide-tag guide-tag--assumption" id="assumption-2-ref" href="#assumption-2">Assumption</a>
         </li>
         <li>
           The working set leaves out file cache the kernel can reclaim, so it's closer to what the container really
           needs than total usage.
-          <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a>
+          <a class="guide-tag guide-tag--assumption" id="assumption-3-ref" href="#assumption-3">Assumption</a>
           A range query over a representative period (a week is a good default) gives the best average and peak.
         </li>
       </ul>
@@ -276,9 +276,9 @@ limit       = max(peak × (1 + limit margin), reservation, 6M)   rounded up to a
         <table class="guide-table">
           <thead><tr><th scope="col">Assumption</th><th scope="col">Kind</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
           <tbody>
-            <tr><td>Swap is left as Docker sets it</td><td class="guide-kind">Our default</td><td>Whether to swap or fail fast depends on the service</td><td>On a host with swap, the container can use up to its limit again in swap; set <code>memswap_limit</code> to the limit to prevent it.</td></tr>
-            <tr><td>Containers keep Compose's default names</td><td class="guide-kind">About your setup</td><td>The paste hint filters by <code>&lt;project&gt;-&lt;service&gt;-&lt;number&gt;</code></td><td>With <code>container_name</code> set, the query matches nothing; filter by that name.</td></tr>
-            <tr><td>Size from the working set, not total usage</td><td class="guide-kind">Our default</td><td>Total usage includes reclaimable file cache</td><td>Sizing from total usage gives larger values for services that read many files.</td></tr>
+            <tr id="assumption-1"><td>Swap is left as Docker sets it <a class="guide-backref" href="#assumption-1-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>Whether to swap or fail fast depends on the service</td><td>On a host with swap, the container can use up to its limit again in swap; set <code>memswap_limit</code> to the limit to prevent it.</td></tr>
+            <tr id="assumption-2"><td>Containers keep Compose's default names <a class="guide-backref" href="#assumption-2-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">About your setup</td><td>The paste hint filters by <code>&lt;project&gt;-&lt;service&gt;-&lt;number&gt;</code></td><td>With <code>container_name</code> set, the query matches nothing; filter by that name.</td></tr>
+            <tr id="assumption-3"><td>Size from the working set, not total usage <a class="guide-backref" href="#assumption-3-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>Total usage includes reclaimable file cache</td><td>Sizing from total usage gives larger values for services that read many files.</td></tr>
           </tbody>
         </table>
       </div>

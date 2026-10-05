@@ -1253,3 +1253,12 @@ body.tips-dismissed .hint-tip__text { visibility: hidden !important; opacity: 0 
 /* The kind of each row in a guide's table of assumptions (ADR 0013). */
 .guide-kind { color: var(--text-secondary); font-size: 12.5px; }
 .guide-kind-legend { font-size: 13px; color: var(--text-secondary); }
+
+/* Two-way links between an "Assumption" label and its row in the table of assumptions (ADR 0013). */
+.guide-backref { margin-left: 4px; color: var(--warn); text-decoration: none; font-size: 12px; }
+.guide-backref:hover,
+.guide-backref:focus-visible { text-decoration: underline; }
+.guide-table tr[id],
+.guide-tag[id] { scroll-margin-top: 24px; }
+.guide-table tr:target td { background: var(--warn-bg); }
+.guide-tag:target { outline: 2px solid var(--warn); outline-offset: 1px; opacity: 1; }
