@@ -1,28 +1,31 @@
 /**
  * Raw MiB sizing → a HashiCorp Nomad task `resources` block.
  *
- * With memory oversubscription enabled, `memory` is the reservation the
- * scheduler places tasks by and `memory_max` the hard limit — the same model
- * as Kubernetes requests/limits, so the same rounding applies: memory rounds
- * up to 32 MB, memory_max to 64 MB and never below 1.2× memory. Nomad's "MB"
- * is MiB, so values pass through unconverted.
+ * Nomad's own guidance matches the shared model: `memory` for the task's
+ * typical usage (the reservation the scheduler places tasks by) and, with
+ * memory oversubscription enabled, `memory_max` for unexpected spikes (the
+ * hard limit). Nomad's "MB" is MiB, so values pass through unconverted and
+ * round up to a whole MB. Nomad rejects `memory` below 10 MB and
+ * `memory_max` below `memory`, so each is raised to that floor if needed.
+ *
+ * The method, sources and assumptions are on /nomad/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { describeProfile, percent, pluralize } from './shared.js';
+import { percent, pluralize } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
   avg: 'memory is this plus the request margin.',
-  peak: 'memory_max is this plus the limit margin, and at least 1.2× memory.',
+  peak: 'memory_max is this plus the limit margin, and never below memory.',
   replicas: 'Only the total changes: it’s memory per allocation times this.'
 };
 
-export const MEMORY_STEP_MB = 32;
-export const MEMORY_MAX_STEP_MB = 64;
-export const MIN_MAX_TO_MEMORY_RATIO = 1.2;
+// Nomad takes whole MB (MiB).
+export const ROUNDING_STEP_MB = 1;
+// The smallest memory Nomad accepts for a task.
+export const MIN_MEMORY_MB = 10;
 
 const ENABLE_OVERSUBSCRIPTION = 'nomad operator scheduler set-config -memory-oversubscription=true';
-
 const NOTE =
   'memory_max only takes effect when the cluster has memory oversubscription enabled. Without it, Nomad ignores ' +
   'memory_max and enforces memory as the hard limit — in that case set memory to the memory_max value instead.';
@@ -31,21 +34,34 @@ export function generateHcl(memory, memoryMax) {
   return ['resources {', `  memory     = ${memory}`, `  memory_max = ${memoryMax}`, '}'].join('\n');
 }
 
-function explain(raw, memory, memoryMax) {
-  return (
-    `memory = ${Math.round(raw.averageMiB)}MiB average + ${percent(raw.requestMarginPct)} margin ` +
-    `(${describeProfile(raw)}) → rounded up to ${memory} MB; ` +
-    `memory_max = ${Math.round(raw.peakMiB)}MiB peak + ${percent(raw.limitMarginPct)} margin, ` +
-    `never below ${MIN_MAX_TO_MEMORY_RATIO}× memory → rounded up to ${memoryMax} MB.`
-  );
+const mib = (value) => `${Number(value.toFixed(1))} MiB`;
+
+function explainSteps(raw, memory, memoryMax, totalReserved, memoryRaised, maxRaised) {
+  return [
+    {
+      label: 'memory',
+      text: `${mib(raw.averageMiB)} average + ${percent(raw.requestMarginPct)} = ${mib(raw.requestMiB)}` +
+        (memoryRaised ? `, raised to Nomad’s ${MIN_MEMORY_MB} MB minimum → ${memory} MB` : ` → ${memory} MB`)
+    },
+    {
+      label: 'memory_max',
+      text: `${mib(raw.peakMiB)} peak + ${percent(raw.limitMarginPct)} = ${mib(raw.limitMiB)}` +
+        (maxRaised ? `, raised to memory → ${memoryMax} MB` : ` → ${memoryMax} MB`)
+    },
+    { label: 'Total reserved', text: `${memory} MB × ${pluralize(raw.replicas, 'allocation')} = ${totalReserved} MB` }
+  ];
 }
 
 /** @param {object} raw - result of calculateRawSizing() */
 export function format(raw) {
-  const memory = roundUpToMultiple(raw.requestMiB, MEMORY_STEP_MB);
-  const memoryMax = roundUpToMultiple(Math.max(raw.limitMiB, memory * MIN_MAX_TO_MEMORY_RATIO), MEMORY_MAX_STEP_MB);
+  const averageBased = roundUpToMultiple(raw.requestMiB, ROUNDING_STEP_MB);
+  const memory = Math.max(averageBased, MIN_MEMORY_MB);
+  const peakBased = roundUpToMultiple(raw.limitMiB, ROUNDING_STEP_MB);
+  // Nomad rejects memory_max below memory.
+  const memoryMax = Math.max(peakBased, memory);
   const totalReserved = memory * raw.replicas;
 
+  const steps = explainSteps(raw, memory, memoryMax, totalReserved, memory > averageBased, memoryMax > peakBased);
   return {
     platform: 'nomad',
     memory,
@@ -63,7 +79,8 @@ export function format(raw) {
     snippet: { label: 'Nomad job (task resources)', language: 'hcl', code: generateHcl(memory, memoryMax) },
     alternative: { label: 'Enable oversubscription once per cluster', code: ENABLE_OVERSUBSCRIPTION },
     warnings: [...raw.warnings],
-    explanation: explain(raw, memory, memoryMax),
+    explanationSteps: steps,
+    explanation: steps.map((step) => `${step.label}: ${step.text}.`).join(' '),
     note: NOTE
   };
 }

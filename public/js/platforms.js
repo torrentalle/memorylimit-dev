@@ -52,6 +52,7 @@ export const PLATFORM_DEFINITIONS = [
     category: 'containers',
     label: 'HashiCorp Nomad',
     path: '/nomad/',
+    guide: '/nomad/how-it-works/',
     tagline: 'Set a task’s memory and memory_max for Nomad’s memory oversubscription.'
   },
   {

@@ -176,9 +176,11 @@ test('HashiCorp Nomad: produces a resources block and the oversubscription comma
   await expect(field(page, 'Group count')).toBeVisible();
   await fillUsage(page, 450.4, 629.4);
 
-  await expect(page.locator('#snippet-code')).toHaveText('resources {\n  memory     = 608\n  memory_max = 832\n}');
+  await expect(page.locator('#snippet-code')).toHaveText('resources {\n  memory     = 586\n  memory_max = 819\n}');
   await expect(page.locator('#snippet-secondary-note')).toContainText('nomad operator scheduler set-config -memory-oversubscription=true');
-  await expect(page.locator('#stat-row')).toContainText('1824 MB');
+  await expect(page.locator('#stat-row')).toContainText('1758 MB');
+  await expect(page.locator('#explanation .explanation-steps li')).toHaveCount(3);
+  await expect(page.locator('.explanation-panel .guide-link a')).toHaveAttribute('href', '/nomad/how-it-works/');
 });
 
 test('Google Cloud Run: produces a gcloud command with the memory limit', async ({ page }) => {
