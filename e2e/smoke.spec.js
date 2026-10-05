@@ -176,12 +176,13 @@ test('VMware vSphere: produces vSphere Client steps and a govc command', async (
   await fillUsage(page, 390, 700);
 
   await expect(page.locator('#snippet-code')).toHaveText(
-    'govc vm.change -vm "<vm-name>" -mem.reservation 507 -mem.limit 910 -mem.shares normal'
+    'govc vm.change -vm "<vm-name>" -m 910 -mem.reservation 507 -mem.limit -1 -mem.shares normal'
   );
   await expect(page.locator('#snippet-secondary-note')).toHaveText(
-    'In vSphere Client: Edit Settings → Virtual Hardware → Memory → set Reservation to 507 MB, Limit to 910 MB, Shares to Normal.'
+    'In vSphere Client: Edit Settings → Virtual Hardware → Memory → set Memory to 910 MB, Reservation to 507 MB, Limit to Unlimited, Shares to Normal.'
   );
-  await expect(page.locator('#gauge-track')).toHaveAttribute('aria-label', /reservation 507 MB, limit 910 MB/);
+  await expect(page.locator('#gauge-track')).toHaveAttribute('aria-label', /reservation 507 MB, memory 910 MB/);
+  await expect(page.locator('#stat-row')).toContainText('Unlimited');
   await expect(page.locator('#stat-row')).toContainText('Normal');
   await expect(page.locator('.explanation-panel .guide-link a')).toHaveAttribute('href', '/vmware/how-it-works/');
 });
@@ -208,6 +209,17 @@ test('Google Cloud Run: produces a gcloud command with the memory limit', async 
   await expect(page.locator('#stat-row')).toContainText('1 vCPU');
   await expect(page.locator('#snippet-secondary-note')).toHaveText('service.yaml:\nspec.template.spec.containers[0].resources.limits:\n  memory: 819Mi');
   await expect(page.locator('.explanation-panel .guide-link a')).toHaveAttribute('href', '/cloud-run/how-it-works/');
+});
+
+test('Google Cloud Run: a planned concurrency rescales the peak with Google’s formula', async ({ page }) => {
+  await page.goto('/cloud-run/');
+  await fillUsage(page, 410, 630);
+  await field(page, 'Idle memory per instance').fill('120');
+  await field(page, 'Max concurrency planned').fill('160');
+  await expect(page.locator('#snippet-code')).toHaveText('gcloud run services update <service> --memory 1482Mi');
+  await expect(page.locator('#explanation .explanation-steps li').first()).toHaveText(
+    'Concurrency: 120 MiB idle + (630 − 120) ÷ 80 × 160 requests = 1140 MiB planned peak'
+  );
 });
 
 test('Azure Functions: produces a Flex Consumption instance size command', async ({ page }) => {

@@ -1,20 +1,20 @@
 /**
- * Raw MiB sizing → VMware vSphere memory reservation / limit / shares for
- * a VM, as vSphere Client steps and the equivalent govc command.
+ * Raw MiB sizing → a VMware vSphere VM's memory size, reservation and shares,
+ * following VMware's own advice, as vSphere Client steps and the equivalent
+ * govc command.
  *
- *   Reservation — average-based, rounded up to a whole MB: memory the host
- *                 guarantees the VM.
- *   Limit       — peak-based, rounded up to a whole MB: above it the host
- *                 balloons and swaps the VM instead of OOM-killing anything.
+ *   Memory      — peak-based, rounded up to a whole MB: the VM's configured
+ *                 memory. With no limit set, it is the VM's effective cap.
+ *   Reservation — average-based, rounded up to a whole MB: the memory the VM
+ *                 needs under normal load, guaranteed by the host.
+ *   Limit       — Unlimited (-1). VMware warns that a limit can waste idle
+ *                 memory; the configured memory caps the VM instead.
  *   Shares      — Normal (10 shares per MB); informational only.
  *
  * vSphere labels memory in "MB" and means MiB, so values pass through
- * unconverted. A VM whose reservation is above its limit can fail to power
- * on, so the limit is raised to the reservation when steady workloads would
- * invert them.
- *
- * VMware's own guidance differs: reserve only the minimum acceptable memory,
- * and avoid limits because they can waste idle memory. The note says so.
+ * unconverted. A reservation can't be larger than the configured memory, so
+ * the memory is raised to the reservation when steady workloads would invert
+ * them.
  *
  * The method, sources and assumptions are on /vmware/how-it-works/.
  */
@@ -24,82 +24,88 @@ import { percent } from './shared.js';
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
   avg: 'The reservation is this plus the request margin.',
-  peak: 'The limit is this plus the limit margin, raised to the reservation if it would fall below it.'
+  peak: 'The VM’s memory size is this plus the limit margin, raised to the reservation if it would fall below it.'
 };
 
 // vSphere takes whole MB (MiB).
 export const ROUNDING_STEP_MB = 1;
 export const DEFAULT_SHARES = 'Normal';
+// The API's value for "no limit": the configured memory caps the VM.
+export const UNLIMITED = -1;
 
 const NOTE =
-  'A limit below the VM’s configured memory makes the host balloon and swap it rather than fail fast, and VMware ' +
-  'warns that limits can waste idle memory: with no limit, the configured memory is the cap. VMware also suggests ' +
-  'reserving only the minimum acceptable memory and leaving at least 10% of the host unreserved. Shares stay at ' +
-  'Normal; change them only to favour one VM over others under contention.';
+  'As VMware advises, no limit is set: with none, the VM’s configured memory is its cap, and no idle host memory is ' +
+  'held back by a limit. Raising the memory of a running VM needs memory hot add; lowering it ' +
+  'needs the VM powered off. Leave at least 10% of the host unreserved, and keep shares at Normal unless one VM ' +
+  'should win under contention.';
 
-export function uiInstructions(reservation, limit) {
+export function uiInstructions(memory, reservation) {
   return (
-    `Edit Settings → Virtual Hardware → Memory → set Reservation to ${reservation} MB, ` +
-    `Limit to ${limit} MB, Shares to ${DEFAULT_SHARES}.`
+    `Edit Settings → Virtual Hardware → Memory → set Memory to ${memory} MB, Reservation to ${reservation} MB, ` +
+    `Limit to Unlimited, Shares to ${DEFAULT_SHARES}.`
   );
 }
 
-export function govcCommand(reservation, limit) {
+export function govcCommand(memory, reservation) {
   return (
-    `govc vm.change -vm "<vm-name>" -mem.reservation ${reservation} -mem.limit ${limit} ` +
+    `govc vm.change -vm "<vm-name>" -m ${memory} -mem.reservation ${reservation} -mem.limit ${UNLIMITED} ` +
     `-mem.shares ${DEFAULT_SHARES.toLowerCase()}`
   );
 }
 
 const mib = (value) => `${Number(value.toFixed(1))} MiB`;
 
-function explainSteps(raw, reservation, limit, limitRaised) {
+function explainSteps(raw, memory, reservation, memoryRaised) {
   return [
-    { label: 'Reservation', text: `${mib(raw.averageMiB)} average + ${percent(raw.requestMarginPct)} = ${mib(raw.requestMiB)} → ${reservation} MB` },
     {
-      label: 'Limit',
-      text: limitRaised
-        ? `${mib(raw.peakMiB)} peak + ${percent(raw.limitMarginPct)} = ${mib(raw.limitMiB)}, raised to the reservation → ${limit} MB`
-        : `${mib(raw.peakMiB)} peak + ${percent(raw.limitMarginPct)} = ${mib(raw.limitMiB)} → ${limit} MB`
-    }
+      label: 'Memory',
+      text: memoryRaised
+        ? `${mib(raw.peakMiB)} peak + ${percent(raw.limitMarginPct)} = ${mib(raw.limitMiB)}, raised to the reservation → ${memory} MB`
+        : `${mib(raw.peakMiB)} peak + ${percent(raw.limitMarginPct)} = ${mib(raw.limitMiB)} → ${memory} MB`
+    },
+    { label: 'Reservation', text: `${mib(raw.averageMiB)} average + ${percent(raw.requestMarginPct)} = ${mib(raw.requestMiB)} → ${reservation} MB` },
+    { label: 'Limit', text: 'Unlimited, so the configured memory is the cap' }
   ];
 }
 
 /** @param {object} raw - result of calculateRawSizing() */
 export function format(raw) {
   const reservation = roundUpToMultiple(raw.requestMiB, ROUNDING_STEP_MB);
-  const peakBasedLimit = roundUpToMultiple(raw.limitMiB, ROUNDING_STEP_MB);
-  const limit = Math.max(peakBasedLimit, reservation);
-  const limitRaised = limit > peakBasedLimit;
+  const peakBasedMemory = roundUpToMultiple(raw.limitMiB, ROUNDING_STEP_MB);
+  // A reservation can't be larger than the VM's configured memory.
+  const memory = Math.max(peakBasedMemory, reservation);
+  const memoryRaised = memory > peakBasedMemory;
 
   const warnings = [...raw.warnings];
-  if (limitRaised) {
+  if (memoryRaised) {
     warnings.push({
       level: 'warning',
-      code: 'limit-raised-to-reservation',
+      code: 'memory-raised-to-reservation',
       message:
-        `Peak is close to average, so the peak-based limit (${peakBasedLimit} MB) fell below the reservation. ` +
-        `The limit was raised to ${limit} MB because a VM whose reservation is above its limit can fail to power on.`
+        `Peak is close to average, so the peak-based memory (${peakBasedMemory} MB) fell below the reservation. ` +
+        `The memory was raised to ${memory} MB because a reservation can't be larger than the VM's configured memory.`
     });
   }
 
-  const steps = explainSteps(raw, reservation, limit, limitRaised);
+  const steps = explainSteps(raw, memory, reservation, memoryRaised);
   return {
     platform: 'vmware',
+    memory,
     reservation,
-    limit,
+    limit: UNLIMITED,
     shares: DEFAULT_SHARES,
     figures: [
-      { role: 'request', label: 'Reservation', text: `${reservation} MB`, detail: 'guaranteed, never reclaimed' },
-      { role: 'limit', label: 'Limit', text: `${limit} MB`, detail: 'ballooning / swapping above this' },
+      { role: 'limit', label: 'Memory', text: `${memory} MB`, detail: 'configured size — the cap, with no limit' },
+      { role: 'request', label: 'Reservation', text: `${reservation} MB`, detail: 'guaranteed by the host' },
+      { role: 'info', label: 'Limit', text: 'Unlimited', detail: 'as VMware advises' },
       { role: 'info', label: 'Shares', text: DEFAULT_SHARES, detail: '10 shares per MB — informational' }
     ],
     markers: [
       { role: 'request', name: 'reservation', value: reservation, text: `${reservation} MB` },
-      { role: 'limit', name: 'limit', value: limit, text: `${limit} MB` }
+      { role: 'limit', name: 'memory', value: memory, text: `${memory} MB` }
     ],
-    snippet: { label: 'govc command', language: 'shell', code: govcCommand(reservation, limit) },
-    alternative: { label: 'In vSphere Client', code: uiInstructions(reservation, limit) },
+    snippet: { label: 'govc command', language: 'shell', code: govcCommand(memory, reservation) },
+    alternative: { label: 'In vSphere Client', code: uiInstructions(memory, reservation) },
     warnings,
     explanationSteps: steps,
     explanation: steps.map((step) => `${step.label}: ${step.text}.`).join(' '),
