@@ -61,7 +61,8 @@ test('no page has inline scripts or inline event handlers (the CSP forbids them)
   const offenders = [];
   for (const dir of [...CONTENT_PAGES.map((p) => p.dir), 'k8s']) {
     const html = read(dir);
-    if (/<script(?![^>]*\bsrc=)[^>]*>/.test(html)) offenders.push(`${dir || '/'}: inline <script>`);
+    // JSON-LD is an inert data block, not executable script, so the CSP doesn't apply to it.
+    if (/<script(?![^>]*\bsrc=)(?![^>]*type="application\/ld\+json")[^>]*>/.test(html)) offenders.push(`${dir || '/'}: inline <script>`);
     if (/\son[a-z]+\s*=/.test(html)) offenders.push(`${dir || '/'}: inline event handler`);
     if (/href="javascript:/i.test(html)) offenders.push(`${dir || '/'}: javascript: URL`);
   }
