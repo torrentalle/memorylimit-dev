@@ -82,7 +82,7 @@ const BUCKET_TIPS = {
   eviction: 'Value ejection keeps every document’s metadata in RAM; full ejection only the working set’s, for a smaller quota but more disk reads.'
 };
 const FIELD_TIPS = {
-  dataNodes: 'The bucket total is divided by this to give the Data quota per node: more nodes, a smaller quota on each.',
+  dataNodes: 'Each bucket’s need is spread over this many nodes to give its quota per node, and the Data quota per node is those added up: more nodes, smaller quotas on each.',
   nodeRam: 'Doesn’t change any quota; the quotas are checked against it (at most 90% recommended, never above RAM − 1 GiB).',
   // The other services' quotas all work the same way, so one sentence in the section's hint covers them.
   // "Advanced: sizing defaults and thresholds":
@@ -321,14 +321,23 @@ function handlePaste() {
     if (services) parts.push(`${count(Object.values(services).filter(Boolean).length, 'other service')} with a quota`);
     setFeedback(`Cluster info read — ${parts.join(' · ') || 'no node or quota fields found'}.`, parts.length ? 'ok' : 'error');
   } else if (parsed.kind === 'prometheus' || parsed.kind === 'buckets') {
-    applyBuckets(parsed.buckets);
     const source = parsed.kind === 'prometheus' ? 'Prometheus' : 'Bucket API';
     const skipped = parsed.skipped.length ? ` · skipped ${parsed.skipped.map((s) => `${s.name} (${s.reason})`).join(', ')}` : '';
+    // Pasted buckets replace the list, so a paste with nothing to size (only ephemeral or Memcached buckets)
+    // would otherwise remove every bucket entered.
+    if (parsed.buckets.length === 0) {
+      setFeedback(`${source}: no bucket this calculator sizes${skipped}. Your buckets are unchanged.`, 'error');
+      return;
+    }
+    applyBuckets(parsed.buckets);
     const missing =
       parsed.kind === 'prometheus'
         ? ' Metrics don’t include document size, replicas or eviction — set those yourself.'
         : ' Set the average key and document size yourself.';
-    setFeedback(`${source}: ${count(parsed.buckets.length, 'bucket')} — ${parsed.buckets.map(describeBucket).join('; ')}.${missing}${skipped}`, 'ok');
+    // A bucket with only its quota in the paste keeps the default document count, so say it wasn't read.
+    const uncounted = parsed.buckets.filter((bucket) => bucket.documents === undefined).map((bucket) => bucket.name);
+    const noCount = uncounted.length ? ` No document count for ${uncounted.join(', ')} (no kv_curr_items) — enter it yourself.` : '';
+    setFeedback(`${source}: ${count(parsed.buckets.length, 'bucket')} — ${parsed.buckets.map(describeBucket).join('; ')}.${noCount}${missing}${skipped}`, 'ok');
   } else {
     setFeedback('Nothing recognised. Paste kv_curr_items from /metrics, or the JSON from /pools/default/buckets or /pools/default.', 'error');
     return;

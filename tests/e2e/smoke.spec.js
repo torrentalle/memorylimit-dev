@@ -346,6 +346,26 @@ test('Couchbase: a Prometheus paste sets the document count and keeps the sizes 
   await expect(field(page, 'Average document size')).toHaveValue('2048');
 });
 
+test('Couchbase: a paste with no bucket to size keeps the buckets, and a missing document count is called out', async ({ page }) => {
+  await page.goto('/couchbase/');
+  await field(page, 'Average document size').fill('2048');
+  await page.locator('#mode-paste-btn').click();
+  const paste = page.getByLabel('Prometheus metrics or Couchbase REST output');
+
+  // Only an ephemeral bucket: nothing replaces the bucket entered.
+  await paste.fill(JSON.stringify([{ name: 'cache', bucketType: 'ephemeral', replicaNumber: 1, quota: { ram: 104857600 }, basicStats: { itemCount: 10 } }]));
+  await expect(page.locator('#metrics-feedback')).toContainText('no bucket this calculator sizes · skipped cache (ephemeral bucket)');
+  await expect(page.locator('#metrics-feedback')).toHaveClass(/is-error/);
+  await expect(page.locator('[data-bucket-row]')).toHaveCount(1);
+  await expect(field(page, 'Average document size')).toHaveValue('2048');
+  await expect(page.locator('#snippet-code')).toContainText('--bucket default');
+
+  // Only the quota metric: the bucket is added, and the feedback says its document count wasn't read.
+  await paste.fill('kv_ep_cache_size{bucket="orders",instance="n1"} 1073741824');
+  await expect(page.locator('#metrics-feedback')).toContainText('No document count for orders (no kv_curr_items)');
+  await expect(field(page, 'Bucket name')).toHaveValue('orders');
+});
+
 test('Couchbase: each input that changes the result has a tooltip saying how', async ({ page }) => {
   await page.goto('/couchbase/');
   const button = page.getByRole('button', { name: 'How Replicas affects the result' });
@@ -360,7 +380,7 @@ test('Couchbase: each input that changes the result has a tooltip saying how', a
 
   await page.mouse.move(0, 0);
   await page.getByRole('button', { name: 'How Data nodes affects the result' }).focus();
-  await expect(page.getByRole('tooltip').filter({ hasText: 'divided by this' })).toBeVisible();
+  await expect(page.getByRole('tooltip').filter({ hasText: 'spread over this many nodes' })).toBeVisible();
 
   // 6 per bucket + Data nodes + RAM per node + the 6 advanced settings. The bucket name doesn't affect the
   // numbers, and the other services' quotas share one sentence in their section's hint.
@@ -421,6 +441,13 @@ test('advanced margins and defaults: closed by default, they change the result, 
   await field(page, 'Request basis').selectOption('vpa');
   await field(page, 'VPA margin').fill('20');
   await expect(page.locator('#snippet-code')).toContainText('memory: "756Mi"');
+  await expect(section.locator('summary')).toContainText('1 changed');
+
+  // Hiding the VPA settings takes their change out of the count, and showing them again puts it back.
+  await field(page, 'Request basis').selectOption('average');
+  await expect(section.locator('summary')).not.toContainText('changed');
+  await expect(page.getByRole('button', { name: 'Reset to defaults' })).toBeDisabled();
+  await field(page, 'Request basis').selectOption('vpa');
   await expect(section.locator('summary')).toContainText('1 changed');
 });
 
