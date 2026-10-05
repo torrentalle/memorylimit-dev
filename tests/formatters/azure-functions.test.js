@@ -19,9 +19,11 @@ test('is peak-based: a low average does not shrink the instance', () => {
   assert.equal(azureFunctions.format(raw({ averageMiB: 50, peakMiB: 629.4 })).memory, 2048);
 });
 
-test('picks the smallest Flex Consumption size that fits', () => {
-  assert.equal(azureFunctions.format(raw({ averageMiB: 10, peakMiB: 50, sensitivity: 'low' })).memory, 512);
-  assert.equal(azureFunctions.format(raw({ peakMiB: 300 })).memory, 512);
+test('picks the smallest Flex Consumption size that fits, but never below Microsoft’s 2,048 MB default', () => {
+  const small = azureFunctions.format(raw({ averageMiB: 10, peakMiB: 50, sensitivity: 'low' }));
+  assert.equal(small.memory, 2048);
+  assert.equal(small.explanationSteps[1].text, 'fits 512 MB, but Microsoft’s 2,048 MB default applies → 2048 MB, 1 core');
+  assert.equal(azureFunctions.format(raw({ peakMiB: 300 })).memory, 2048);
   assert.equal(azureFunctions.format(raw({ averageMiB: 1500, peakMiB: 2000, workloadType: 'worker' })).memory, 4096);
 });
 
@@ -68,14 +70,15 @@ test('explains the derivation in two short steps with the real numbers', () => {
 });
 
 test('shows the CPU cores that come with the Flex size', () => {
-  const result = azureFunctions.format(raw({ averageMiB: 10, peakMiB: 50, sensitivity: 'low' }));
-  assert.equal(result.cores, 0.25);
-  assert.ok(result.figures.some((f) => f.text === '0.25 cores'));
+  const result = azureFunctions.format(raw({ averageMiB: 1500, peakMiB: 2000, workloadType: 'worker' }));
+  assert.equal(result.cores, 2);
+  assert.ok(result.figures.some((f) => f.text === '2 cores'));
 });
 
-test('the Flex note mentions Microsoft’s 2,048 MB suggestion within three sentences', () => {
+test('the Flex note explains the 2,048 MB default and when 512 MB is enough, within three sentences', () => {
   const { note } = azureFunctions.format(raw());
-  assert.match(note, /2,048 MB for most apps/);
+  assert.match(note, /2,048 MB for most apps, so that is the floor/);
+  assert.match(note, /512 MB, with 0\.25 cores/);
   assert.ok(note.split(/(?<=\.) /).length <= 3);
 });
 

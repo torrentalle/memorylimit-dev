@@ -241,8 +241,9 @@ test('Redis: a used_memory paste produces maxmemory and host sizing', async ({ p
   await page.getByLabel('used_memory samples').fill('used_memory:419430400\nused_memory:524288000');
 
   await expect(page.locator('#prom-feedback')).toContainText('2 samples parsed');
-  await expect(page.locator('#snippet-code')).toHaveText('maxmemory 704mb\nmaxmemory-policy allkeys-lru');
-  await expect(page.locator('#stat-row')).toContainText('1408 MB');
+  await expect(page.locator('#snippet-code')).toHaveText('maxmemory 650mb\nmaxmemory-policy allkeys-lru');
+  await expect(page.locator('#stat-row')).toContainText('1300 MB');
+  await expect(page.locator('.explanation-panel .guide-link a')).toHaveAttribute('href', '/redis/how-it-works/');
 });
 
 test('Couchbase: default bucket produces quotas and couchbase-cli commands, and buckets can be added and removed', async ({ page }) => {

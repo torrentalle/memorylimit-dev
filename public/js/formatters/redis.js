@@ -2,16 +2,18 @@
  * Raw MiB sizing → Redis `maxmemory`, plus the memory to provision for the
  * Redis process around it.
  *
- * maxmemory caps the dataset: past it Redis evicts keys (allkeys-lru, the
- * usual cache policy). It's peak-based — the observed `used_memory` peak
- * plus margin, never below the average-based figure — rounded up to 64 MB.
- * The process needs more than maxmemory: fragmentation, client/replication
- * buffers, and copy-on-write pages while a forked child writes an RDB
- * snapshot or rewrites the AOF, which Redis's docs put at up to 2× under
- * heavy writes. Redis's "mb" unit is 1024×1024 bytes, i.e. MiB.
+ * maxmemory caps the dataset: past it Redis evicts keys (allkeys-lru, which
+ * Redis suggests as the default for a cache). It's peak-based — the observed
+ * `used_memory` peak plus margin, never below the average-based figure —
+ * rounded up to a whole mb. The process needs more than maxmemory: Redis
+ * documents up to 2× while it writes an RDB snapshot or rewrites the AOF
+ * under heavy writes, so the memory to provision is 2× maxmemory. Redis's
+ * "mb" unit is 1024×1024 bytes, i.e. MiB.
+ *
+ * The method, sources and assumptions are on /redis/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { describeProfile, percent } from './shared.js';
+import { percent } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
@@ -19,15 +21,16 @@ export const fieldTips = {
   peak: 'maxmemory is this plus the limit margin, and the memory to provision twice that.'
 };
 
-export const STEP_MB = 64;
+// Redis's mb is MiB; the output uses whole mb.
+export const ROUNDING_STEP_MB = 1;
 export const PERSISTENCE_OVERHEAD = 2;
 export const EVICTION_POLICY = 'allkeys-lru';
 
 const NOTE =
-  'The host or container needs room beyond maxmemory for fragmentation, client buffers and the fork Redis makes ' +
-  'for RDB snapshots and AOF rewrites; with persistence off (save "" and appendonly no), about 1.25× maxmemory is ' +
-  'usually enough. allkeys-lru suits a cache — if this Redis holds data you can’t lose, use noeviction so writes ' +
-  'fail at the limit instead of evicting keys.';
+  'Redis can use up to twice its memory while it writes an RDB snapshot or rewrites the AOF, and replicas trigger ' +
+  'those saves even with persistence off unless replication is diskless; without either, about 1.25× maxmemory ' +
+  'leaves room for fragmentation and buffers. allkeys-lru suits a cache — if this Redis holds data you can’t lose, ' +
+  'use noeviction so writes fail at the limit instead of evicting keys.';
 
 export function generateConfig(maxmemory) {
   return [`maxmemory ${maxmemory}mb`, `maxmemory-policy ${EVICTION_POLICY}`].join('\n');
@@ -40,19 +43,27 @@ export function runtimeCommand(maxmemory) {
   );
 }
 
-function explain(raw, maxmemory, provision) {
-  return (
-    `maxmemory = ${Math.round(raw.peakMiB)}MiB peak used_memory + ${percent(raw.limitMarginPct)} margin ` +
-    `(${describeProfile(raw)}) → rounded up to ${maxmemory}mb; ` +
-    `memory to provision = ${PERSISTENCE_OVERHEAD}× maxmemory for persistence forks → ${provision} MB.`
-  );
+const mib = (value) => `${Number(value.toFixed(1))} MiB`;
+
+function explainSteps(raw, maxmemory, provision, fromAverage) {
+  return [
+    {
+      label: 'maxmemory',
+      text: fromAverage
+        ? `${mib(raw.averageMiB)} average + ${percent(raw.requestMarginPct)} = ${mib(raw.requestMiB)}, above the peak-based ${mib(raw.limitMiB)} → ${maxmemory}mb`
+        : `${mib(raw.peakMiB)} peak used_memory + ${percent(raw.limitMarginPct)} = ${mib(raw.limitMiB)} → ${maxmemory}mb`
+    },
+    { label: 'Memory to provision', text: `${PERSISTENCE_OVERHEAD} × ${maxmemory} MB for persistence forks = ${provision} MB` }
+  ];
 }
 
 /** @param {object} raw - result of calculateRawSizing() */
 export function format(raw) {
-  const maxmemory = roundUpToMultiple(Math.max(raw.limitMiB, raw.requestMiB), STEP_MB);
+  const fromAverage = raw.requestMiB > raw.limitMiB;
+  const maxmemory = roundUpToMultiple(Math.max(raw.limitMiB, raw.requestMiB), ROUNDING_STEP_MB);
   const provision = maxmemory * PERSISTENCE_OVERHEAD;
 
+  const steps = explainSteps(raw, maxmemory, provision, fromAverage);
   return {
     platform: 'redis',
     maxmemory,
@@ -68,7 +79,8 @@ export function format(raw) {
     snippet: { label: 'redis.conf', language: 'text', code: generateConfig(maxmemory) },
     alternative: { label: 'Apply without a restart', code: runtimeCommand(maxmemory) },
     warnings: [...raw.warnings],
-    explanation: explain(raw, maxmemory, provision),
+    explanationSteps: steps,
+    explanation: steps.map((step) => `${step.label}: ${step.text}.`).join(' '),
     note: NOTE
   };
 }
