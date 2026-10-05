@@ -17,7 +17,7 @@
  * The method, sources and assumptions are on /cloud-run/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { marginTip, percent, PEAK_ONLY_FIELD_TIPS } from './shared.js';
+import { fixed, marginTip, PEAK_ONLY_FIELD_TIPS, percent } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
@@ -81,8 +81,6 @@ export function yamlSnippet(memoryMiB) {
     ...(cpu > DEFAULT_CPU ? [`            cpu: ${cpu}`] : [])
   ].join('\n');
 }
-
-const fixed = (value) => Number(value.toFixed(1));
 
 /**
  * Google's formula applied to the samples: returns the peak to size from (MiB) and, when concurrency changes,

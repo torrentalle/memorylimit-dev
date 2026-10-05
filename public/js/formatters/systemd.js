@@ -20,7 +20,7 @@
  * The method, sources and assumptions are on /systemd/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { marginTip, percent } from './shared.js';
+import { marginTip, mib, percent } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
@@ -53,8 +53,6 @@ export function generateDropIn(memoryHigh, memoryMax) {
 export function setPropertyCommand(memoryHigh, memoryMax) {
   return `systemctl set-property <service>.service MemoryHigh=${memoryHigh}M MemoryMax=${memoryMax}M`;
 }
-
-const mib = (value) => `${Number(value.toFixed(1))} MiB`;
 
 function explainSteps(raw, expectedUsage, memoryHigh, memoryMax, highRaised, ratio) {
   return [

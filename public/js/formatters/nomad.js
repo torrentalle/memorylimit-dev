@@ -11,7 +11,7 @@
  * The method, sources and assumptions are on /nomad/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { marginTip, percent, pluralize } from './shared.js';
+import { marginTip, mib, percent, pluralize } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
@@ -35,8 +35,6 @@ const NOTE =
 export function generateHcl(memory, memoryMax) {
   return ['resources {', `  memory     = ${memory}`, `  memory_max = ${memoryMax}`, '}'].join('\n');
 }
-
-const mib = (value) => `${Number(value.toFixed(1))} MiB`;
 
 function explainSteps(raw, memory, memoryMax, totalReserved, memoryRaised, maxRaised) {
   return [

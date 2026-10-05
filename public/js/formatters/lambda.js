@@ -13,7 +13,7 @@
  * The method, sources and assumptions are on /lambda/how-it-works/.
  */
 import { roundUpToMultiple } from '../calculator.js';
-import { marginTip, percent, PEAK_ONLY_FIELD_TIPS } from './shared.js';
+import { fixed, marginTip, PEAK_ONLY_FIELD_TIPS, percent } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
@@ -42,8 +42,6 @@ export function mibToMb(mib) {
 export function cliCommand(memorySize) {
   return `aws lambda update-function-configuration --function-name <function> --memory-size ${memorySize}`;
 }
-
-const fixed = (value) => Number(value.toFixed(1));
 
 function explainSteps(raw, limitMb, rounded, memorySize, vcpu) {
   const memory = `${fixed(raw.peakMiB)} MiB peak + ${percent(raw.limitMarginPct)} = ${fixed(raw.limitMiB)} MiB = ${fixed(limitMb)} MB`;

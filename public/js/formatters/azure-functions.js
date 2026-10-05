@@ -14,7 +14,7 @@
  *
  * The method, sources and assumptions are on /azure-functions/how-it-works/.
  */
-import { marginTip, percent, PEAK_ONLY_FIELD_TIPS } from './shared.js';
+import { fixed, marginTip, PEAK_ONLY_FIELD_TIPS, percent } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
@@ -72,8 +72,6 @@ export function bicepSnippet(memoryMB) {
 export function premiumCommand(sku) {
   return `az functionapp plan update --resource-group <resource-group> --name <plan> --sku ${sku}`;
 }
-
-const fixed = (value) => Number(value.toFixed(1));
 
 export function coresText(cores) {
   return `${cores} ${cores === 1 ? 'core' : 'cores'}`;

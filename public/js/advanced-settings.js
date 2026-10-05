@@ -17,9 +17,12 @@ function isChanged(control) {
   return control.tagName === 'SELECT' ? control.selectedIndex !== defaultIndex(control) : control.value !== control.defaultValue;
 }
 
+// What a field's data-unit converts its value by: a percentage arrives as a fraction, GiB as MiB.
+const UNIT_FACTORS = { percent: 1 / 100, gib: 1024 };
+
 /**
  * Reads a number input the section holds: null when empty or not a number, otherwise the value kept within the
- * input's min and max, and divided by 100 when it's a percentage (data-unit="percent").
+ * input's min and max, and converted by its data-unit (percent → fraction, gib → MiB).
  */
 export function readAdvancedNumber(input) {
   const value = parseFloat(input.value);
@@ -27,7 +30,7 @@ export function readAdvancedNumber(input) {
   const min = input.min === '' ? -Infinity : Number(input.min);
   const max = input.max === '' ? Infinity : Number(input.max);
   const kept = Math.min(max, Math.max(min, value));
-  return input.dataset.unit === 'percent' ? kept / 100 : kept;
+  return kept * (UNIT_FACTORS[input.dataset.unit] ?? 1);
 }
 
 /**
