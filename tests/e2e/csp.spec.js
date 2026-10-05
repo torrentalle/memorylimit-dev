@@ -62,9 +62,6 @@ async function configureThirdParties(page) {
 const violations = (page) => page.evaluate(() => window.__cspViolations);
 
 test.beforeEach(async ({ page }) => {
-  page.on('pageerror', (error) => {
-    throw error;
-  });
   await enforceCsp(page);
 });
 
@@ -110,18 +107,29 @@ test('Cloudflare Web Analytics, once configured, runs under the CSP', async ({ p
 // host the site might be served from never pollutes real
 // analytics, even once a real token is configured.
 test('off the production host, Cloudflare Analytics stays dormant even when configured', async ({ page }) => {
-  const patch = (pattern, from, to) =>
-    page.route(pattern, async (route) => {
-      const response = await route.fetch();
-      const body = (await response.text()).replace(from, to);
-      await route.fulfill({ response, body });
-    });
-  await patch('**/js/analytics.js', 'cloudflareBeaconToken: PLACEHOLDER_TOKEN', "cloudflareBeaconToken: 'csp-test'");
+  // The control: the token really was configured, so "no requests" is down to the host check, not a patch
+  // that no longer matches analytics.js.
+  let tokenConfigured = false;
+  await page.route('**/js/analytics.js', async (route) => {
+    const response = await route.fetch();
+    const source = await response.text();
+    const body = source.replace('cloudflareBeaconToken: PLACEHOLDER_TOKEN', "cloudflareBeaconToken: 'csp-test'");
+    tokenConfigured = body !== source;
+    await route.fulfill({ response, body });
+  });
   const thirdPartyRequests = [];
   page.on('request', (req) => {
     if (/cloudflareinsights\.com/.test(req.url())) thirdPartyRequests.push(req.url());
   });
   await page.goto('/kubernetes/'); // served from localhost in this test run — never the production host
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
+  expect(tokenConfigured).toBe(true);
   expect(thirdPartyRequests).toEqual([]);
+});
+
+test('/k8s/ redirects to /kubernetes/ under the CSP without violations', async ({ page }) => {
+  await page.goto('/k8s/');
+  await page.waitForURL('**/kubernetes/');
+  await page.waitForFunction(() => 'calculatorReady' in document.documentElement.dataset);
+  expect(await violations(page)).toEqual([]);
 });

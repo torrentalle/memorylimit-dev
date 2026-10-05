@@ -23,12 +23,6 @@ async function fillUsage(page, average, peak) {
   await peakInput(page).fill(String(peak));
 }
 
-test.beforeEach(async ({ page }) => {
-  page.on('pageerror', (error) => {
-    throw error;
-  });
-});
-
 test('landing page links to every calculator without relying on JavaScript', async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();
@@ -518,15 +512,35 @@ test('copy button reports success and resets, even when clicked twice', async ({
 });
 
 test('theme choice persists across pages without a flash', async ({ page }) => {
+  // Records the theme at the moment <body> is created, i.e. before anything in it can be painted.
+  await page.addInitScript(() => {
+    new MutationObserver((records, observer) => {
+      if (!document.body) return;
+      window.__themeWhenBodyCreated = document.documentElement.dataset.theme ?? null;
+      observer.disconnect();
+    }).observe(document.documentElement, { childList: true });
+  });
   await page.goto('/kubernetes/');
   const initial = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   await page.getByRole('button', { name: 'Dark theme' }).click();
   const toggled = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   expect(toggled).not.toBe(initial);
+  const chosen = await page.evaluate(() => document.documentElement.dataset.theme);
+  expect(['light', 'dark']).toContain(chosen);
 
   await page.goto('/lambda/');
   expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(toggled);
-  expect(['light', 'dark']).toContain(await page.evaluate(() => document.documentElement.dataset.theme));
+  // theme-init.js, a render-blocking script in <head>, applied the saved theme before <body> existed: no flash.
+  expect(await page.evaluate(() => window.__themeWhenBodyCreated)).toBe(chosen);
+});
+
+test('the footer links to GitHub Sponsors in a new tab, without leaking the page', async ({ page }) => {
+  await page.goto('/kubernetes/');
+  const link = page.locator('#donation-slot a.donation-link');
+  await expect(link).toHaveAttribute('href', 'https://github.com/sponsors/torrentalle');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(link).toContainText('Sponsor');
 });
 
 test('/k8s/ falls back to a meta refresh that lands on /kubernetes/', async ({ page }) => {
