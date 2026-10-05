@@ -102,11 +102,11 @@ const guide = readFileSync(join(import.meta.dirname, '..', '..', 'public', 'kube
 
 test('every number in the guide’s examples is what the formatter gives', () => {
   const tables = [...guide.matchAll(/<table[^>]*data-example="([^"]+)"[^>]*>([\s\S]*?)<\/table>/g)];
-  assert.equal(tables.length, 4);
+  assert.equal(tables.length, 5);
   for (const [, example, body] of tables) {
-    const [averageMiB, peakMiB, workloadType, sensitivity, environment, replicas, qos] = example.split(' ');
+    const [averageMiB, peakMiB, workloadType, sensitivity, environment, replicas, qos, requestBasis = 'average'] = example.split(' ');
     const input = { averageMiB: Number(averageMiB), peakMiB: Number(peakMiB), workloadType, sensitivity, environment, replicas: Number(replicas) };
-    const result = kubernetes.format(calculateRawSizing(input), { qos });
+    const result = kubernetes.format(calculateRawSizing(input), { qos, requestBasis });
     const expected = { request: `${result.request}Mi`, limit: `${result.limit}Mi`, totalRequest: `${result.totalRequest}Mi`, ratio: `${result.ratio}×` };
     const checks = [...body.matchAll(/data-check="(\w+)">([^<]+)</g)];
     assert.ok(checks.length >= 2, example);
@@ -130,4 +130,27 @@ test('Guaranteed explains the limit from whichever value sets it', () => {
   assert.equal(fromPeak.explanationSteps[0].text, '630 MiB peak + 30% = 819 MiB → 819Mi');
   const fromAverage = kubernetes.format(raw({ averageMiB: 1000, peakMiB: 1000, sensitivity: 'high' }), { qos: 'guaranteed' });
   assert.equal(fromAverage.explanationSteps[0].text, '1000 MiB average + 50% = 1500 MiB, above the peak-based 1400 MiB → 1500Mi');
+});
+
+test('VPA-style request: 15% above the peak, as the Vertical Pod Autoscaler’s defaults', () => {
+  const result = kubernetes.format(raw({ averageMiB: 410, peakMiB: 630, replicas: 3 }), { requestBasis: 'vpa' });
+  assert.equal(result.request, Math.ceil(630 * 1.15));
+  assert.equal(result.limit, 819);
+  assert.equal(result.explanationSteps[0].text, '630 MiB peak + VPA’s 15% = 724.5 MiB → 725Mi');
+  assert.match(result.note, /Vertical Pod Autoscaler’s defaults/);
+});
+
+test('VPA-style request ignores the sensitivity margins and keeps VPA’s 250 MiB minimum', () => {
+  const low = kubernetes.format(raw({ averageMiB: 100, peakMiB: 630, sensitivity: 'low' }), { requestBasis: 'vpa' });
+  const high = kubernetes.format(raw({ averageMiB: 100, peakMiB: 630, sensitivity: 'high' }), { requestBasis: 'vpa' });
+  assert.equal(low.request, high.request);
+  const small = kubernetes.format(raw({ averageMiB: 100, peakMiB: 150 }), { requestBasis: 'vpa' });
+  assert.equal(small.request, kubernetes.VPA_MIN_MIB);
+  assert.match(small.explanationSteps[0].text, /raised to VPA’s 250 MiB → 250Mi$/);
+});
+
+test('VPA-style request with Guaranteed QoS covers the larger of the VPA request and the limit', () => {
+  const result = kubernetes.format(raw({ averageMiB: 1000, peakMiB: 1000, sensitivity: 'low' }), { qos: 'guaranteed', requestBasis: 'vpa' });
+  assert.equal(result.limit, Math.ceil(1000 * 1.2));
+  assert.equal(result.request, result.limit);
 });

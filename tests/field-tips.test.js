@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { DEFAULT_FIELD_TIPS, fieldTipsFor } from '../public/js/field-tip-texts.js';
 import { PLATFORM_DEFINITIONS, entryUrl, formatterUrl } from '../public/js/platforms.js';
 
@@ -16,9 +18,12 @@ test('fieldTipsFor() applies a formatter’s overrides and drops the tips it set
 });
 
 for (const def of SHARED_PAGE_PLATFORMS) {
-  test(`${def.id}: field tooltips are single sentences for shared fields only`, async () => {
+  test(`${def.id}: field tooltips are single sentences, for shared fields or the page's own options`, async () => {
     const formatter = await loadFormatter(def);
-    for (const key of Object.keys(formatter.fieldTips ?? {})) assert.ok(key in DEFAULT_FIELD_TIPS, key);
+    // A platform's own fields carry data-formatter-option="name" on its page.
+    const page = readFileSync(join(import.meta.dirname, '..', 'public', def.path.slice(1), 'index.html'), 'utf8');
+    const ownOptions = [...page.matchAll(/data-formatter-option="([^"]+)"/g)].map((m) => m[1]);
+    for (const key of Object.keys(formatter.fieldTips ?? {})) assert.ok(key in DEFAULT_FIELD_TIPS || ownOptions.includes(key), key);
     for (const [key, text] of Object.entries(fieldTipsFor(formatter))) {
       assert.match(text, /^[^.]+(\.\d[^.]*)*\.$/, `${key}: one sentence ending in a full stop`);
     }
