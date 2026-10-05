@@ -89,8 +89,8 @@
     <h1 class="intro-title">Docker Compose Memory Limits Calculator</h1>
     <p class="intro-text">
       Docker Compose's <code>deploy.resources</code> block controls how much memory a service reserves and how
-      much it's allowed to use before it gets killed. This calculator sizes both values — plus the legacy
-      <code>mem_limit</code> equivalent for Compose setups without Swarm — from your service's observed
+      much it's allowed to use before it gets killed. This calculator sizes both values — plus the service-level
+      <code>mem_limit</code> / <code>mem_reservation</code> equivalent — from your service's observed
       average and peak memory usage.
     </p>
   </div>
@@ -118,7 +118,8 @@
         <details class="query-hint">
           <summary>Which query should I paste?</summary>
           <p>Use a <strong>range</strong> query over a representative period (a week is a good default) for one service. Every sample is averaged, and the highest becomes the peak — an instant query only gives one value per container.</p>
-          <pre>container_memory_working_set_bytes{name=~"myapp.*"}</pre>
+          <pre>container_memory_working_set_bytes{name=~"myproject-api-[0-9]+"}</pre>
+          <p>Compose names containers <code>&lt;project&gt;-&lt;service&gt;-&lt;number&gt;</code>, so this matches every replica of one service.</p>
           <p>Paste the Prometheus UI table output, the HTTP API JSON, a Grafana CSV export, or a list of values with units (<code>412 MiB</code>).</p>
         </details>
       </div>
@@ -217,7 +218,7 @@
           <div class="explanation" id="explanation">Enter usage data to see the calculation.</div>
           <p class="explanation-note is-hidden" id="explanation-note"></p>
           <!-- guide-link:start -->
-          <p class="guide-link"><a href="/sizing-model/" target="_blank" rel="noopener">How the request and limit margins work, and which values are assumptions<span class="visually-hidden"> (opens in a new tab)</span> ↗</a></p>
+          <p class="guide-link"><a href="/docker-compose/how-it-works/" target="_blank" rel="noopener">How every number is calculated, with sources and assumptions<span class="visually-hidden"> (opens in a new tab)</span> ↗</a></p>
           <!-- guide-link:end -->
           <!-- report-result:start -->
           <p class="report-link">Result looks wrong? <a href="https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml&amp;platform=Docker%20Compose&amp;title=%5BBug%5D%20Docker%20Compose%3A%20" target="_blank" rel="noopener">Report it</a></p>
