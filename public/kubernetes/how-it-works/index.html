@@ -137,18 +137,14 @@
     <section class="panel guide-section" id="burstable" aria-labelledby="burstable-heading">
       <h2 id="burstable-heading" class="panel__title"><span class="panel__index">02</span> Burstable: request and limit</h2>
       <pre class="yaml-block guide-formula"><code>request = average × (1 + request margin)                 rounded up to a whole Mi
-limit   = max(peak × (1 + limit margin), 1.2 × request)   rounded up to a whole Mi</code></pre>
+limit   = max(peak × (1 + limit margin), request)        rounded up to a whole Mi</code></pre>
       <p>
         The margins come from the sensitivity, workload type and environment you choose; the
         <a href="/sizing-model/">sizing model</a> explains them, and they are assumptions too.
       </p>
       <p>
-        A request can't be larger than its limit: the API rejects it. <a class="guide-tag guide-tag--doc" href="https://github.com/kubernetes/kubernetes/blob/master/pkg/apis/core/validation/validation.go" target="_blank" rel="noopener">Kubernetes docs</a>
-      </p>
-      <p>
-        The calculator goes further and keeps the limit at least 1.2× the request. When peak and average are close,
-        the peak-based limit can end up barely above the request; the floor leaves some room for growth before an OOM
-        kill. Kubernetes doesn't set or recommend this ratio, and we found no documentation that does. <a class="guide-tag guide-tag--assumption" href="#assumptions">Assumption</a>
+        A request can't be larger than its limit: the API rejects it. So when the peak is so close to the average that
+        the peak-based limit falls below the request, the limit is raised to the request. <a class="guide-tag guide-tag--doc" href="https://github.com/kubernetes/kubernetes/blob/master/pkg/apis/core/validation/validation.go" target="_blank" rel="noopener">Kubernetes docs</a>
       </p>
 
       <h3 class="guide-subheading">Worked example</h3>
@@ -157,17 +153,17 @@ limit   = max(peak × (1 + limit margin), 1.2 × request)   rounded up to a whol
         <table class="guide-table guide-table--numbers" data-example="410 630 generic medium production 3 burstable">
           <tbody>
             <tr><th scope="row">request</th><td>410 MiB × 1.30 = 533 MiB</td><td data-check="request">533Mi</td></tr>
-            <tr><th scope="row">limit</th><td>630 MiB × 1.30 = 819 MiB, above 1.2 × 533 = 639.6</td><td data-check="limit">819Mi</td></tr>
+            <tr><th scope="row">limit</th><td>630 MiB × 1.30 = 819 MiB, above the request</td><td data-check="limit">819Mi</td></tr>
             <tr class="guide-table__result"><th scope="row">total request</th><td>533Mi × 3 replicas</td><td data-check="totalRequest">1599Mi</td></tr>
           </tbody>
         </table>
       </div>
-      <p>When the peak is close to the average, the 1.2× floor decides the limit. Average 500 MiB and peak 520 MiB, same profile:</p>
+      <p>When the peak is close to the average, the request can decide the limit. Average 1000 MiB and peak 1010 MiB, high sensitivity:</p>
       <div class="guide-table-wrap">
-        <table class="guide-table guide-table--numbers" data-example="500 520 generic medium production 3 burstable">
+        <table class="guide-table guide-table--numbers" data-example="1000 1010 generic high production 3 burstable">
           <tbody>
-            <tr><th scope="row">request</th><td>500 MiB × 1.30 = 650 MiB</td><td data-check="request">650Mi</td></tr>
-            <tr><th scope="row">limit</th><td>520 MiB × 1.30 = 676 MiB, below 1.2 × 650 = 780</td><td data-check="limit">780Mi</td></tr>
+            <tr><th scope="row">request</th><td>1000 MiB × 1.50 = 1500 MiB</td><td data-check="request">1500Mi</td></tr>
+            <tr><th scope="row">limit</th><td>1010 MiB × 1.40 = 1414 MiB, below the request</td><td data-check="limit">1500Mi</td></tr>
           </tbody>
         </table>
       </div>
@@ -293,7 +289,6 @@ limit   = max(peak × (1 + limit margin), 1.2 × request)   rounded up to a whol
         <table class="guide-table">
           <thead><tr><th scope="col">Assumption</th><th scope="col">Kind</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
           <tbody>
-            <tr><td>The limit is at least 1.2× the request</td><td class="guide-kind">Our default</td><td>Leaves room for growth when peak and average are close</td><td>Kubernetes only needs limit ≥ request; lower the limit by hand if you want it tighter.</td></tr>
             <tr><td>Warn when the limit is over 4× the request</td><td class="guide-kind">Our default</td><td>A judgment call on when overcommit makes evictions likely</td><td>Only the warning moves; a LimitRange in your namespace may set a stricter cap.</td></tr>
             <tr><td>The request comes from the average, not from daily peaks like VPA</td><td class="guide-kind">Our default</td><td>Works with few samples</td><td>The Pod is more often above its request, so more likely to be evicted under node pressure.</td></tr>
             <tr><td>Burstable by default</td><td class="guide-kind">Our default</td><td>Packs more Pods per node</td><td>GKE recommends request = limit for memory; choose Guaranteed for workloads that mustn't be evicted.</td></tr>

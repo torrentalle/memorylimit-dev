@@ -65,7 +65,7 @@ platform's rules:
 
 | Platform | Output | Rules |
 | --- | --- | --- |
-| Kubernetes — Burstable | `requests` < `limits` | Request and limit round up to a whole Mi; the limit is never below 1.2× the rounded request (our assumption: Kubernetes only requires request ≤ limit). Warns when the limit exceeds 4× the request (node overcommit → evictions). The full method, sources and assumptions, including how this compares with the Vertical Pod Autoscaler, are on [/kubernetes/how-it-works/](public/kubernetes/how-it-works/index.html). |
+| Kubernetes — Burstable | `requests` < `limits` | Request and limit round up to a whole Mi; the limit is raised to the request if it would fall below it (Kubernetes rejects request > limit). Warns when the limit exceeds 4× the request (node overcommit → evictions). The full method, sources and assumptions, including how this compares with the Vertical Pod Autoscaler, are on [/kubernetes/how-it-works/](public/kubernetes/how-it-works/index.html). |
 | Kubernetes — Guaranteed | `requests` = `limits` | One value covering both the peak-based limit and the average-based request, rounded up to a whole Mi. The Pod is only Guaranteed if its CPU request equals its CPU limit too, which the note says. |
 | Docker Compose | `reservations` ≤ `limits` | Both round up to 10 M; the limit is raised to the reservation for steady workloads. Also shows the `mem_limit` equivalent. |
 | HashiCorp Nomad | `memory` < `memory_max` | `memory` rounds up to 32 MB, `memory_max` to 64 MB, never below 1.2× `memory`. `memory_max` needs memory oversubscription enabled on the cluster. |

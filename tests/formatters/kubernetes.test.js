@@ -25,9 +25,11 @@ test('request and limit round up to a whole Mi and no further', () => {
   assert.equal(result.limit, Math.ceil(input.limitMiB));
 });
 
-test('burstable limit is never below 1.2× the rounded request', () => {
-  const result = kubernetes.format(raw({ averageMiB: 1000, peakMiB: 1010, sensitivity: 'low' }));
-  assert.ok(result.limit >= result.request * kubernetes.MIN_LIMIT_TO_REQUEST_RATIO);
+test('burstable limit is the peak-based value, never below the request (the API rejects request > limit)', () => {
+  const input = raw({ averageMiB: 500, peakMiB: 520 });
+  assert.equal(kubernetes.format(input).limit, Math.ceil(input.limitMiB));
+  const steady = kubernetes.format(raw({ averageMiB: 1000, peakMiB: 1010, sensitivity: 'high' }));
+  assert.equal(steady.limit, steady.request);
 });
 
 test('guaranteed QoS sets request equal to limit and covers the peak', () => {
@@ -82,10 +84,9 @@ test('explains the derivation in three short steps with the real numbers', () =>
   assert.match(result.explanation, /^Request: 450\.4 MiB average/);
 });
 
-test('says when the limit was raised to 1.2× the request', () => {
-  const result = kubernetes.format(raw({ averageMiB: 1000, peakMiB: 1010, sensitivity: 'low' }));
-  assert.equal(result.limit, Math.ceil(result.request * 1.2));
-  assert.match(result.explanationSteps[1].text, /raised to 1\.2× the request → 1380Mi$/);
+test('says when the limit was raised to the request', () => {
+  const result = kubernetes.format(raw({ averageMiB: 1000, peakMiB: 1010, sensitivity: 'high' }));
+  assert.equal(result.explanationSteps[1].text, '1010 MiB peak + 40% = 1414 MiB, raised to the request → 1500Mi');
 });
 
 test('the note stays within three short sentences and names the eviction risk and VPA', () => {
@@ -119,8 +120,7 @@ test('the guide cites the Kubernetes docs, compares with VPA and lists its assum
     'https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/',
     'https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/flags.md'
   ]) assert.ok(guide.includes(url), url);
-  assert.ok((guide.match(/guide-tag--assumption/g) ?? []).length >= 4);
-  assert.ok(guide.includes(`${kubernetes.MIN_LIMIT_TO_REQUEST_RATIO}×`));
+  assert.ok((guide.match(/guide-tag--assumption/g) ?? []).length >= 3);
   assert.ok(guide.includes(`more than ${kubernetes.OVERCOMMIT_RATIO}× the request`));
   assert.ok(guide.includes('href="/sizing-model/"'));
 });

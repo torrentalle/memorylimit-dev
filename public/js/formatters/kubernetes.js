@@ -2,9 +2,9 @@
  * Raw MiB sizing → Kubernetes resources.requests/limits.memory.
  *
  * Burstable (default): request = the average-based value, limit = the
- * peak-based value, both rounded up to a whole Mi. The limit is floored at
- * 1.2× the rounded request (our assumption: Kubernetes only requires
- * request ≤ limit), so the manifest's actual ratio honors the floor.
+ * peak-based value, both rounded up to a whole Mi. Kubernetes rejects a
+ * request above its limit, so when steady workloads would invert them the
+ * limit is raised to the request.
  *
  * Guaranteed: request = limit, sized to cover both the peak-based limit
  * and the average-based request. Memory is incompressible, so this is the
@@ -18,12 +18,11 @@ import { percent, pluralize } from './shared.js';
 
 // How the shared fields move this result (see ../field-tip-texts.js for the defaults).
 export const fieldTips = {
-  peak: 'The limit is this plus the limit margin, and at least 1.2× the request (Burstable).'
+  peak: 'The limit is this plus the limit margin, and never below the request.'
 };
 
 // Kubernetes takes any quantity; the manifest uses whole Mi.
 export const ROUNDING_STEP_MIB = 1;
-export const MIN_LIMIT_TO_REQUEST_RATIO = 1.2;
 export const OVERCOMMIT_RATIO = 4;
 export const QOS_CLASSES = ['burstable', 'guaranteed'];
 
@@ -70,7 +69,7 @@ function explainSteps(raw, request, limit, totalRequest, qos, limitFloored) {
     {
       label: 'Limit',
       text: limitFloored
-        ? `${fromPeak} = ${mib(raw.limitMiB)}, raised to ${MIN_LIMIT_TO_REQUEST_RATIO}× the request → ${limit}Mi`
+        ? `${fromPeak} = ${mib(raw.limitMiB)}, raised to the request → ${limit}Mi`
         : `${fromPeak} = ${mib(raw.limitMiB)} → ${limit}Mi`
     },
     total
@@ -90,9 +89,9 @@ export function format(raw, { qos = 'burstable' } = {}) {
     request = limit;
   } else {
     request = roundUpToMultiple(raw.requestMiB, ROUNDING_STEP_MIB);
-    const floor = request * MIN_LIMIT_TO_REQUEST_RATIO;
-    limitFloored = floor > raw.limitMiB;
-    limit = roundUpToMultiple(Math.max(raw.limitMiB, floor), ROUNDING_STEP_MIB);
+    // The API rejects a request above the limit.
+    limitFloored = request > raw.limitMiB;
+    limit = roundUpToMultiple(Math.max(raw.limitMiB, request), ROUNDING_STEP_MIB);
   }
   const totalRequest = request * raw.replicas;
   const ratio = limit / request;
