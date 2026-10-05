@@ -119,6 +119,12 @@ const REST_FIELDS = {
 };
 
 // Kept short on purpose: the details, sources and assumptions are on the guide page (/couchbase/how-it-works/).
+// Couchbase refuses a Data quota below the bucket quotas already set, and a bucket quota above the Data quota,
+// so which command goes first depends on whether the quotas grow or shrink. The page doesn't know the current
+// quotas, so the snippet says so; a comment line keeps it runnable as pasted.
+const ORDER_COMMENT =
+  '# Raising quotas: run these in order. Lowering them: run the bucket-edit lines first, since Couchbase refuses a Data quota below the bucket quotas already set.';
+
 const NOTE =
   'Index, Search, Eventing and Analytics quotas are the values you entered. Full-ejection buckets count only the ' +
   'metadata of documents kept in RAM — an assumption. bucket-edit only changes buckets that already exist.';
@@ -129,6 +135,8 @@ function assertNonNegativeNumber(name, value) {
   }
 }
 
+const BUCKET_NAME = /^[A-Za-z0-9._%-]{1,100}$/;
+
 function assertPositiveInteger(name, value) {
   if (!Number.isInteger(value) || value < 1) throw new RangeError(`${name} must be a positive integer (got ${value})`);
 }
@@ -136,6 +144,11 @@ function assertPositiveInteger(name, value) {
 function sizeBucket(bucket, { metadataBytes, overhead, highWaterMark }, dataNodes) {
   const { name, documents, keyBytes, documentBytes, replicas, workingSetPct, eviction } = bucket;
   if (typeof name !== 'string' || !name.trim()) throw new RangeError('bucket name must not be empty');
+  // Couchbase's own rule for bucket names. It also keeps the name safe in the shell commands below, which
+  // quote nothing: a pasted name like x$(…) can't reach them.
+  if (!BUCKET_NAME.test(name.trim())) {
+    throw new RangeError(`bucket name "${name.trim()}" may only use letters, digits, ".", "_", "%" and "-", up to 100 characters`);
+  }
   assertNonNegativeNumber(`${name}: documents`, documents);
   assertNonNegativeNumber(`${name}: keyBytes`, keyBytes);
   assertNonNegativeNumber(`${name}: documentBytes`, documentBytes);
@@ -353,7 +366,7 @@ export function format(input) {
     snippet: {
       label: 'couchbase-cli',
       language: 'text',
-      code: [clusterCommand(quotas), ...buckets.map(bucketCommand)].join('\n')
+      code: [ORDER_COMMENT, clusterCommand(quotas), ...buckets.map(bucketCommand)].join('\n')
     },
     alternative: { label: 'Cluster quotas through the REST API', code: restCommand(quotas) },
     warnings: [...sizing.warnings],

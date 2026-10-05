@@ -372,7 +372,8 @@ quota     = need ÷ Data nodes                           per node</code></pre>
     <section class="panel guide-section" id="commands" aria-labelledby="commands-heading">
       <h2 id="commands-heading" class="panel__title"><span class="panel__index">09</span> The commands</h2>
       <p>For the worked example, the calculator writes:</p>
-      <pre class="yaml-block"><code>couchbase-cli setting-cluster -c localhost:8091 -u Administrator -p "$CB_PASSWORD" \
+      <pre class="yaml-block"><code># Raising quotas: run these in order. Lowering them: run the bucket-edit lines first, since Couchbase refuses a Data quota below the bucket quotas already set.
+couchbase-cli setting-cluster -c localhost:8091 -u Administrator -p "$CB_PASSWORD" \
   --cluster-ramsize 278 \
   --cluster-index-ramsize 512
 couchbase-cli bucket-edit -c localhost:8091 -u Administrator -p "$CB_PASSWORD" --bucket orders --bucket-ramsize 278</code></pre>
@@ -387,6 +388,16 @@ couchbase-cli bucket-edit -c localhost:8091 -u Administrator -p "$CB_PASSWORD" -
           <a href="https://docs.couchbase.com/server/current/cli/cbcli/couchbase-cli-bucket-edit.html" target="_blank" rel="noopener"><code>bucket-edit</code></a>
           sets each bucket's quota. It only changes buckets that already exist (create new ones with <code>bucket-create</code>), and
           it can't lower a quota below what the bucket currently uses.
+        </li>
+        <li>
+          The order matters. Couchbase refuses a Data quota below the bucket quotas already set, and a bucket quota above the
+          Data quota. When the quotas grow, set the Data quota first; when they shrink, edit the buckets first. The calculator
+          doesn't know the current quotas, so the first line of the snippet, a shell comment, says so.
+        </li>
+        <li>
+          Bucket names follow Couchbase's rule: letters, digits, <code>.</code>, <code>_</code>, <code>%</code> and
+          <code>-</code>, up to 100 characters. The calculator rejects any other name, so the commands, which don't quote the
+          name, are safe to run as written.
         </li>
         <li>
           The same service quotas through the REST API,
