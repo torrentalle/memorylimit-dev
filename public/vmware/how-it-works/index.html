@@ -158,7 +158,7 @@
     <section class="panel guide-section" id="steps" aria-labelledby="steps-heading">
       <h2 id="steps-heading" class="panel__title"><span class="panel__index">03</span> From usage to memory and reservation</h2>
       <pre class="yaml-block guide-formula"><code>reservation = average × (1 + request margin)                  rounded up to a whole MB
-memory      = max(peak × (1 + limit margin), reservation)     rounded up to a whole MB
+memory      = max(peak × (1 + limit margin), reservation)     rounded up to a multiple of 4 MB
 limit       = Unlimited (−1)
 shares      = Normal</code></pre>
       <p>
@@ -167,7 +167,9 @@ shares      = Normal</code></pre>
         so values pass through unconverted.
         <a class="guide-tag guide-tag--assumption" id="assumption-1-ref" href="#assumption-1">Assumption</a>
         A reservation can't exceed the configured memory, so when the peak is so close to the average that the peak-based
-        memory falls below the reservation, the memory is raised to it.
+        memory falls below the reservation, the memory is raised to it. The memory size must be a multiple of 4 MB, so it
+        is rounded up to the next one; the reservation takes any whole MB.
+        <a class="guide-tag guide-tag--doc" href="https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-virtual-machine-administration/configuring-virtual-machine-hardwarevsphere-vm-admin/virtual-memory-configurationvsphere-vm-admin/change-the-memory-configurationvsphere-vm-admin.html" target="_blank" rel="noopener">vSphere docs</a>
       </p>
 
       <h3 class="guide-subheading">Worked example</h3>
@@ -175,7 +177,7 @@ shares      = Normal</code></pre>
       <div class="guide-table-wrap">
         <table class="guide-table guide-table--numbers" data-example="390 700 generic medium production">
           <tbody>
-            <tr><th scope="row">memory</th><td>700 MiB × 1.30 = 910 MiB</td><td data-check="memory">910 MB</td></tr>
+            <tr><th scope="row">memory</th><td>700 MiB × 1.30 = 910 MiB, up to a multiple of 4</td><td data-check="memory">912 MB</td></tr>
             <tr><th scope="row">reservation</th><td>390 MiB × 1.30 = 507 MiB</td><td data-check="reservation">507 MB</td></tr>
             <tr><th scope="row">limit</th><td>none</td><td>Unlimited</td></tr>
           </tbody>
@@ -186,7 +188,7 @@ shares      = Normal</code></pre>
         <table class="guide-table guide-table--numbers" data-example="1000 1020 cache medium production">
           <tbody>
             <tr><th scope="row">reservation</th><td>1000 MiB × 1.35 = 1350 MiB</td><td data-check="reservation">1350 MB</td></tr>
-            <tr><th scope="row">memory</th><td>1020 MiB × 1.30 = 1326 MiB, below the reservation</td><td data-check="memory">1350 MB</td></tr>
+            <tr><th scope="row">memory</th><td>1020 MiB × 1.30 = 1326 MiB, below the reservation, so 1350 MiB up to a multiple of 4</td><td data-check="memory">1352 MB</td></tr>
           </tbody>
         </table>
       </div>
@@ -194,7 +196,7 @@ shares      = Normal</code></pre>
 
     <section class="panel guide-section" id="output" aria-labelledby="output-heading">
       <h2 id="output-heading" class="panel__title"><span class="panel__index">04</span> What the calculator writes</h2>
-      <pre class="yaml-block"><code>govc vm.change -vm "&lt;vm-name&gt;" -m 910 -mem.reservation 507 -mem.limit -1 -mem.shares normal</code></pre>
+      <pre class="yaml-block"><code>govc vm.change -vm "&lt;vm-name&gt;" -m 912 -mem.reservation 507 -mem.limit -1 -mem.shares normal</code></pre>
       <ul>
         <li>
           <code>govc vm.change</code> takes the memory size with <code>-m</code>, and the reservation and limit with

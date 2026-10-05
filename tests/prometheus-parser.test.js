@@ -149,6 +149,19 @@ test('parses a Grafana CSV export with an epoch-millisecond column', () => {
   assert.deepEqual(Parser.parseSamples(text), [419430400, 429916160]);
 });
 
+test('skips Grafana CSV rows whose value cell is empty instead of reading the timestamp as a sample', () => {
+  for (const [first, second, third] of [
+    ['1727260000000', '1727260060000', '1727260120000'],
+    ['1727260000', '1727260060', '1727260120']
+  ]) {
+    const text = `"Time","Value"\n${first},419430400\n${second},\n${third},436207616`;
+    const result = Parser.parseAndAnalyze(text);
+    assert.deepEqual(result.samples, [419430400, 436207616], first);
+    assert.equal(result.peakMiB, 416, first);
+    assert.equal(result.ignoredLines, 1, first);
+  }
+});
+
 test('keeps a genuine first column that is not increasing like a timestamp', () => {
   const text = '2147483648,3221225472\n2147000000,3221000000';
   assert.deepEqual(Parser.parseSamples(text), [2147483648, 3221225472, 2147000000, 3221000000]);

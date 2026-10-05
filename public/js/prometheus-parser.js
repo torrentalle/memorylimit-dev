@@ -45,6 +45,7 @@ const KEY_VALUE = new RegExp(`^[A-Za-z_][\\w.-]*\\s*[:=]\\s*(${NUMBER_SRC})\\s?(
 const isEpochMs = (v) => v >= 1e12 && v < 1e13;
 const isEpochSeconds = (v) => v >= 1e9 && v < 1e10;
 const isUsable = (v) => v !== null && Number.isFinite(v) && v >= 0;
+const isTimestampToken = (t) => t.unit === null && (isEpochMs(t.value) || isEpochSeconds(t.value));
 
 function isPodLevelSeries(labels) {
   if (!labels || !Object.hasOwn(labels, 'container')) return false;
@@ -259,6 +260,12 @@ export function extractSamples(text) {
   for (const { sample, row } of entries) {
     if (sample) {
       out.samples.push(sample);
+      continue;
+    }
+    // A row left with only its timestamp (an empty cell in a Grafana CSV, e.g. a gap in the series)
+    // has no sample: counting the timestamp would add a value in the terabytes.
+    if (dropFirst && row.hasTimeColumn && row.tokens.length === 1 && isTimestampToken(row.tokens[0])) {
+      out.ignoredLines++;
       continue;
     }
     const values = dropFirst && row.hasTimeColumn && row.tokens.length >= 2 ? row.tokens.slice(1) : row.tokens;

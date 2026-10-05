@@ -3,7 +3,10 @@ import { join } from 'node:path';
 
 export const HEADERS_PATH = join(import.meta.dirname, '..', '..', 'public', '_headers');
 
-/** Parses Cloudflare Pages' _headers format into { "/path": { Header: value } }. */
+/**
+ * Parses Cloudflare Pages' _headers format into { "/path": { Header: value } }.
+ * A detach line (`! Header`, which drops a header set by a broader rule) becomes { "! Header": true }.
+ */
 export function parseHeaders(text = readFileSync(HEADERS_PATH, 'utf8')) {
   const rules = {};
   let current = null;
@@ -11,6 +14,8 @@ export function parseHeaders(text = readFileSync(HEADERS_PATH, 'utf8')) {
     if (!line.trim() || line.trim().startsWith('#')) continue;
     if (!/^\s/.test(line)) {
       current = rules[line.trim()] ??= {};
+    } else if (current && line.trim().startsWith('! ')) {
+      current[`! ${line.trim().slice(2).trim()}`] = true;
     } else if (current) {
       const i = line.indexOf(':');
       current[line.slice(0, i).trim()] = line.slice(i + 1).trim();

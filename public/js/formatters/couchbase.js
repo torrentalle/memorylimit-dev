@@ -12,8 +12,10 @@
  *  - per service, per node (Data, Index, Search, Eventing, Analytics) — set
  *    with `couchbase-cli setting-cluster` / POST /pools/default and applied
  *    on every node that runs the service;
- *  - per bucket, cluster-wide — carved out of the Data service quota, so the
- *    bucket quotas must add up to at most Data quota × Data nodes.
+ *  - per bucket, also per node — carved out of the Data service quota on
+ *    every Data node, so the bucket quotas must add up to at most the Data
+ *    quota. Couchbase's ramQuota and `bucket-edit --bucket-ramsize` are MiB
+ *    per node.
  * The Query service has no quota; it uses whatever the OS has left.
  *
  * Bucket formula, from Couchbase's sizing guidance:
@@ -21,7 +23,8 @@
  *   metadata  = documents × (METADATA_BYTES + key length) × copies
  *   dataset   = documents × document size × copies
  *   resident  = dataset × working set %
- *   quota     = (metadata + resident) × (1 + OVERHEAD) / HIGH_WATER_MARK, rounded up to a whole MiB
+ *   need      = (metadata + resident) × (1 + OVERHEAD) / HIGH_WATER_MARK   (the whole cluster)
+ *   quota     = need / Data nodes, rounded up to a whole MiB              (per node)
  * With full eviction metadata isn't pinned in RAM, so only the working-set
  * share of it counts.
  *
@@ -41,7 +44,7 @@ export const EVICTION_POLICIES = ['value', 'full'];
 // The sizing guide's overhead_percentage: memory the bucket uses beyond the metadata and working set it counts.
 export const OVERHEAD = 0.25;
 
-/** Documented minimums, in MiB, for the cluster-wide service quotas and for a bucket. */
+/** Documented minimums, in MiB per node, for the service quotas and for a bucket. */
 export const MIN_QUOTA_MIB = { data: 256, index: 256, search: 256, eventing: 256, analytics: 1024 };
 export const MIN_BUCKET_MIB = 100;
 
@@ -130,7 +133,7 @@ function assertPositiveInteger(name, value) {
   if (!Number.isInteger(value) || value < 1) throw new RangeError(`${name} must be a positive integer (got ${value})`);
 }
 
-function sizeBucket(bucket, { metadataBytes, overhead, highWaterMark }) {
+function sizeBucket(bucket, { metadataBytes, overhead, highWaterMark }, dataNodes) {
   const { name, documents, keyBytes, documentBytes, replicas, workingSetPct, eviction } = bucket;
   if (typeof name !== 'string' || !name.trim()) throw new RangeError('bucket name must not be empty');
   assertNonNegativeNumber(`${name}: documents`, documents);
@@ -152,7 +155,9 @@ function sizeBucket(bucket, { metadataBytes, overhead, highWaterMark }) {
   const datasetMiB = (documents * documentBytes * copies) / MIB;
   const residentMetadataMiB = eviction === 'value' ? metadataMiB : metadataMiB * workingSet;
   const residentDataMiB = datasetMiB * workingSet;
+  // What the bucket needs across the cluster; vBuckets spread it evenly over the Data nodes.
   const rawQuotaMiB = ((residentMetadataMiB + residentDataMiB) * (1 + overhead)) / highWaterMark;
+  const rawNodeQuotaMiB = rawQuotaMiB / dataNodes;
 
   return {
     name: name.trim(),
@@ -164,7 +169,8 @@ function sizeBucket(bucket, { metadataBytes, overhead, highWaterMark }) {
     residentDataMiB,
     workingSetPct,
     rawQuotaMiB,
-    quotaMiB: Math.max(MIN_BUCKET_MIB, roundUpToMultiple(rawQuotaMiB, STEP_MIB))
+    rawNodeQuotaMiB,
+    quotaMiB: Math.max(MIN_BUCKET_MIB, roundUpToMultiple(rawNodeQuotaMiB, STEP_MIB))
   };
 }
 
@@ -188,10 +194,11 @@ export function calculateSizing({ buckets, dataNodes, nodeRamMiB, services = {},
   const names = buckets.map((bucket) => String(bucket.name).trim());
   if (new Set(names).size !== names.length) throw new RangeError('bucket names must be unique');
 
-  const sized = buckets.map((bucket) => sizeBucket(bucket, settings));
+  const sized = buckets.map((bucket) => sizeBucket(bucket, settings, dataNodes));
+  // Bucket quotas are per node, so the Data quota on each node has to hold all of them.
   const bucketsTotalMiB = sized.reduce((sum, bucket) => sum + bucket.quotaMiB, 0);
 
-  const quotas = { data: Math.max(MIN_QUOTA_MIB.data, roundUpToMultiple(bucketsTotalMiB / dataNodes, STEP_MIB)) };
+  const quotas = { data: Math.max(MIN_QUOTA_MIB.data, bucketsTotalMiB) };
   const warnings = [];
   for (const service of ['index', 'search', 'eventing', 'analytics']) {
     const value = services[service] ?? 0;
@@ -231,19 +238,20 @@ export function calculateSizing({ buckets, dataNodes, nodeRamMiB, services = {},
   }
 
   for (const bucket of sized) {
-    if (bucket.rawQuotaMiB < MIN_BUCKET_MIB) {
+    if (bucket.rawNodeQuotaMiB < MIN_BUCKET_MIB) {
       warnings.push({
         level: 'warning',
         code: 'bucket-at-minimum',
-        message: `Bucket "${bucket.name}" needs less than Couchbase's ${MIN_BUCKET_MIB} MiB minimum, so it was raised to that.`
+        message: `Bucket "${bucket.name}" needs less than Couchbase's ${MIN_BUCKET_MIB} MiB per node minimum, so it was raised to that.`
       });
     }
-    if (bucket.quotaMiB < bucket.datasetMiB * minDatasetShare) {
+    // The dataset is cluster-wide, so compare it with the bucket's quota on all Data nodes together.
+    if (bucket.quotaMiB * dataNodes < bucket.datasetMiB * minDatasetShare) {
       warnings.push({
         level: 'warning',
         code: 'bucket-below-dataset-share',
         message:
-          `Bucket "${bucket.name}" gets ${bucket.quotaMiB} MiB for ${Math.round(bucket.datasetMiB)} MiB of data; Couchbase ` +
+          `Bucket "${bucket.name}" gets ${bucket.quotaMiB * dataNodes} MiB across the Data nodes for ${Math.round(bucket.datasetMiB)} MiB of data; Couchbase ` +
           `recommends a quota of at least ${Math.round(minDatasetShare * 100)}% of the dataset for ${ENGINE_LABELS[settings.storageEngine]}` +
           (settings.storageEngine === 'couchstore' ? ' (1% for Magma).' : '.')
       });
@@ -296,9 +304,17 @@ function explainSteps(sizing) {
   return [
     {
       label: buckets.length === 1 ? 'Bucket' : 'Each bucket',
-      text: `(metadata + working set in RAM) × ${factor(1 + settings.overhead)} ÷ ${factor(settings.highWaterMark)} → ${buckets.map((b) => `${b.name} ${b.quotaMiB} MiB`).join(', ')}`
+      text:
+        `(metadata + working set in RAM) × ${factor(1 + settings.overhead)} ÷ ${factor(settings.highWaterMark)} ÷ ` +
+        `${pluralize(dataNodes, 'Data node')} → ${buckets.map((b) => `${b.name} ${b.quotaMiB} MiB`).join(', ')} per node`
     },
-    { label: 'Data quota', text: `${bucketsTotalMiB} MiB ÷ ${pluralize(dataNodes, 'Data node')} = ${quotas.data} MiB per node` },
+    {
+      label: 'Data quota',
+      text:
+        (buckets.length === 1 ? `the bucket's ${bucketsTotalMiB} MiB` : `the buckets' ${bucketsTotalMiB} MiB together`) +
+        (quotas.data > bucketsTotalMiB ? `, raised to Couchbase's ${MIN_QUOTA_MIB.data} MiB minimum` : '') +
+        ` → ${quotas.data} MiB per node`
+    },
     { label: 'All quotas', text: `${quotaTotalMiB} MiB per node, ${Math.round(quotaShare * 100)}% of the node's RAM` }
   ];
 }
@@ -318,7 +334,7 @@ export function format(input) {
     role: 'request',
     label: `Bucket ${bucket.name}`,
     text: `${bucket.quotaMiB} MiB`,
-    detail: `${bucket.replicas} ${bucket.replicas === 1 ? 'replica' : 'replicas'}, cluster-wide`
+    detail: `${bucket.replicas} ${bucket.replicas === 1 ? 'replica' : 'replicas'}, per Data node`
   }));
 
   return {

@@ -17,7 +17,8 @@ const EXPOSITION = [
 const BUCKET_API = [
   { name: 'travel', bucketType: 'membase', replicaNumber: 2, evictionPolicy: 'fullEviction', quota: { ram: 209715200, rawRAM: 69905067 }, basicStats: { itemCount: 63321, memUsed: 137835864 } },
   { name: 'cache', bucketType: 'ephemeral', replicaNumber: 1, evictionPolicy: 'noEviction', quota: { ram: 104857600 }, basicStats: { itemCount: 10 } },
-  { name: 'users', bucketType: 'membase', replicaNumber: 1, evictionPolicy: 'valueOnly', quota: { ram: 536870912 }, basicStats: { itemCount: 1000000 } }
+  { name: 'users', bucketType: 'membase', replicaNumber: 1, evictionPolicy: 'valueOnly', quota: { ram: 536870912, rawRAM: 268435456 }, basicStats: { itemCount: 1000000 } },
+  { name: 'logs', bucketType: 'membase', replicaNumber: 0, evictionPolicy: 'valueOnly', quota: { ram: 314572800 }, basicStats: { itemCount: 5 } }
 ];
 
 const CLUSTER_API = {
@@ -33,11 +34,12 @@ const CLUSTER_API = {
   ]
 };
 
-test('Prometheus exposition: sums each bucket’s items across nodes and reads the current quota', () => {
+test('Prometheus exposition: sums each bucket’s items across nodes and reads the current quota per node', () => {
   const result = parseCouchbaseInput(EXPOSITION);
   assert.equal(result.kind, 'prometheus');
   assert.deepEqual(result.buckets, [
-    { name: 'orders', documents: 1200000, currentQuotaMiB: 2048 },
+    // kv_ep_cache_size is 1 GiB on each of the two nodes: a 1024 MiB quota per node, not 2048.
+    { name: 'orders', documents: 1200000, currentQuotaMiB: 1024 },
     { name: 'sessions', documents: 5000 }
   ]);
 });
@@ -60,12 +62,14 @@ test('Prometheus HTTP API JSON, instant and range results', () => {
   assert.equal(parseCouchbaseInput(JSON.stringify(range)).buckets[0].documents, 30);
 });
 
-test('bucket REST JSON: items, replicas, eviction and quota; ephemeral buckets are skipped', () => {
+test('bucket REST JSON: items, replicas, eviction and quota per node; ephemeral buckets are skipped', () => {
   const result = parseCouchbaseInput(JSON.stringify(BUCKET_API));
   assert.equal(result.kind, 'buckets');
   assert.deepEqual(result.buckets, [
-    { name: 'travel', documents: 63321, replicas: 2, eviction: 'full', currentQuotaMiB: 200 },
-    { name: 'users', documents: 1000000, replicas: 1, eviction: 'value', currentQuotaMiB: 512 }
+    // quota.rawRAM is per node; quota.ram (the cluster total) is never used, so logs, without rawRAM, has no quota.
+    { name: 'travel', documents: 63321, replicas: 2, eviction: 'full', currentQuotaMiB: 67 },
+    { name: 'users', documents: 1000000, replicas: 1, eviction: 'value', currentQuotaMiB: 256 },
+    { name: 'logs', documents: 5, replicas: 0, eviction: 'value' }
   ]);
   assert.deepEqual(result.skipped, [{ name: 'cache', reason: 'ephemeral bucket' }]);
 });

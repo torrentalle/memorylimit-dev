@@ -40,6 +40,10 @@ so entries are grouped under `Unreleased` until a release is tagged.
 - Docker Compose service-level alternative (#17).
 - Kubernetes: Guaranteed QoS needs CPU as well as memory (#16).
 - systemd advice updated for cgroup v1 (#23).
+- Couchbase bucket quotas are per node, as `--bucket-ramsize` expects: the generated `bucket-edit` command passed the cluster-wide total, which Couchbase refuses on more than one Data node.
+- Grafana CSV rows with an empty value cell are skipped instead of reading their timestamp as a sample.
+- vSphere memory size rounds up to a multiple of 4 MB, the only sizes vSphere accepts.
+- The favicon keeps its light and dark colours under the stricter CSP: `/favicon.svg` drops the page policy, whose `style-src 'self'` blocked its inline `<style>`.
 - Phone layout issues on the Azure Functions page (#22).
 
 ### Removed
