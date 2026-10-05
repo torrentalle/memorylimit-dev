@@ -44,6 +44,8 @@ so entries are grouped under `Unreleased` until a release is tagged.
 - Grafana CSV rows with an empty value cell are skipped instead of reading their timestamp as a sample.
 - vSphere memory size rounds up to a multiple of 4 MB, the only sizes vSphere accepts.
 - The favicon keeps its light and dark colours under the stricter CSP: `/favicon.svg` drops the page policy, whose `style-src 'self'` blocked its inline `<style>`.
+- Couchbase: a pasted bucket list with nothing to size (only ephemeral or Memcached buckets) no longer removes the buckets entered, and a Prometheus paste without `kv_curr_items` for a bucket says its document count wasn't read.
+- The count of changed advanced settings updates when the Kubernetes VPA settings are shown or hidden.
 - Phone layout issues on the Azure Functions page (#22).
 
 ### Removed

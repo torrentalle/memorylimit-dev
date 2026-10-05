@@ -292,8 +292,13 @@ export function initCalculator({ platformId, formatter }) {
     return { field, control: document.querySelector(`[data-formatter-option="${option}"]`), value };
   });
 
+  // Set once the advanced section is wired up; its changed-count leaves out hidden fields, so it's refreshed
+  // whenever a field is shown or hidden.
+  let advancedSettings = null;
+
   function refreshConditionalFields() {
     for (const { field, control, value } of conditionalFields) field.hidden = control?.value !== value;
+    advancedSettings?.refresh();
   }
 
   // An empty margin field uses the profile's margin, so its placeholder shows that margin.
@@ -379,7 +384,7 @@ export function initCalculator({ platformId, formatter }) {
   });
 
   attachFieldTips();
-  initAdvancedSettings(el.advanced, recalculate);
+  advancedSettings = initAdvancedSettings(el.advanced, recalculate);
   setMode('manual');
   recalculate();
 }
