@@ -159,7 +159,11 @@ MemoryMax      = 1.2 × MemoryHigh                                    rounded up
         </li>
         <li>
           <code>MemoryMax</code> is 20% above <code>MemoryHigh</code>. The gap is warning time: a leak slows the service down
-          before the kernel kills it. systemd doesn't give a ratio; 1.2× is ours.
+          before the kernel kills it. Neither systemd nor the cgroup v2 memory controller's own documentation gives a ratio:
+          both treat the high limit as the main control and the max as a final safety net, which by default isn't set at all.
+          <a class="guide-tag guide-tag--doc" href="https://facebookmicrosites.github.io/cgroup2/docs/memory-controller.html" target="_blank" rel="noopener">cgroup2 docs</a>
+          1.2× is ours; guides outside the official documentation commonly put the high limit 20–30% below the max
+          (1.25–1.43×), so ours is on the tight side.
           <a class="guide-tag guide-tag--assumption" id="assumption-1-ref" href="#assumption-1">Assumption</a>
         </li>
       </ul>
@@ -262,7 +266,7 @@ MemoryMax=609M</code></pre>
         <table class="guide-table">
           <thead><tr><th scope="col">Assumption</th><th scope="col">Kind</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
           <tbody>
-            <tr id="assumption-1"><td>MemoryMax is 1.2× MemoryHigh <a class="guide-backref" href="#assumption-1-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>Leaves warning time between throttling and an OOM kill</td><td>A smaller gap kills sooner after throttling starts; a larger one lets a leak take more of the host first.</td></tr>
+            <tr id="assumption-1"><td>MemoryMax is 1.2× MemoryHigh <a class="guide-backref" href="#assumption-1-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>Leaves warning time between throttling and an OOM kill; no official source gives a ratio</td><td>A smaller gap kills sooner after throttling starts; a larger one lets a leak take more of the host first.</td></tr>
             <tr id="assumption-2"><td>MemoryHigh never goes below expected usage <a class="guide-backref" href="#assumption-2-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>A steady service shouldn't be throttled at its normal level</td><td>Only matters when peak and average are close; MemoryHigh is then a little higher.</td></tr>
             <tr id="assumption-3"><td><code>MemoryCurrent</code> is the unit's <code>memory.current</code> <a class="guide-backref" href="#assumption-3-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our reading</td><td>systemd lists the property without describing it</td><td>If it counted less than <code>memory.current</code>, the values would be too small.</td></tr>
           </tbody>
@@ -277,6 +281,7 @@ MemoryMax=609M</code></pre>
         <li><a href="https://github.com/systemd/systemd/blob/main/NEWS" target="_blank" rel="noopener">systemd NEWS</a> — cgroup v1 removed in systemd 258.</li>
         <li><a href="https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html" target="_blank" rel="noopener">systemd.unit</a> — drop-in directories.</li>
         <li><a href="https://www.freedesktop.org/software/systemd/man/latest/systemctl.html" target="_blank" rel="noopener">systemctl</a> — <code>set-property</code> and <code>show -P</code>.</li>
+        <li><a href="https://facebookmicrosites.github.io/cgroup2/docs/memory-controller.html" target="_blank" rel="noopener">cgroup2 memory controller</a> (Meta, the controller's authors) — memory.high as the main control, memory.max as the safety net.</li>
         <li><a href="https://docs.kernel.org/admin-guide/cgroup-v2.html" target="_blank" rel="noopener">Control Group v2</a> (kernel) — <code>memory.current</code>, <code>memory.high</code>, <code>memory.max</code>.</li>
         <li><a href="https://github.com/google/cadvisor/blob/master/lib/metrics/prometheus.go" target="_blank" rel="noopener">cAdvisor source</a> — the <code>id</code> label.</li>
       </ul>
