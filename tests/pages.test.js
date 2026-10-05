@@ -221,8 +221,8 @@ for (const page of GUIDE_PAGES) {
   });
 }
 
-test('every calculator on the shared page has its advanced section, closed by default, with a reset button', () => {
-  for (const page of CALCULATOR_PAGES.filter((def) => entryUrl(def) === '/js/calculator-page.js')) {
+test('every calculator has its advanced section, closed by default, with a reset button', () => {
+  for (const page of CALCULATOR_PAGES) {
     const html = read(page.dir);
     const section = html.match(/<details class="advanced" id="advanced-settings"[^>]*>([\s\S]*?)<\/details>/);
     assert.ok(section, page.path);

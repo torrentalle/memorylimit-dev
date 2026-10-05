@@ -299,6 +299,19 @@ test('Couchbase: quotas above the node RAM raise an error warning', async ({ pag
   await expect(page.locator('#warnings .is-error')).toContainText('will refuse them');
 });
 
+test('Couchbase: the sizing defaults under Advanced change the bucket quota, and reset puts them back', async ({ page }) => {
+  await page.goto('/couchbase/');
+  await expect(page.locator('#snippet-code')).toContainText('--bucket-ramsize 833');
+  await page.locator('#advanced-settings summary').click();
+  // (175.5 + 390.6) MiB × 1.10 ÷ 0.90 = 691.9 → 692 MiB
+  await field(page, 'Overhead').fill('10');
+  await field(page, 'High-water mark').fill('90');
+  await expect(page.locator('#snippet-code')).toContainText('--bucket-ramsize 692');
+  await expect(page.locator('#advanced-settings summary')).toContainText('2 changed');
+  await page.getByRole('button', { name: 'Reset to defaults' }).click();
+  await expect(page.locator('#snippet-code')).toContainText('--bucket-ramsize 833');
+});
+
 test('Couchbase: pasted bucket API and cluster API output fill in the form', async ({ page }) => {
   await page.goto('/couchbase/');
   await expect(page.locator('#mode-paste')).toBeHidden();
@@ -349,9 +362,9 @@ test('Couchbase: each input that changes the result has a tooltip saying how', a
   await page.getByRole('button', { name: 'How Data nodes affects the result' }).focus();
   await expect(page.getByRole('tooltip').filter({ hasText: 'divided by this' })).toBeVisible();
 
-  // 6 per bucket + Data nodes + RAM per node. The bucket name doesn't affect the numbers, and the other
-  // services' quotas share one sentence in their section's hint.
-  await expect(page.locator('.hint-tip__btn')).toHaveCount(8);
+  // 6 per bucket + Data nodes + RAM per node + the 6 advanced settings. The bucket name doesn't affect the
+  // numbers, and the other services' quotas share one sentence in their section's hint.
+  await expect(page.locator('.hint-tip__btn')).toHaveCount(14);
   await expect(page.getByText("These aren't calculated: each is added as entered")).toBeVisible();
   await expect(field(page, 'Bucket name')).not.toHaveAttribute('aria-describedby', /.+/);
 });

@@ -24,6 +24,10 @@
  *   quota     = (metadata + resident) × (1 + OVERHEAD) / HIGH_WATER_MARK, rounded up to a whole MiB
  * With full eviction metadata isn't pinned in RAM, so only the working-set
  * share of it counts.
+ *
+ * The constants in that formula, and the thresholds of the warnings, are
+ * defaults (DEFAULT_SETTINGS) a caller can replace with `settings`: the page
+ * offers them under "Advanced: sizing defaults and thresholds".
  */
 import { roundUpToMultiple } from '../calculator.js';
 import { pluralize } from './shared.js';
@@ -55,13 +59,43 @@ export const FULL_EJECTION_LOW_WORKING_SET_PCT = 20;
 
 /** Couchbase's guidance: a bucket quota of at least 10% of the dataset (Couchstore; 1% for Magma). */
 export const MIN_DATASET_SHARE = 0.1;
+export const MIN_DATASET_SHARE_BY_ENGINE = { couchstore: MIN_DATASET_SHARE, magma: 0.01 };
+export const STORAGE_ENGINES = Object.keys(MIN_DATASET_SHARE_BY_ENGINE);
+const ENGINE_LABELS = { couchstore: 'Couchstore', magma: 'Magma' };
+
+/** The values calculateSizing() uses unless `settings` replaces them. */
+export const DEFAULT_SETTINGS = {
+  metadataBytes: METADATA_BYTES,
+  overhead: OVERHEAD,
+  highWaterMark: HIGH_WATER_MARK,
+  smallNodeMiB: SMALL_NODE_MIB,
+  lowWorkingSetPct: FULL_EJECTION_LOW_WORKING_SET_PCT,
+  storageEngine: 'couchstore'
+};
 
 export function firmQuotaLimitMiB(nodeRamMiB) {
   return Math.max(nodeRamMiB - 1024, 0.8 * nodeRamMiB);
 }
 
-export function recommendedQuotaShare(nodeRamMiB) {
-  return nodeRamMiB < SMALL_NODE_MIB ? SMALL_NODE_QUOTA_SHARE : RECOMMENDED_QUOTA_SHARE;
+export function recommendedQuotaShare(nodeRamMiB, smallNodeMiB = SMALL_NODE_MIB) {
+  return nodeRamMiB < smallNodeMiB ? SMALL_NODE_QUOTA_SHARE : RECOMMENDED_QUOTA_SHARE;
+}
+
+function checkSettings(settings) {
+  const { metadataBytes, overhead, highWaterMark, smallNodeMiB, lowWorkingSetPct, storageEngine } = settings;
+  const finite = (value) => typeof value === 'number' && Number.isFinite(value);
+  if (!finite(metadataBytes) || metadataBytes < 0) throw new RangeError(`metadataBytes must be a non-negative number (got ${metadataBytes})`);
+  if (!finite(overhead) || overhead < 0) throw new RangeError(`overhead must be a non-negative number (got ${overhead})`);
+  if (!finite(highWaterMark) || !(highWaterMark > 0 && highWaterMark <= 1)) {
+    throw new RangeError(`highWaterMark must be above 0 and at most 1 (got ${highWaterMark})`);
+  }
+  if (!finite(smallNodeMiB) || smallNodeMiB < 0) throw new RangeError(`smallNodeMiB must be a non-negative number (got ${smallNodeMiB})`);
+  if (!finite(lowWorkingSetPct) || lowWorkingSetPct < 0 || lowWorkingSetPct > 100) {
+    throw new RangeError(`lowWorkingSetPct must be from 0 to 100 (got ${lowWorkingSetPct})`);
+  }
+  if (!STORAGE_ENGINES.includes(storageEngine)) {
+    throw new RangeError(`storageEngine must be one of ${STORAGE_ENGINES.join(', ')} (got ${storageEngine})`);
+  }
 }
 
 const MIB = 1024 * 1024;
@@ -96,7 +130,7 @@ function assertPositiveInteger(name, value) {
   if (!Number.isInteger(value) || value < 1) throw new RangeError(`${name} must be a positive integer (got ${value})`);
 }
 
-function sizeBucket(bucket) {
+function sizeBucket(bucket, { metadataBytes, overhead, highWaterMark }) {
   const { name, documents, keyBytes, documentBytes, replicas, workingSetPct, eviction } = bucket;
   if (typeof name !== 'string' || !name.trim()) throw new RangeError('bucket name must not be empty');
   assertNonNegativeNumber(`${name}: documents`, documents);
@@ -114,11 +148,11 @@ function sizeBucket(bucket) {
 
   const copies = 1 + replicas;
   const workingSet = workingSetPct / 100;
-  const metadataMiB = (documents * (METADATA_BYTES + keyBytes) * copies) / MIB;
+  const metadataMiB = (documents * (metadataBytes + keyBytes) * copies) / MIB;
   const datasetMiB = (documents * documentBytes * copies) / MIB;
   const residentMetadataMiB = eviction === 'value' ? metadataMiB : metadataMiB * workingSet;
   const residentDataMiB = datasetMiB * workingSet;
-  const rawQuotaMiB = ((residentMetadataMiB + residentDataMiB) * (1 + OVERHEAD)) / HIGH_WATER_MARK;
+  const rawQuotaMiB = ((residentMetadataMiB + residentDataMiB) * (1 + overhead)) / highWaterMark;
 
   return {
     name: name.trim(),
@@ -140,9 +174,12 @@ function sizeBucket(bucket) {
  * @param {number} input.dataNodes - nodes running the Data service
  * @param {number} input.nodeRamMiB - RAM of one node
  * @param {object} [input.services] - per-node quota in MiB for index/search/eventing/analytics; 0 or absent = not running
+ * @param {object} [input.settings] - replaces any of DEFAULT_SETTINGS
  * @throws {RangeError} on invalid input, rather than silently coercing it
  */
-export function calculateSizing({ buckets, dataNodes, nodeRamMiB, services = {} }) {
+export function calculateSizing({ buckets, dataNodes, nodeRamMiB, services = {}, settings: overrides = {} }) {
+  const settings = { ...DEFAULT_SETTINGS, ...overrides };
+  checkSettings(settings);
   if (!Array.isArray(buckets) || buckets.length === 0) throw new RangeError('at least one bucket is required');
   assertPositiveInteger('dataNodes', dataNodes);
   if (typeof nodeRamMiB !== 'number' || !Number.isFinite(nodeRamMiB) || nodeRamMiB <= 0) {
@@ -151,7 +188,7 @@ export function calculateSizing({ buckets, dataNodes, nodeRamMiB, services = {} 
   const names = buckets.map((bucket) => String(bucket.name).trim());
   if (new Set(names).size !== names.length) throw new RangeError('bucket names must be unique');
 
-  const sized = buckets.map(sizeBucket);
+  const sized = buckets.map((bucket) => sizeBucket(bucket, settings));
   const bucketsTotalMiB = sized.reduce((sum, bucket) => sum + bucket.quotaMiB, 0);
 
   const quotas = { data: Math.max(MIN_QUOTA_MIB.data, roundUpToMultiple(bucketsTotalMiB / dataNodes, STEP_MIB)) };
@@ -173,7 +210,8 @@ export function calculateSizing({ buckets, dataNodes, nodeRamMiB, services = {} 
   const quotaTotalMiB = Object.values(quotas).reduce((sum, value) => sum + value, 0);
   const quotaShare = quotaTotalMiB / nodeRamMiB;
   const firmLimitMiB = firmQuotaLimitMiB(nodeRamMiB);
-  const recommendedShare = recommendedQuotaShare(nodeRamMiB);
+  const recommendedShare = recommendedQuotaShare(nodeRamMiB, settings.smallNodeMiB);
+  const minDatasetShare = MIN_DATASET_SHARE_BY_ENGINE[settings.storageEngine];
   if (quotaTotalMiB > firmLimitMiB) {
     warnings.push({
       level: 'error',
@@ -200,16 +238,17 @@ export function calculateSizing({ buckets, dataNodes, nodeRamMiB, services = {} 
         message: `Bucket "${bucket.name}" needs less than Couchbase's ${MIN_BUCKET_MIB} MiB minimum, so it was raised to that.`
       });
     }
-    if (bucket.quotaMiB < bucket.datasetMiB * MIN_DATASET_SHARE) {
+    if (bucket.quotaMiB < bucket.datasetMiB * minDatasetShare) {
       warnings.push({
         level: 'warning',
         code: 'bucket-below-dataset-share',
         message:
           `Bucket "${bucket.name}" gets ${bucket.quotaMiB} MiB for ${Math.round(bucket.datasetMiB)} MiB of data; Couchbase ` +
-          `recommends a quota of at least ${Math.round(MIN_DATASET_SHARE * 100)}% of the dataset for Couchstore (1% for Magma).`
+          `recommends a quota of at least ${Math.round(minDatasetShare * 100)}% of the dataset for ${ENGINE_LABELS[settings.storageEngine]}` +
+          (settings.storageEngine === 'couchstore' ? ' (1% for Magma).' : '.')
       });
     }
-    if (bucket.eviction === 'full' && bucket.workingSetPct < FULL_EJECTION_LOW_WORKING_SET_PCT) {
+    if (bucket.eviction === 'full' && bucket.workingSetPct < settings.lowWorkingSetPct) {
       warnings.push({
         level: 'warning',
         code: 'full-ejection-low-working-set',
@@ -228,6 +267,7 @@ export function calculateSizing({ buckets, dataNodes, nodeRamMiB, services = {} 
     quotas,
     quotaTotalMiB,
     quotaShare,
+    settings,
     warnings
   };
 }
@@ -251,11 +291,12 @@ export function restCommand(quotas) {
 
 /** The calculation as three steps, whatever the number of buckets: bucket quotas, Data quota, total. */
 function explainSteps(sizing) {
-  const { buckets, dataNodes, bucketsTotalMiB, quotas, quotaTotalMiB, quotaShare } = sizing;
+  const { buckets, dataNodes, bucketsTotalMiB, quotas, quotaTotalMiB, quotaShare, settings } = sizing;
+  const factor = (value) => Number(value.toFixed(4));
   return [
     {
       label: buckets.length === 1 ? 'Bucket' : 'Each bucket',
-      text: `(metadata + working set in RAM) × ${1 + OVERHEAD} ÷ ${HIGH_WATER_MARK} → ${buckets.map((b) => `${b.name} ${b.quotaMiB} MiB`).join(', ')}`
+      text: `(metadata + working set in RAM) × ${factor(1 + settings.overhead)} ÷ ${factor(settings.highWaterMark)} → ${buckets.map((b) => `${b.name} ${b.quotaMiB} MiB`).join(', ')}`
     },
     { label: 'Data quota', text: `${bucketsTotalMiB} MiB ÷ ${pluralize(dataNodes, 'Data node')} = ${quotas.data} MiB per node` },
     { label: 'All quotas', text: `${quotaTotalMiB} MiB per node, ${Math.round(quotaShare * 100)}% of the node's RAM` }
