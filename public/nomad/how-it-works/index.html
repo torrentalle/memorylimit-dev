@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>How the HashiCorp Nomad Memory Calculator Works | MemoryLimit</title>
+<meta name="description" content="How the Nomad calculator sets a task's memory and memory_max: Nomad's own guidance, rounding, minimums, memory oversubscription and what to paste, with links to the Nomad docs and source." />
+<link rel="canonical" href="https://memorylimit.dev/nomad/how-it-works/" />
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="MemoryLimit" />
+<meta property="og:title" content="How the HashiCorp Nomad Memory Calculator Works" />
+<meta property="og:description" content="How the Nomad calculator sets a task's memory and memory_max: Nomad's own guidance, rounding, minimums, memory oversubscription and what to paste, with links to the Nomad docs and source." />
+<meta property="og:url" content="https://memorylimit.dev/nomad/how-it-works/" />
+<meta property="og:image" content="https://memorylimit.dev/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="How the HashiCorp Nomad Memory Calculator Works" />
+<meta name="twitter:description" content="How the Nomad calculator sets a task's memory and memory_max: Nomad's own guidance, rounding, minimums, memory oversubscription and what to paste, with links to the Nomad docs and source." />
+<meta name="twitter:image" content="https://memorylimit.dev/og-image.png" />
+<link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/css/styles.css" />
+<script src="/js/theme-init.js"></script>
+</head>
+<body>
+
+<div class="skyline" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="brand" href="/" aria-label="MemoryLimit home">
+      <img class="brand__mark brand__mark--light" src="/brand/memorylimit-mark.svg" alt="" width="37" height="28" />
+      <img class="brand__mark brand__mark--dark" src="/brand/memorylimit-mark-on-dark.svg" alt="" width="37" height="28" />
+      <div><p class="brand__name">MemoryLimit</p><p class="brand__tagline">Memory request/limit sizing</p></div>
+    </a>
+    <!-- platform-nav:start -->
+    <nav class="site-nav" aria-label="Calculators">
+      <details class="site-nav__menu">
+        <summary class="site-nav__toggle">Calculators</summary>
+        <div class="site-nav__panel">
+          <div class="site-nav__group" data-platform-group="containers">
+            <p class="site-nav__group-title">Containers &amp; orchestration</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/kubernetes/" data-platform-link="kubernetes">Kubernetes</a></li>
+              <li><a class="site-nav__link" href="/docker-compose/" data-platform-link="dockerCompose">Docker Compose</a></li>
+              <li><a class="site-nav__link" href="/nomad/" data-platform-link="nomad">HashiCorp Nomad</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="serverless">
+            <p class="site-nav__group-title">Serverless</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/lambda/" data-platform-link="lambda">AWS Lambda</a></li>
+              <li><a class="site-nav__link" href="/cloud-run/" data-platform-link="cloudRun">Google Cloud Run</a></li>
+              <li><a class="site-nav__link" href="/azure-functions/" data-platform-link="azureFunctions">Azure Functions</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="vms">
+            <p class="site-nav__group-title">VMs &amp; bare metal</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/systemd/" data-platform-link="systemd">Systemd / Bare Metal / VM</a></li>
+              <li><a class="site-nav__link" href="/vmware/" data-platform-link="vmware">VMware vSphere</a></li>
+              <li><a class="site-nav__link" href="/proxmox/" data-platform-link="proxmox">Proxmox VE</a></li>
+            </ul>
+          </div>
+          <div class="site-nav__group" data-platform-group="datastores">
+            <p class="site-nav__group-title">Data stores</p>
+            <ul class="site-nav__list">
+              <li><a class="site-nav__link" href="/redis/" data-platform-link="redis">Redis maxmemory</a></li>
+              <li><a class="site-nav__link" href="/couchbase/" data-platform-link="couchbase">Couchbase memory quotas</a></li>
+            </ul>
+          </div>
+        </div>
+      </details>
+    </nav>
+    <!-- platform-nav:end -->
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Dark theme">
+      <span class="theme-toggle__icon" aria-hidden="true">◐</span><span class="theme-toggle__label">theme</span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <div class="wrap intro-section">
+    <p class="guide-back"><a href="/nomad/">← HashiCorp Nomad memory calculator</a></p>
+    <h1 class="intro-title">How the Nomad calculator works</h1>
+    <p class="intro-text">
+      This page walks through how the <a href="/nomad/">Nomad calculator</a> turns your usage data into a task's
+      <code>memory</code> and <code>memory_max</code>. Both start from the <a href="/sizing-model/">shared sizing model</a>;
+      this page covers what happens after that. Statements backed by HashiCorp's documentation or Nomad's source end
+      with a <span class="guide-tag guide-tag--doc">Nomad docs</span> link to it. Choices the documentation doesn't make
+      for us are explained and marked <span class="guide-tag guide-tag--assumption">Assumption</span>, which links to
+      its row in the table of all of them.
+    </p>
+  </div>
+
+  <div class="wrap guide">
+
+    <nav class="panel guide-toc" aria-labelledby="toc-heading">
+      <h2 id="toc-heading" class="panel__title panel__title--tight">On this page</h2>
+      <ol>
+        <li><a href="#settings">What the two settings do</a></li>
+        <li><a href="#steps">memory and memory_max</a></li>
+        <li><a href="#oversubscription">Memory oversubscription</a></li>
+        <li><a href="#warnings">Every warning, and why</a></li>
+        <li><a href="#paste">What to paste</a></li>
+        <li><a href="#assumptions">All assumptions in one place</a></li>
+        <li><a href="#references">References</a></li>
+      </ol>
+    </nav>
+
+    <section class="panel guide-section" id="settings" aria-labelledby="settings-heading">
+      <h2 id="settings-heading" class="panel__title"><span class="panel__index">01</span> What the two settings do</h2>
+      <ul>
+        <li>
+          <strong><code>memory</code></strong> is the memory the task requires, in MB. Without <code>memory_max</code> it is
+          also the hard limit.
+          <a class="guide-tag guide-tag--doc" href="https://developer.hashicorp.com/nomad/docs/job-specification/resources" target="_blank" rel="noopener">Nomad docs</a>
+        </li>
+        <li>
+          <strong><code>memory_max</code></strong> is the most the task may use when its client has memory to spare. With
+          it set, <code>memory</code> becomes the reservation and <code>memory_max</code> the hard limit.
+          <a class="guide-tag guide-tag--doc" href="https://developer.hashicorp.com/nomad/docs/job-specification/resources" target="_blank" rel="noopener">Nomad docs</a>
+        </li>
+      </ul>
+      <p>
+        Nomad's own advice matches the shared model: set <code>memory</code> to the task's typical usage and
+        <code>memory_max</code> to absorb unexpected load spikes.
+        <a class="guide-tag guide-tag--doc" href="https://developer.hashicorp.com/nomad/docs/job-specification/resources" target="_blank" rel="noopener">Nomad docs</a>
+        So the calculator sizes <code>memory</code> from the average and <code>memory_max</code> from the peak.
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="steps" aria-labelledby="steps-heading">
+      <h2 id="steps-heading" class="panel__title"><span class="panel__index">02</span> memory and memory_max</h2>
+      <pre class="yaml-block guide-formula"><code>memory     = max(average × (1 + request margin), 10)     rounded up to a whole MB
+memory_max = max(peak × (1 + limit margin), memory)       rounded up to a whole MB</code></pre>
+      <p>
+        The margins come from the sensitivity, workload type and environment you choose; the
+        <a href="/sizing-model/">sizing model</a> explains them, and they are assumptions too.
+      </p>
+      <ul>
+        <li>
+          Nomad's MB are mebibytes: it converts them to bytes with 1024 × 1024, so MiB values pass through unchanged.
+          <a class="guide-tag guide-tag--doc" href="https://github.com/hashicorp/nomad/blob/main/nomad/structs/structs.go" target="_blank" rel="noopener">Nomad source</a>
+        </li>
+        <li>
+          Nomad rejects a task with less than 10 MB of <code>memory</code>, or with <code>memory_max</code> below
+          <code>memory</code>, so the result is raised to whichever applies.
+          <a class="guide-tag guide-tag--doc" href="https://github.com/hashicorp/nomad/blob/main/nomad/structs/structs.go" target="_blank" rel="noopener">Nomad source</a>
+        </li>
+      </ul>
+
+      <h3 class="guide-subheading">Worked example</h3>
+      <p>Average 410 MiB, peak 630 MiB, generic workload, medium sensitivity, production, a group count of 3:</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-example="410 630 generic medium production 3">
+          <tbody>
+            <tr><th scope="row">memory</th><td>410 MiB × 1.30 = 533 MiB</td><td data-check="memory">533 MB</td></tr>
+            <tr><th scope="row">memory_max</th><td>630 MiB × 1.30 = 819 MiB, above memory</td><td data-check="memoryMax">819 MB</td></tr>
+            <tr class="guide-table__result"><th scope="row">total reserved</th><td>533 MB × 3 allocations</td><td data-check="totalReserved">1599 MB</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>When the peak is close to the average, <code>memory</code> can decide <code>memory_max</code>. Average 1000 MiB and peak 1010 MiB, high sensitivity:</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-example="1000 1010 generic high production 1">
+          <tbody>
+            <tr><th scope="row">memory</th><td>1000 MiB × 1.50 = 1500 MiB</td><td data-check="memory">1500 MB</td></tr>
+            <tr><th scope="row">memory_max</th><td>1010 MiB × 1.40 = 1414 MiB, below memory</td><td data-check="memoryMax">1500 MB</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="oversubscription" aria-labelledby="oversubscription-heading">
+      <h2 id="oversubscription-heading" class="panel__title"><span class="panel__index">03</span> Memory oversubscription</h2>
+      <p>
+        <code>memory_max</code> only works when memory oversubscription is enabled in the scheduler configuration. It's
+        off by default and enabled once per cluster:
+        <a class="guide-tag guide-tag--doc" href="https://developer.hashicorp.com/nomad/commands/operator/scheduler/set-config" target="_blank" rel="noopener">Nomad docs</a>
+      </p>
+      <pre class="yaml-block"><code>nomad operator scheduler set-config -memory-oversubscription=true</code></pre>
+      <p>
+        Without it, <code>memory</code> is the hard limit, so a task sized here would be killed at its average-based value.
+        The note under the result says to set <code>memory</code> to the <code>memory_max</code> value in that case.
+        <a class="guide-tag guide-tag--assumption" id="assumption-2-ref" href="#assumption-2">Assumption</a>
+      </p>
+      <p>
+        Nomad also advises keeping an eye on memory use and leaving enough reserved memory on each client, because
+        oversubscribed tasks can run a client out of memory.
+        <a class="guide-tag guide-tag--doc" href="https://developer.hashicorp.com/nomad/docs/job-specification/resources" target="_blank" rel="noopener">Nomad docs</a>
+      </p>
+    </section>
+
+    <section class="panel guide-section" id="warnings" aria-labelledby="warnings-heading">
+      <h2 id="warnings-heading" class="panel__title"><span class="panel__index">04</span> Every warning, and why</h2>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Message about</th><th scope="col">Shown when</th><th scope="col">Basis</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Peak below average <span class="guide-level guide-level--error">error</span></td>
+              <td>The peak you entered is lower than the average</td>
+              <td>Impossible with real samples; it usually means two different series. See the <a href="/sizing-model/#inputs">sizing model</a>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="paste" aria-labelledby="paste-heading">
+      <h2 id="paste-heading" class="panel__title"><span class="panel__index">05</span> What to paste</h2>
+      <pre class="yaml-block"><code>nomad_client_allocs_memory_usage{job="web", task="api"}</code></pre>
+      <ul>
+        <li>
+          Nomad publishes allocation metrics when telemetry has <code>publish_allocation_metrics</code> on, and serves them
+          in Prometheus format at <code>/v1/metrics?format=prometheus</code> with <code>prometheus_metrics</code> on.
+          <a class="guide-tag guide-tag--doc" href="https://developer.hashicorp.com/nomad/docs/configuration/telemetry" target="_blank" rel="noopener">Nomad docs</a>
+        </li>
+        <li>
+          <code>nomad.client.allocs.memory.usage</code> is a gauge of the total memory a task uses, in bytes, labelled with
+          <code>job</code>, <code>task_group</code>, <code>task</code> and <code>alloc_id</code>, among others. Filtering by
+          both job and task keeps another job's task of the same name out.
+          <a class="guide-tag guide-tag--doc" href="https://developer.hashicorp.com/nomad/docs/reference/metrics" target="_blank" rel="noopener">Nomad docs</a>
+        </li>
+        <li>
+          Total usage includes file cache. Nomad also reports <code>rss</code> and <code>cache</code> separately, but RSS
+          leaves out memory the task does need, so the calculator sizes from total usage and errs on the high side.
+          <a class="guide-tag guide-tag--assumption" id="assumption-1-ref" href="#assumption-1">Assumption</a>
+        </li>
+      </ul>
+    </section>
+
+    <section class="panel guide-section" id="assumptions" aria-labelledby="assumptions-heading">
+      <h2 id="assumptions-heading" class="panel__title"><span class="panel__index">06</span> All assumptions in one place</h2>
+      <p>Besides the margins of the <a href="/sizing-model/#assumptions">shared sizing model</a>:</p>
+      <p class="guide-kind-legend"><strong>Our default</strong>: a value we chose. <strong>Our reading</strong>: how we read documentation that isn't explicit. <strong>About your setup</strong>: something we take for granted about your data or cluster.</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th scope="col">Assumption</th><th scope="col">Kind</th><th scope="col">Why</th><th scope="col">If it doesn't hold</th></tr></thead>
+          <tbody>
+            <tr id="assumption-1"><td>Size from total usage, cache included <a class="guide-backref" href="#assumption-1-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td>RSS alone leaves out memory the task needs</td><td>Tasks that read many files get larger values than they strictly need.</td></tr>
+            <tr id="assumption-2"><td>Without oversubscription, use the memory_max value for memory <a class="guide-backref" href="#assumption-2-ref" aria-label="Back to where this is explained">↩</a></td><td class="guide-kind">Our default</td><td><code>memory</code> is then the hard limit, and it has to cover the peak</td><td>Sizing <code>memory</code> from the average alone would get the task killed at its first peak.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guide-section" id="references" aria-labelledby="references-heading">
+      <h2 id="references-heading" class="panel__title"><span class="panel__index">07</span> References</h2>
+      <ul class="guide-references">
+        <li><a href="https://developer.hashicorp.com/nomad/docs/job-specification/resources" target="_blank" rel="noopener"><code>resources</code> block</a> — <code>memory</code>, <code>memory_max</code> and how to choose them.</li>
+        <li><a href="https://developer.hashicorp.com/nomad/commands/operator/scheduler/set-config" target="_blank" rel="noopener"><code>nomad operator scheduler set-config</code></a> — enabling memory oversubscription.</li>
+        <li><a href="https://developer.hashicorp.com/nomad/docs/configuration/telemetry" target="_blank" rel="noopener">Telemetry configuration</a> — <code>publish_allocation_metrics</code> and <code>prometheus_metrics</code>.</li>
+        <li><a href="https://developer.hashicorp.com/nomad/docs/reference/metrics" target="_blank" rel="noopener">Metrics reference</a> — <code>nomad.client.allocs.memory.*</code>.</li>
+        <li><a href="https://github.com/hashicorp/nomad/blob/main/nomad/structs/structs.go" target="_blank" rel="noopener">Nomad source: structs.go</a> — MB to bytes, the 10 MB minimum and <code>memory_max</code> ≥ <code>memory</code>.</li>
+      </ul>
+      <p class="guide-back"><a href="/nomad/">← Back to the Nomad calculator</a></p>
+    </section>
+
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div id="ethical-ads-slot" class="ethical-ads-slot"></div>
+    <div class="footer-row">
+      <!-- footer-links:start -->
+      <p class="footer-tagline">Your pasted metrics and results never leave the browser.</p>
+      <nav class="footer-links" aria-label="Project">
+        <a href="/privacy/" class="footer-link">Privacy</a>
+        <a href="/support/" class="footer-link">Support</a>
+        <a href="https://github.com/torrentalle/memorylimit-dev" class="footer-link" target="_blank" rel="noopener">★ Star on GitHub</a>
+        <a href="https://github.com/torrentalle/memorylimit-dev/issues/new?template=bug.yml" class="footer-link" target="_blank" rel="noopener">Report an issue</a>
+      </nav>
+      <!-- footer-links:end -->
+      <div id="donation-slot" class="donation-slot"></div>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="/js/site.js"></script>
+</body>
+</html>
