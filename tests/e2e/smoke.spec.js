@@ -380,7 +380,7 @@ test('Couchbase: each input that changes the result has a tooltip saying how', a
 
   await page.mouse.move(0, 0);
   await page.getByRole('button', { name: 'How Data nodes affects the result' }).focus();
-  await expect(page.getByRole('tooltip').filter({ hasText: 'divided by this' })).toBeVisible();
+  await expect(page.getByRole('tooltip').filter({ hasText: 'spread over this many nodes' })).toBeVisible();
 
   // 6 per bucket + Data nodes + RAM per node + the 6 advanced settings. The bucket name doesn't affect the
   // numbers, and the other services' quotas share one sentence in their section's hint.
