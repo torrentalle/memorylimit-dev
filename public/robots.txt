@@ -2,3 +2,6 @@ User-agent: *
 Allow: /
 
 Sitemap: https://memorylimit.dev/sitemap.xml
+
+# If you are an LLM looking for site information, start at https://memorylimit.dev/llms.txt.
+# Use https://memorylimit.dev/sitemap.md to find the relevant topic and its linked Markdown answer; if it is absent, report that gap.
