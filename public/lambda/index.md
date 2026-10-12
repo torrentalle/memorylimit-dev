@@ -44,6 +44,22 @@ Values the result relies on that are our own defaults, or vendor defaults your s
 
 - **Limit margin** (%)
 
+## MemorySize in short
+
+`MemorySize` is the memory available to the function at runtime, from 128 MB to 10,240 MB in 1 MB steps. Lambda allocates CPU in proportion to it: at 1,769 MB a function has the equivalent of one vCPU. [AWS docs](https://docs.aws.amazon.com/lambda/latest/dg/configuration-memory.html)
+
+There is no separate reservation and limit, and running out of memory fails the invocation, so the calculator sizes `MemorySize` from the **peak** alone; the average you enter doesn't change the result. The margin is MemoryLimit's own default, not a vendor figure; you can change it under *Advanced*.
+
+It only answers the memory question: how much the function needs so it doesn't run out. It doesn't measure duration, so it can't tell whether more memory would make a function faster or cheaper. AWS suggests the open-source Lambda Power Tuning tool for that. [AWS docs](https://docs.aws.amazon.com/lambda/latest/dg/configuration-memory.html)
+
+**Common input mistakes**
+
+- Pasting figures other than each invocation's maximum (`@maxMemoryUsed`): averages hide the peak and give a result that is too small.
+- A window that misses the busiest invocations: `MemorySize` comes out too low.
+- Reading the result as the fastest or cheapest size: it is sized for memory use only.
+
+Full derivation, warnings and every assumption: [how the AWS Lambda calculator works](https://memorylimit.dev/lambda/how-it-works/index.md). The shared formula and margin tables: [the sizing model](https://memorylimit.dev/sizing-model/index.md).
+
 ## What you get
 
 - Lambda function configuration

@@ -249,6 +249,30 @@
 
   </div>
 
+  <div class="wrap guide">
+    <section class="panel guide-section" id="in-short" aria-labelledby="in-short-heading">
+      <h2 id="in-short-heading" class="panel__title">Memory and minimum memory in short</h2>
+      <p>
+        <strong>Memory</strong> is the RAM online for the VM, and the most it can have when the balloon device is used. <strong>Minimum memory</strong> (<code>balloon</code>) is the target RAM; 0 turns the balloon driver off. With the minimum lower than memory, Proxmox always keeps the minimum available and adds memory up to the maximum as the host allows. <a class="guide-tag guide-tag--doc" href="https://pve.proxmox.com/pve-docs/chapter-qm.html" target="_blank" rel="noopener">Proxmox docs</a>
+      </p>
+      <p>
+        So the minimum comes from the <strong>average</strong> and memory from the <strong>peak</strong>, with margins that are MemoryLimit's own defaults, changeable under <em>Advanced</em>. Proxmox refuses a balloon value larger than the assigned memory, so memory is raised to the minimum when the two are close. The calculator assumes ballooning is on; with it off, set both values to the memory result.
+      </p>
+      <p>
+        When the host needs memory back, the guest's balloon driver gives it up, which can make the guest swap or, as a last resort, run its OOM killer. On Windows the driver has to be installed and isn't recommended for critical systems. <a class="guide-tag guide-tag--doc" href="https://pve.proxmox.com/pve-docs/chapter-qm.html" target="_blank" rel="noopener">Proxmox docs</a>
+      </p>
+      <p><strong>Common input mistakes</strong></p>
+      <ul>
+        <li>Measuring from the host: with ballooning active it shows what Proxmox lent the VM, not what the VM needed. Measure inside the guest.</li>
+        <li>Keeping a lower minimum with ballooning off: the minimum only means something with the balloon driver.</li>
+        <li>A window that misses the busiest times: memory comes out too low.</li>
+      </ul>
+      <p>
+        Full derivation, warnings and every assumption: <a href="/proxmox/how-it-works/">how the Proxmox VE calculator works</a>. The shared formula and margin tables: <a href="/sizing-model/">the sizing model</a>.
+      </p>
+    </section>
+  </div>
+
 </main>
 
 <footer class="site-footer">

@@ -248,6 +248,30 @@
 
   </div>
 
+  <div class="wrap guide">
+    <section class="panel guide-section" id="in-short" aria-labelledby="in-short-heading">
+      <h2 id="in-short-heading" class="panel__title">Limits, reservations and swap in short</h2>
+      <p>
+        The <strong>limit</strong> becomes the container's hard memory limit (<code>--memory</code>). The <strong>reservation</strong> becomes <code>--memory-reservation</code>: a soft limit, lower than the limit, that Docker enforces only when it detects contention or low memory on the host. <a class="guide-tag guide-tag--doc" href="https://docs.docker.com/engine/containers/resource_constraints/" target="_blank" rel="noopener">Docker docs</a>
+      </p>
+      <p>
+        The calculator sizes the reservation from the <strong>average</strong> and the limit from the <strong>peak</strong>, then adds margins that are MemoryLimit's own defaults, not vendor figures; you can change them under <em>Advanced</em>. Docker rejects a limit below its reservation, so when the peak is close to the average the limit is raised to the reservation. <a class="guide-tag guide-tag--doc" href="https://github.com/moby/moby/blob/master/daemon/daemon_unix.go" target="_blank" rel="noopener">Docker source</a>
+      </p>
+      <p>
+        <strong>Swap.</strong> If the host has swap and <code>memswap_limit</code> isn't set, a container with a memory limit can use as much swap as that limit. Setting <code>memswap_limit</code> equal to the limit prevents any swap. The calculator leaves swap as Docker sets it. <a class="guide-tag guide-tag--doc" href="https://docs.docker.com/engine/containers/resource_constraints/" target="_blank" rel="noopener">Docker docs</a>
+      </p>
+      <p><strong>Common input mistakes</strong></p>
+      <ul>
+        <li>Sizing from total usage instead of the working set: total usage includes reclaimable file cache, so services that read many files get larger values.</li>
+        <li>Filtering by the wrong container name: Compose names containers <code>&lt;project&gt;-&lt;service&gt;-&lt;number&gt;</code>, and a service with its own <code>container_name</code> needs that name in the query.</li>
+        <li>A window that misses the busiest times: the limit comes out too low.</li>
+      </ul>
+      <p>
+        Full derivation, warnings and every assumption: <a href="/docker-compose/how-it-works/">how the Docker Compose calculator works</a>. The shared formula and margin tables: <a href="/sizing-model/">the sizing model</a>.
+      </p>
+    </section>
+  </div>
+
 </main>
 
 <footer class="site-footer">

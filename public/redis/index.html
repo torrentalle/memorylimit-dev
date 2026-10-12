@@ -252,6 +252,30 @@
 
   </div>
 
+  <div class="wrap guide">
+    <section class="panel guide-section" id="in-short" aria-labelledby="in-short-heading">
+      <h2 id="in-short-heading" class="panel__title">maxmemory and provisioning in short</h2>
+      <p>
+        <code>maxmemory</code> is the most memory Redis uses for data; past it Redis applies the eviction policy. <code>allkeys-lru</code> evicts the least recently used keys, while <code>noeviction</code> returns errors for writes at the limit. Buffers for replication and the AOF don't count towards <code>maxmemory</code>, so Redis can use somewhat more. <a class="guide-tag guide-tag--doc" href="https://redis.io/docs/latest/develop/reference/eviction/" target="_blank" rel="noopener">Redis docs</a>
+      </p>
+      <p>
+        The calculator sizes <code>maxmemory</code> from the <strong>peak</strong> <code>used_memory</code> plus a margin, with a floor from the average. The margins are MemoryLimit's own defaults, changeable under <em>Advanced</em>. It writes <code>allkeys-lru</code>, taking this Redis to be a cache.
+      </p>
+      <p>
+        It also tells you how much memory to give the process: in a write-heavy application Redis can use up to twice its normal memory while it saves an RDB file or rewrites the AOF, so the calculator provisions 2 × <code>maxmemory</code>. Without persistence or replication it suggests about 1.25 ×. <a class="guide-tag guide-tag--doc" href="https://redis.io/docs/latest/operate/oss_and_stack/management/admin/" target="_blank" rel="noopener">Redis docs</a>
+      </p>
+      <p><strong>Common input mistakes</strong></p>
+      <ul>
+        <li>Using <code>allkeys-lru</code> for data you can't lose: use <code>noeviction</code>, so writes fail at the limit instead.</li>
+        <li>Provisioning only <code>maxmemory</code>: in a write-heavy application the process can need up to twice that while it saves an RDB file or rewrites the AOF.</li>
+        <li>Setting <code>maxmemory</code> equal to the memory you have: Redis advises setting it below the free memory, to leave room for its overhead and fragmentation.</li>
+      </ul>
+      <p>
+        Full derivation, warnings and every assumption: <a href="/redis/how-it-works/">how the Redis calculator works</a>. The shared formula and margin tables: <a href="/sizing-model/">the sizing model</a>.
+      </p>
+    </section>
+  </div>
+
 </main>
 
 <footer class="site-footer">

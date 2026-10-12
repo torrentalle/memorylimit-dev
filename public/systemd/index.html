@@ -254,6 +254,30 @@
 
   </div>
 
+  <div class="wrap guide">
+    <section class="panel guide-section" id="in-short" aria-labelledby="in-short-heading">
+      <h2 id="in-short-heading" class="panel__title">MemoryHigh and MemoryMax in short</h2>
+      <p>
+        <code>MemoryHigh</code> is the throttling limit: above it the service's processes are heavily slowed down and memory is taken away aggressively. <code>MemoryMax</code> is the absolute limit: if usage can't be kept under it, the OOM killer runs inside the unit, and systemd recommends it as the last line of defense. <a class="guide-tag guide-tag--doc" href="https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html" target="_blank" rel="noopener">systemd docs</a>
+      </p>
+      <p>
+        The calculator sets <code>MemoryHigh</code> just above the observed <strong>peak</strong> and <code>MemoryMax</code> at 1.25 × <code>MemoryHigh</code>. Neither systemd nor the cgroup v2 documentation gives a ratio, so 1.25 is MemoryLimit's own default; you can change it under <em>Advanced</em>. The average-based figure is shown as expected usage, for reference only.
+      </p>
+      <p>
+        Both settings control cgroup v2. Since systemd 258, cgroup v1 isn't supported at all; older hosts still on it only have the deprecated <code>MemoryLimit=</code>. <a class="guide-tag guide-tag--doc" href="https://github.com/systemd/systemd/blob/main/NEWS" target="_blank" rel="noopener">systemd NEWS</a>
+      </p>
+      <p><strong>Common input mistakes</strong></p>
+      <ul>
+        <li>Reading <code>MemoryCurrent</code> as the working set: we read it as the unit's <code>memory.current</code>, which counts page cache too, so it reads a little higher.</li>
+        <li>Using the wrong cgroup id in a cAdvisor query: a service is <code>/system.slice/&lt;name&gt;.service</code>.</li>
+        <li>A window that misses the busiest times: <code>MemoryHigh</code> comes out too low and the service is throttled early.</li>
+      </ul>
+      <p>
+        Full derivation, warnings and every assumption: <a href="/systemd/how-it-works/">how the systemd calculator works</a>. The shared formula and margin tables: <a href="/sizing-model/">the sizing model</a>.
+      </p>
+    </section>
+  </div>
+
 </main>
 
 <footer class="site-footer">

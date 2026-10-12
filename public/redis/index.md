@@ -49,6 +49,22 @@ Values the result relies on that are our own defaults, or vendor defaults your s
 - **Limit margin** (%)
 - **Provisioning factor** (× maxmemory)
 
+## maxmemory and provisioning in short
+
+`maxmemory` is the most memory Redis uses for data; past it Redis applies the eviction policy. `allkeys-lru` evicts the least recently used keys, while `noeviction` returns errors for writes at the limit. Buffers for replication and the AOF don't count towards `maxmemory`, so Redis can use somewhat more. [Redis docs](https://redis.io/docs/latest/develop/reference/eviction/)
+
+The calculator sizes `maxmemory` from the **peak** `used_memory` plus a margin, with a floor from the average. The margins are MemoryLimit's own defaults, changeable under *Advanced*. It writes `allkeys-lru`, taking this Redis to be a cache.
+
+It also tells you how much memory to give the process: in a write-heavy application Redis can use up to twice its normal memory while it saves an RDB file or rewrites the AOF, so the calculator provisions 2 × `maxmemory`. Without persistence or replication it suggests about 1.25 ×. [Redis docs](https://redis.io/docs/latest/operate/oss_and_stack/management/admin/)
+
+**Common input mistakes**
+
+- Using `allkeys-lru` for data you can't lose: use `noeviction`, so writes fail at the limit instead.
+- Provisioning only `maxmemory`: in a write-heavy application the process can need up to twice that while it saves an RDB file or rewrites the AOF.
+- Setting `maxmemory` equal to the memory you have: Redis advises setting it below the free memory, to leave room for its overhead and fragmentation.
+
+Full derivation, warnings and every assumption: [how the Redis calculator works](https://memorylimit.dev/redis/how-it-works/index.md). The shared formula and margin tables: [the sizing model](https://memorylimit.dev/sizing-model/index.md).
+
 ## What you get
 
 - redis.conf

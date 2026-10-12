@@ -259,6 +259,30 @@
 
   </div>
 
+  <div class="wrap guide">
+    <section class="panel guide-section" id="in-short" aria-labelledby="in-short-heading">
+      <h2 id="in-short-heading" class="panel__title">Memory limit, CPU and concurrency in short</h2>
+      <p>
+        Each instance gets one memory limit, 512 MiB by default, up to 32 GiB; an instance that exceeds it is terminated. The container's filesystem is in memory, so files it writes use the instance's memory too. <a class="guide-tag guide-tag--doc" href="https://docs.cloud.google.com/run/docs/configuring/services/memory-limits" target="_blank" rel="noopener">Cloud Run docs</a>
+      </p>
+      <p>
+        With no separate reservation and running out ending the instance, the calculator sizes the limit from the <strong>peak</strong> alone; the average doesn't change the result. The margin is MemoryLimit's own default; you can change it under <em>Advanced</em>.
+      </p>
+      <p>
+        Google's own formula counts requests: standing memory plus memory per request times concurrency. The calculator applies it when you enter the instance's idle memory and the concurrency now and planned. Up to 4 GiB it leaves CPU at the default 1 vCPU; above that it adds the fewest vCPU the memory needs. <a class="guide-tag guide-tag--doc" href="https://docs.cloud.google.com/run/docs/configuring/services/memory-limits" target="_blank" rel="noopener">Cloud Run docs</a>
+      </p>
+      <p><strong>Common input mistakes</strong></p>
+      <ul>
+        <li>Using the utilization metric as if it were MiB: we read it as a share of the instance's current limit, so multiply its p99 by that limit to get the peak in MiB.</li>
+        <li>Planning a higher concurrency without entering the idle memory: the whole peak counts as per-request memory, so the result is an upper bound.</li>
+        <li>A measured peak taken with fewer requests in flight than the maximum concurrency you entered: memory per request, and the planned memory, come out low.</li>
+      </ul>
+      <p>
+        Full derivation, warnings and every assumption: <a href="/cloud-run/how-it-works/">how the Cloud Run calculator works</a>. The shared formula and margin tables: <a href="/sizing-model/">the sizing model</a>.
+      </p>
+    </section>
+  </div>
+
 </main>
 
 <footer class="site-footer">

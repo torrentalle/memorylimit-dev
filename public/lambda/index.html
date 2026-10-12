@@ -249,6 +249,30 @@
 
   </div>
 
+  <div class="wrap guide">
+    <section class="panel guide-section" id="in-short" aria-labelledby="in-short-heading">
+      <h2 id="in-short-heading" class="panel__title">MemorySize in short</h2>
+      <p>
+        <code>MemorySize</code> is the memory available to the function at runtime, from 128 MB to 10,240 MB in 1 MB steps. Lambda allocates CPU in proportion to it: at 1,769 MB a function has the equivalent of one vCPU. <a class="guide-tag guide-tag--doc" href="https://docs.aws.amazon.com/lambda/latest/dg/configuration-memory.html" target="_blank" rel="noopener">AWS docs</a>
+      </p>
+      <p>
+        There is no separate reservation and limit, and running out of memory fails the invocation, so the calculator sizes <code>MemorySize</code> from the <strong>peak</strong> alone; the average you enter doesn't change the result. The margin is MemoryLimit's own default, not a vendor figure; you can change it under <em>Advanced</em>.
+      </p>
+      <p>
+        It only answers the memory question: how much the function needs so it doesn't run out. It doesn't measure duration, so it can't tell whether more memory would make a function faster or cheaper. AWS suggests the open-source Lambda Power Tuning tool for that. <a class="guide-tag guide-tag--doc" href="https://docs.aws.amazon.com/lambda/latest/dg/configuration-memory.html" target="_blank" rel="noopener">AWS docs</a>
+      </p>
+      <p><strong>Common input mistakes</strong></p>
+      <ul>
+        <li>Pasting figures other than each invocation's maximum (<code>@maxMemoryUsed</code>): averages hide the peak and give a result that is too small.</li>
+        <li>A window that misses the busiest invocations: <code>MemorySize</code> comes out too low.</li>
+        <li>Reading the result as the fastest or cheapest size: it is sized for memory use only.</li>
+      </ul>
+      <p>
+        Full derivation, warnings and every assumption: <a href="/lambda/how-it-works/">how the AWS Lambda calculator works</a>. The shared formula and margin tables: <a href="/sizing-model/">the sizing model</a>.
+      </p>
+    </section>
+  </div>
+
 </main>
 
 <footer class="site-footer">

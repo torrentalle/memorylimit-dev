@@ -40,6 +40,22 @@ Values the result relies on that are our own defaults, or vendor defaults your s
 - **Limit margin** (%)
 - **Minimum instance size**: 512 MB; 2,048 MB — Microsoft’s suggestion; 4,096 MB
 
+## Instance sizes in short
+
+Azure Functions doesn't take a free-form memory value. Flex Consumption, the recommended serverless plan, offers three instance sizes: 512 MB (0.25 cores), 2,048 MB (1 core) and 4,096 MB (2 cores). [Azure docs](https://learn.microsoft.com/en-us/azure/azure-functions/flex-consumption-plan)
+
+Running out of memory recycles the instance, so only the **peak** sets the size; the margin is MemoryLimit's own default and can be changed under *Advanced*. The calculator never goes below Microsoft's suggested 2,048 MB unless you lower the minimum there, and above 4,096 MB it points to Elastic Premium.
+
+Executions on an instance share its memory, so the measured peak includes the concurrency the app ran at. Raising concurrency, or moving to a size with a higher default, can need more memory per instance. [Azure docs](https://learn.microsoft.com/en-us/azure/azure-functions/functions-concurrency)
+
+**Common input mistakes**
+
+- Using the average working set as the peak: take the highest per-instance working set over a representative period.
+- Changing concurrency after taking the samples: size again once it has changed.
+- Sizing a Premium app on its own when other apps share the plan: add up the peaks of every app in the plan.
+
+Full derivation, warnings and every assumption: [how the Azure Functions calculator works](https://memorylimit.dev/azure-functions/how-it-works/index.md). The shared formula and margin tables: [the sizing model](https://memorylimit.dev/sizing-model/index.md).
+
 ## What you get
 
 - Azure CLI command
