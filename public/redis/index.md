@@ -65,6 +65,10 @@ It also tells you how much memory to give the process: in a write-heavy applicat
 
 Full derivation, warnings and every assumption: [how the Redis calculator works](https://memorylimit.dev/redis/how-it-works/index.md). The shared formula and margin tables: [the sizing model](https://memorylimit.dev/sizing-model/index.md).
 
+Related calculators:
+
+- [Couchbase memory quotas](https://memorylimit.dev/couchbase/index.md)
+
 ## What you get
 
 - redis.conf

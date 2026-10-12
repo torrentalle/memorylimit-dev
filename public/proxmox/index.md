@@ -61,6 +61,11 @@ When the host needs memory back, the guest's balloon driver gives it up, which c
 
 Full derivation, warnings and every assumption: [how the Proxmox VE calculator works](https://memorylimit.dev/proxmox/how-it-works/index.md). The shared formula and margin tables: [the sizing model](https://memorylimit.dev/sizing-model/index.md).
 
+Related calculators:
+
+- [Systemd / Bare Metal / VM](https://memorylimit.dev/systemd/index.md)
+- [VMware vSphere](https://memorylimit.dev/vmware/index.md)
+
 ## What you get
 
 - qm command

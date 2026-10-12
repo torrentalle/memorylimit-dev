@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { PLATFORM_DEFINITIONS, formatterUrl, entryUrl, getGuidePages, SIZING_MODEL_GUIDE } from '../public/js/platforms.js';
-import { navPages, renderNav, renderGuideLink, syncedPage } from '../scripts/sync-pages.js';
+import { navPages, renderNav, renderGuideLink, renderRelatedCalculators, syncedPage } from '../scripts/sync-pages.js';
 
 const PUBLIC = join(import.meta.dirname, '..', 'public');
 const BASE_URL = 'https://memorylimit.dev';
@@ -230,5 +230,19 @@ test('every calculator has its advanced section, closed by default, with a reset
     assert.doesNotMatch(section[0].split('>')[0], /\sopen\b/, `${page.path}: closed by default`);
     assert.match(section[1], /data-advanced-count/, page.path);
     assert.match(section[1], /<button[^>]*data-advanced-reset[^>]*>Reset to defaults<\/button>/, page.path);
+  }
+});
+
+test('each calculator page lists the other calculators of its category, and only those', () => {
+  for (const def of PLATFORM_DEFINITIONS) {
+    const html = read(def.dir ?? def.path.slice(1, -1));
+    const listed = [...renderRelatedCalculators(def.id).matchAll(/href="([^"]+)" data-platform-link="([^"]+)"/g)];
+    const expected = PLATFORM_DEFINITIONS.filter((other) => other.category === def.category && other.id !== def.id);
+    assert.deepEqual(
+      listed.map((m) => m[1]),
+      expected.map((other) => other.path)
+    );
+    assert.ok(!listed.some((m) => m[2] === def.id), `${def.id} lists itself`);
+    for (const other of expected) assert.ok(html.includes(`href="${other.path}" data-platform-link="${other.id}"`), `${def.id} misses ${other.id}`);
   }
 });

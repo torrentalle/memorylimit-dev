@@ -8,6 +8,7 @@
  *   <!-- platform-cards:start --> … <!-- platform-cards:end -->  landing page
  *   <!-- report-result:start --> … <!-- report-result:end -->    calculator pages
  *   <!-- guide-link:start --> … <!-- guide-link:end -->          calculator pages
+ *   <!-- related-calculators:start --> … <!-- related-calculators:end -->  calculator pages (same category)
  *   <!-- footer-links:start --> … <!-- footer-links:end -->      every page (data from js/links.js)
  *
  * Every defined platform is written out; links to disabled ones are removed
@@ -135,6 +136,28 @@ export function renderGuideLink(currentId, indent = '          ') {
   );
 }
 
+/**
+ * The other calculators in the current one's category, as a short list under its "in short" section, so
+ * related pages link to each other in the content and not only through the nav. Links carry
+ * data-platform-link, so js/nav.js removes the ones to disabled platforms. A category with a single
+ * platform gets no list.
+ */
+export function renderRelatedCalculators(currentId, indent = '      ') {
+  const current = PLATFORM_DEFINITIONS.find((def) => def.id === currentId);
+  const siblings = PLATFORM_DEFINITIONS.filter((def) => def.category === current.category && def.id !== currentId);
+  if (siblings.length === 0) return '';
+  return [
+    '<p>Related calculators:</p>',
+    '<ul>',
+    ...siblings.map(
+      (def) => `  <li><a href="${def.path}" data-platform-link="${def.id}">${escapeHtml(def.label)}</a></li>`
+    ),
+    '</ul>'
+  ]
+    .map((line) => indent + line)
+    .join('\n');
+}
+
 export function replaceBlock(html, name, content, file) {
   const pattern = new RegExp(`<!-- ${name}:start -->[\\s\\S]*?\\n([ \\t]*)<!-- ${name}:end -->`);
   if (!pattern.test(html)) throw new Error(`${file}: missing <!-- ${name}:start --> / <!-- ${name}:end --> markers`);
@@ -148,6 +171,7 @@ export function syncedPage(dir, currentId, html) {
   if (currentId) {
     out = replaceBlock(out, 'guide-link', renderGuideLink(currentId), file);
     out = replaceBlock(out, 'report-result', renderReportResult(currentId), file);
+    out = replaceBlock(out, 'related-calculators', renderRelatedCalculators(currentId), file);
   }
   if (dir === '') out = replaceBlock(out, 'platform-cards', renderCards(), file);
   return out;

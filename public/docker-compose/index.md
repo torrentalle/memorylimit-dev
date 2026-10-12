@@ -63,6 +63,11 @@ The calculator sizes the reservation from the **average** and the limit from the
 
 Full derivation, warnings and every assumption: [how the Docker Compose calculator works](https://memorylimit.dev/docker-compose/how-it-works/index.md). The shared formula and margin tables: [the sizing model](https://memorylimit.dev/sizing-model/index.md).
 
+Related calculators:
+
+- [Kubernetes](https://memorylimit.dev/kubernetes/index.md)
+- [HashiCorp Nomad](https://memorylimit.dev/nomad/index.md)
+
 ## What you get
 
 - docker-compose.yml
