@@ -250,6 +250,30 @@
 
   </div>
 
+  <div class="wrap guide">
+    <section class="panel guide-section" id="in-short" aria-labelledby="in-short-heading">
+      <h2 id="in-short-heading" class="panel__title">Memory, reservation and limit in short</h2>
+      <p>
+        A <strong>reservation</strong> is the guaranteed minimum allocation: a VM whose reservation can't be met doesn't power on, and a reservation can't be larger than the VM's configured memory. With no <strong>limit</strong>, the VM's configured memory is its effective limit. <a class="guide-tag guide-tag--doc" href="https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/9-0/vsphere-resource-management/configuring-resource-allocation-settings.html" target="_blank" rel="noopener">vSphere docs</a>
+      </p>
+      <p>
+        VMware advises that a limit can waste idle memory, that you reserve the minimum acceptable amount, and that you leave at least 10% of the host unreserved. So the calculator sets no limit, sizes the VM's configured memory from the <strong>peak</strong> and the reservation from the <strong>average</strong> plus its margin, which is our reading of "minimum acceptable". The margins are MemoryLimit's own defaults and can be changed under <em>Advanced</em>.
+      </p>
+      <p>
+        Memory hot add lets you add memory to a powered-on VM, but lowering a VM's memory isn't covered by it, so we assume that needs the VM off. <a class="guide-tag guide-tag--doc" href="https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/7-0/vsphere-virtual-machine-administration/configuring-virtual-machine-hardwarevm-admin/virtual-memory-configurationvm-admin/change-memory-hot-add-settingsvm-admin.html" target="_blank" rel="noopener">vSphere docs</a>
+      </p>
+      <p><strong>Common input mistakes</strong></p>
+      <ul>
+        <li>Pasting vSphere's "active" or "consumed" memory: those describe the host's view of the VM; measure inside the guest instead.</li>
+        <li>Reserving the peak: VMware advises reserving the minimum acceptable amount, not the amount you would like to have available.</li>
+        <li>A window that misses the busiest times: the VM's memory comes out too low.</li>
+      </ul>
+      <p>
+        Full derivation, warnings and every assumption: <a href="/vmware/how-it-works/">how the VMware vSphere calculator works</a>. The shared formula and margin tables: <a href="/sizing-model/">the sizing model</a>.
+      </p>
+    </section>
+  </div>
+
 </main>
 
 <footer class="site-footer">

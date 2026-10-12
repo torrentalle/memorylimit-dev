@@ -42,6 +42,22 @@ Values the result relies on that are our own defaults, or vendor defaults your s
 
 - **Limit margin** (%)
 
+## Memory limit, CPU and concurrency in short
+
+Each instance gets one memory limit, 512 MiB by default, up to 32 GiB; an instance that exceeds it is terminated. The container's filesystem is in memory, so files it writes use the instance's memory too. [Cloud Run docs](https://docs.cloud.google.com/run/docs/configuring/services/memory-limits)
+
+With no separate reservation and running out ending the instance, the calculator sizes the limit from the **peak** alone; the average doesn't change the result. The margin is MemoryLimit's own default; you can change it under *Advanced*.
+
+Google's own formula counts requests: standing memory plus memory per request times concurrency. The calculator applies it when you enter the instance's idle memory and the concurrency now and planned. Up to 4 GiB it leaves CPU at the default 1 vCPU; above that it adds the fewest vCPU the memory needs. [Cloud Run docs](https://docs.cloud.google.com/run/docs/configuring/services/memory-limits)
+
+**Common input mistakes**
+
+- Using the utilization metric as if it were MiB: we read it as a share of the instance's current limit, so multiply its p99 by that limit to get the peak in MiB.
+- Planning a higher concurrency without entering the idle memory: the whole peak counts as per-request memory, so the result is an upper bound.
+- A measured peak taken with fewer requests in flight than the maximum concurrency you entered: memory per request, and the planned memory, come out low.
+
+Full derivation, warnings and every assumption: [how the Cloud Run calculator works](https://memorylimit.dev/cloud-run/how-it-works/index.md). The shared formula and margin tables: [the sizing model](https://memorylimit.dev/sizing-model/index.md).
+
 ## What you get
 
 - gcloud command

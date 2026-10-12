@@ -45,6 +45,22 @@ Values the result relies on that are our own defaults, or vendor defaults your s
 - **Request margin** (%)
 - **Limit margin** (%)
 
+## Memory, reservation and limit in short
+
+A **reservation** is the guaranteed minimum allocation: a VM whose reservation can't be met doesn't power on, and a reservation can't be larger than the VM's configured memory. With no **limit**, the VM's configured memory is its effective limit. [vSphere docs](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/9-0/vsphere-resource-management/configuring-resource-allocation-settings.html)
+
+VMware advises that a limit can waste idle memory, that you reserve the minimum acceptable amount, and that you leave at least 10% of the host unreserved. So the calculator sets no limit, sizes the VM's configured memory from the **peak** and the reservation from the **average** plus its margin, which is our reading of "minimum acceptable". The margins are MemoryLimit's own defaults and can be changed under *Advanced*.
+
+Memory hot add lets you add memory to a powered-on VM, but lowering a VM's memory isn't covered by it, so we assume that needs the VM off. [vSphere docs](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/7-0/vsphere-virtual-machine-administration/configuring-virtual-machine-hardwarevm-admin/virtual-memory-configurationvm-admin/change-memory-hot-add-settingsvm-admin.html)
+
+**Common input mistakes**
+
+- Pasting vSphere's "active" or "consumed" memory: those describe the host's view of the VM; measure inside the guest instead.
+- Reserving the peak: VMware advises reserving the minimum acceptable amount, not the amount you would like to have available.
+- A window that misses the busiest times: the VM's memory comes out too low.
+
+Full derivation, warnings and every assumption: [how the VMware vSphere calculator works](https://memorylimit.dev/vmware/how-it-works/index.md). The shared formula and margin tables: [the sizing model](https://memorylimit.dev/sizing-model/index.md).
+
 ## What you get
 
 - govc command

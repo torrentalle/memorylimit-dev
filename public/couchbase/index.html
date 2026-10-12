@@ -245,6 +245,30 @@
 
   </div>
 
+  <div class="wrap guide">
+    <section class="panel guide-section" id="in-short" aria-labelledby="in-short-heading">
+      <h2 id="in-short-heading" class="panel__title">Service and bucket quotas in short</h2>
+      <p>
+        Couchbase doesn't have one memory limit. It has two levels of quota, nested inside the node's RAM: a quota per service on each node (Data, Index, Search, Eventing, Analytics; Query has none and uses whatever the operating system has left), and a quota per bucket, taken out of the Data service's. All bucket quotas together must fit in the Data quota. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/learn/buckets-memory-and-storage/memory.html" target="_blank" rel="noopener">Couchbase docs</a>
+      </p>
+      <p>
+        This calculator doesn't use the average-and-peak model of the other pages. It applies Couchbase's own Data service sizing formula to each bucket from its document count, size, replicas and working set, spreads the result over the Data nodes, and checks that all the quotas fit in the node's RAM. The overhead, metadata size and high-water mark can be changed under <em>Advanced</em>. <a class="guide-tag guide-tag--doc" href="https://docs.couchbase.com/server/current/install/sizing-general.html" target="_blank" rel="noopener">Couchbase docs</a>
+      </p>
+      <p>
+        The formula is written for the Couchstore storage engine, so the calculator assumes buckets use it; Magma buckets can run with much less memory.
+      </p>
+      <p><strong>Common input mistakes</strong></p>
+      <ul>
+        <li>Guessing document and key sizes: nothing in the metrics or REST APIs gives them reliably, so average a sample of real documents.</li>
+        <li>Leaving out replicas: every replica is a full extra copy of the bucket's data and metadata, held in the same quota.</li>
+        <li>Forgetting the other services: Index, Search, Eventing and Analytics quotas are added as entered to the node's total.</li>
+      </ul>
+      <p>
+        Full derivation, warnings and every assumption: <a href="/couchbase/how-it-works/">how the Couchbase calculator works</a>.
+      </p>
+    </section>
+  </div>
+
 </main>
 
 <footer class="site-footer">

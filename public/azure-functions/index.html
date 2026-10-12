@@ -255,6 +255,30 @@
 
   </div>
 
+  <div class="wrap guide">
+    <section class="panel guide-section" id="in-short" aria-labelledby="in-short-heading">
+      <h2 id="in-short-heading" class="panel__title">Instance sizes in short</h2>
+      <p>
+        Azure Functions doesn't take a free-form memory value. Flex Consumption, the recommended serverless plan, offers three instance sizes: 512 MB (0.25 cores), 2,048 MB (1 core) and 4,096 MB (2 cores). <a class="guide-tag guide-tag--doc" href="https://learn.microsoft.com/en-us/azure/azure-functions/flex-consumption-plan" target="_blank" rel="noopener">Azure docs</a>
+      </p>
+      <p>
+        Running out of memory recycles the instance, so only the <strong>peak</strong> sets the size; the margin is MemoryLimit's own default and can be changed under <em>Advanced</em>. The calculator never goes below Microsoft's suggested 2,048 MB unless you lower the minimum there, and above 4,096 MB it points to Elastic Premium.
+      </p>
+      <p>
+        Executions on an instance share its memory, so the measured peak includes the concurrency the app ran at. Raising concurrency, or moving to a size with a higher default, can need more memory per instance. <a class="guide-tag guide-tag--doc" href="https://learn.microsoft.com/en-us/azure/azure-functions/functions-concurrency" target="_blank" rel="noopener">Azure docs</a>
+      </p>
+      <p><strong>Common input mistakes</strong></p>
+      <ul>
+        <li>Using the average working set as the peak: take the highest per-instance working set over a representative period.</li>
+        <li>Changing concurrency after taking the samples: size again once it has changed.</li>
+        <li>Sizing a Premium app on its own when other apps share the plan: add up the peaks of every app in the plan.</li>
+      </ul>
+      <p>
+        Full derivation, warnings and every assumption: <a href="/azure-functions/how-it-works/">how the Azure Functions calculator works</a>. The shared formula and margin tables: <a href="/sizing-model/">the sizing model</a>.
+      </p>
+    </section>
+  </div>
+
 </main>
 
 <footer class="site-footer">

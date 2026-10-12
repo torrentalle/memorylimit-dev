@@ -49,6 +49,22 @@ Values the result relies on that are our own defaults, or vendor defaults your s
 - **Limit margin** (%)
 - **MemoryMax ratio** (× MemoryHigh)
 
+## MemoryHigh and MemoryMax in short
+
+`MemoryHigh` is the throttling limit: above it the service's processes are heavily slowed down and memory is taken away aggressively. `MemoryMax` is the absolute limit: if usage can't be kept under it, the OOM killer runs inside the unit, and systemd recommends it as the last line of defense. [systemd docs](https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html)
+
+The calculator sets `MemoryHigh` just above the observed **peak** and `MemoryMax` at 1.25 × `MemoryHigh`. Neither systemd nor the cgroup v2 documentation gives a ratio, so 1.25 is MemoryLimit's own default; you can change it under *Advanced*. The average-based figure is shown as expected usage, for reference only.
+
+Both settings control cgroup v2. Since systemd 258, cgroup v1 isn't supported at all; older hosts still on it only have the deprecated `MemoryLimit=`. [systemd NEWS](https://github.com/systemd/systemd/blob/main/NEWS)
+
+**Common input mistakes**
+
+- Reading `MemoryCurrent` as the working set: we read it as the unit's `memory.current`, which counts page cache too, so it reads a little higher.
+- Using the wrong cgroup id in a cAdvisor query: a service is `/system.slice/<name>.service`.
+- A window that misses the busiest times: `MemoryHigh` comes out too low and the service is throttled early.
+
+Full derivation, warnings and every assumption: [how the systemd calculator works](https://memorylimit.dev/systemd/how-it-works/index.md). The shared formula and margin tables: [the sizing model](https://memorylimit.dev/sizing-model/index.md).
+
 ## What you get
 
 - systemd drop-in (override.conf)

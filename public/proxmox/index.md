@@ -45,6 +45,22 @@ Values the result relies on that are our own defaults, or vendor defaults your s
 - **Request margin** (%)
 - **Limit margin** (%)
 
+## Memory and minimum memory in short
+
+**Memory** is the RAM online for the VM, and the most it can have when the balloon device is used. **Minimum memory** (`balloon`) is the target RAM; 0 turns the balloon driver off. With the minimum lower than memory, Proxmox always keeps the minimum available and adds memory up to the maximum as the host allows. [Proxmox docs](https://pve.proxmox.com/pve-docs/chapter-qm.html)
+
+So the minimum comes from the **average** and memory from the **peak**, with margins that are MemoryLimit's own defaults, changeable under *Advanced*. Proxmox refuses a balloon value larger than the assigned memory, so memory is raised to the minimum when the two are close. The calculator assumes ballooning is on; with it off, set both values to the memory result.
+
+When the host needs memory back, the guest's balloon driver gives it up, which can make the guest swap or, as a last resort, run its OOM killer. On Windows the driver has to be installed and isn't recommended for critical systems. [Proxmox docs](https://pve.proxmox.com/pve-docs/chapter-qm.html)
+
+**Common input mistakes**
+
+- Measuring from the host: with ballooning active it shows what Proxmox lent the VM, not what the VM needed. Measure inside the guest.
+- Keeping a lower minimum with ballooning off: the minimum only means something with the balloon driver.
+- A window that misses the busiest times: memory comes out too low.
+
+Full derivation, warnings and every assumption: [how the Proxmox VE calculator works](https://memorylimit.dev/proxmox/how-it-works/index.md). The shared formula and margin tables: [the sizing model](https://memorylimit.dev/sizing-model/index.md).
+
 ## What you get
 
 - qm command

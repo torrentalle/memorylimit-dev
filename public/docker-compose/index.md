@@ -47,6 +47,22 @@ Values the result relies on that are our own defaults, or vendor defaults your s
 - **Request margin** (%)
 - **Limit margin** (%)
 
+## Limits, reservations and swap in short
+
+The **limit** becomes the container's hard memory limit (`--memory`). The **reservation** becomes `--memory-reservation`: a soft limit, lower than the limit, that Docker enforces only when it detects contention or low memory on the host. [Docker docs](https://docs.docker.com/engine/containers/resource_constraints/)
+
+The calculator sizes the reservation from the **average** and the limit from the **peak**, then adds margins that are MemoryLimit's own defaults, not vendor figures; you can change them under *Advanced*. Docker rejects a limit below its reservation, so when the peak is close to the average the limit is raised to the reservation. [Docker source](https://github.com/moby/moby/blob/master/daemon/daemon_unix.go)
+
+**Swap.** If the host has swap and `memswap_limit` isn't set, a container with a memory limit can use as much swap as that limit. Setting `memswap_limit` equal to the limit prevents any swap. The calculator leaves swap as Docker sets it. [Docker docs](https://docs.docker.com/engine/containers/resource_constraints/)
+
+**Common input mistakes**
+
+- Sizing from total usage instead of the working set: total usage includes reclaimable file cache, so services that read many files get larger values.
+- Filtering by the wrong container name: Compose names containers `<project>-<service>-<number>`, and a service with its own `container_name` needs that name in the query.
+- A window that misses the busiest times: the limit comes out too low.
+
+Full derivation, warnings and every assumption: [how the Docker Compose calculator works](https://memorylimit.dev/docker-compose/how-it-works/index.md). The shared formula and margin tables: [the sizing model](https://memorylimit.dev/sizing-model/index.md).
+
 ## What you get
 
 - docker-compose.yml

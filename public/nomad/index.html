@@ -245,6 +245,30 @@
 
   </div>
 
+  <div class="wrap guide">
+    <section class="panel guide-section" id="in-short" aria-labelledby="in-short-heading">
+      <h2 id="in-short-heading" class="panel__title">memory, memory_max and oversubscription in short</h2>
+      <p>
+        <code>memory</code> is the memory the task requires, in MB. Without <code>memory_max</code> it is also the hard limit; with it set, <code>memory</code> becomes the reservation and <code>memory_max</code> the hard limit. Nomad's own advice is the typical usage for <code>memory</code> and <code>memory_max</code> to absorb unexpected load spikes. <a class="guide-tag guide-tag--doc" href="https://developer.hashicorp.com/nomad/docs/job-specification/resources" target="_blank" rel="noopener">Nomad docs</a>
+      </p>
+      <p>
+        So the calculator sizes <code>memory</code> from the <strong>average</strong> and <code>memory_max</code> from the <strong>peak</strong>, with margins that are MemoryLimit's own defaults, not vendor figures; you can change them under <em>Advanced</em>.
+      </p>
+      <p>
+        <code>memory_max</code> only works when memory oversubscription is enabled in the scheduler configuration. It is off by default and enabled once per cluster. Without it, <code>memory</code> is the hard limit, so a task sized from the average would be killed at that value; the note under the result says to set <code>memory</code> to the <code>memory_max</code> value in that case. <a class="guide-tag guide-tag--doc" href="https://developer.hashicorp.com/nomad/commands/operator/scheduler/set-config" target="_blank" rel="noopener">Nomad docs</a>
+      </p>
+      <p><strong>Common input mistakes</strong></p>
+      <ul>
+        <li>Filtering by job only: filter by both job and task, or another job's task of the same name is mixed in.</li>
+        <li>Pasting from a cluster whose telemetry has <code>publish_allocation_metrics</code> off: Nomad publishes allocation metrics only when it is on.</li>
+        <li>A window that misses the busiest times: <code>memory_max</code> comes out too low.</li>
+      </ul>
+      <p>
+        Full derivation, warnings and every assumption: <a href="/nomad/how-it-works/">how the Nomad calculator works</a>. The shared formula and margin tables: <a href="/sizing-model/">the sizing model</a>.
+      </p>
+    </section>
+  </div>
+
 </main>
 
 <footer class="site-footer">
