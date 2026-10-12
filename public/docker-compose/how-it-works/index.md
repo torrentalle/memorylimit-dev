@@ -87,6 +87,8 @@ container_memory_working_set_bytes{name=~"myproject-api-[0-9]+"}
 - Compose names a service's containers `<project>-<service>-<number>`, so the regex above matches every replica of the `api` service in the `myproject` project. [Docker source](https://github.com/docker/compose/blob/main/pkg/compose/service_containers.go) A service with its own `container_name` needs that name instead. [Assumption](https://memorylimit.dev/docker-compose/how-it-works/index.md#all-assumptions-in-one-place)
 - The working set leaves out file cache the kernel can reclaim, so it's closer to what the container really needs than total usage. [Assumption](https://memorylimit.dev/docker-compose/how-it-works/index.md#all-assumptions-in-one-place) A range query over a representative period (a week is a good default) gives the best average and peak.
 
+The [Kubernetes guide](https://memorylimit.dev/kubernetes/how-it-works/index.md) reads the same working-set metric, and also sizes a request from the average and a limit from the peak.
+
 ## All assumptions in one place
 
 Besides the margins of the [shared sizing model](https://memorylimit.dev/sizing-model/index.md#all-assumptions-in-one-place):

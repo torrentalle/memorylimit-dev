@@ -267,6 +267,9 @@ limit       = max(peak × (1 + limit margin), reservation, 6M)   rounded up to a
           A range query over a representative period (a week is a good default) gives the best average and peak.
         </li>
       </ul>
+      <p>
+        The <a href="/kubernetes/how-it-works/">Kubernetes guide</a> reads the same working-set metric, and also sizes a request from the average and a limit from the peak.
+      </p>
     </section>
 
     <section class="panel guide-section" id="assumptions" aria-labelledby="assumptions-heading">

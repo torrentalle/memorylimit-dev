@@ -21,6 +21,8 @@ This page walks through how the [Nomad calculator](https://memorylimit.dev/nomad
 
 Nomad's own advice matches the shared model: set `memory` to the task's typical usage and `memory_max` to absorb unexpected load spikes. [Nomad docs](https://developer.hashicorp.com/nomad/docs/job-specification/resources) So the calculator sizes `memory` from the average and `memory_max` from the peak.
 
+In Kubernetes, requests and limits play comparable roles; the [Kubernetes guide](https://memorylimit.dev/kubernetes/how-it-works/index.md) sizes them the same way, from the average and the peak.
+
 ## memory and memory_max
 
 ```

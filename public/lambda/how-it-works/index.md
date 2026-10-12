@@ -22,6 +22,8 @@ This page walks through how the [Lambda calculator](https://memorylimit.dev/lamb
 
 There is no separate reservation and limit, and running out of memory fails the invocation, so the calculator sizes `MemorySize` from the peak alone. The average you enter doesn't change the result.
 
+Cloud Run and Azure Functions also size from the peak alone: see the [Cloud Run guide](https://memorylimit.dev/cloud-run/how-it-works/index.md) and the [Azure Functions guide](https://memorylimit.dev/azure-functions/how-it-works/index.md).
+
 ## From peak usage to MemorySize
 
 ```
