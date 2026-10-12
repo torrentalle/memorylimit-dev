@@ -58,6 +58,11 @@ Google's own formula counts requests: standing memory plus memory per request ti
 
 Full derivation, warnings and every assumption: [how the Cloud Run calculator works](https://memorylimit.dev/cloud-run/how-it-works/index.md). The shared formula and margin tables: [the sizing model](https://memorylimit.dev/sizing-model/index.md).
 
+Related calculators:
+
+- [AWS Lambda](https://memorylimit.dev/lambda/index.md)
+- [Azure Functions](https://memorylimit.dev/azure-functions/index.md)
+
 ## What you get
 
 - gcloud command

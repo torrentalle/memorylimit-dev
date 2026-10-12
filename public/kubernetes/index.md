@@ -68,6 +68,11 @@ So the request should cover normal running and the limit the worst moment. The c
 
 Full derivation, warnings and the comparison with the Vertical Pod Autoscaler: [how the Kubernetes calculator works](https://memorylimit.dev/kubernetes/how-it-works/index.md). The shared formula and margin tables: [the sizing model](https://memorylimit.dev/sizing-model/index.md).
 
+Related calculators:
+
+- [Docker Compose](https://memorylimit.dev/docker-compose/index.md)
+- [HashiCorp Nomad](https://memorylimit.dev/nomad/index.md)
+
 ## What you get
 
 - Kubernetes manifest

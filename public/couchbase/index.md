@@ -81,6 +81,10 @@ The formula is written for the Couchstore storage engine, so the calculator assu
 
 Full derivation, warnings and every assumption: [how the Couchbase calculator works](https://memorylimit.dev/couchbase/how-it-works/index.md).
 
+Related calculators:
+
+- [Redis maxmemory](https://memorylimit.dev/redis/index.md)
+
 ## What you get
 
 - couchbase-cli

@@ -65,6 +65,11 @@ Both settings control cgroup v2. Since systemd 258, cgroup v1 isn't supported at
 
 Full derivation, warnings and every assumption: [how the systemd calculator works](https://memorylimit.dev/systemd/how-it-works/index.md). The shared formula and margin tables: [the sizing model](https://memorylimit.dev/sizing-model/index.md).
 
+Related calculators:
+
+- [VMware vSphere](https://memorylimit.dev/vmware/index.md)
+- [Proxmox VE](https://memorylimit.dev/proxmox/index.md)
+
 ## What you get
 
 - systemd drop-in (override.conf)

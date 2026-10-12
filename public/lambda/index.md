@@ -60,6 +60,11 @@ It only answers the memory question: how much the function needs so it doesn't r
 
 Full derivation, warnings and every assumption: [how the AWS Lambda calculator works](https://memorylimit.dev/lambda/how-it-works/index.md). The shared formula and margin tables: [the sizing model](https://memorylimit.dev/sizing-model/index.md).
 
+Related calculators:
+
+- [Google Cloud Run](https://memorylimit.dev/cloud-run/index.md)
+- [Azure Functions](https://memorylimit.dev/azure-functions/index.md)
+
 ## What you get
 
 - Lambda function configuration

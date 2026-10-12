@@ -61,6 +61,11 @@ So the calculator sizes `memory` from the **average** and `memory_max` from the 
 
 Full derivation, warnings and every assumption: [how the Nomad calculator works](https://memorylimit.dev/nomad/how-it-works/index.md). The shared formula and margin tables: [the sizing model](https://memorylimit.dev/sizing-model/index.md).
 
+Related calculators:
+
+- [Kubernetes](https://memorylimit.dev/kubernetes/index.md)
+- [Docker Compose](https://memorylimit.dev/docker-compose/index.md)
+
 ## What you get
 
 - Nomad job (task resources)

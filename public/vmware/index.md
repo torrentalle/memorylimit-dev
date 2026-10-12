@@ -61,6 +61,11 @@ Memory hot add lets you add memory to a powered-on VM, but lowering a VM's memor
 
 Full derivation, warnings and every assumption: [how the VMware vSphere calculator works](https://memorylimit.dev/vmware/how-it-works/index.md). The shared formula and margin tables: [the sizing model](https://memorylimit.dev/sizing-model/index.md).
 
+Related calculators:
+
+- [Systemd / Bare Metal / VM](https://memorylimit.dev/systemd/index.md)
+- [Proxmox VE](https://memorylimit.dev/proxmox/index.md)
+
 ## What you get
 
 - govc command

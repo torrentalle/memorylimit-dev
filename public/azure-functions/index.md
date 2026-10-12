@@ -56,6 +56,11 @@ Executions on an instance share its memory, so the measured peak includes the co
 
 Full derivation, warnings and every assumption: [how the Azure Functions calculator works](https://memorylimit.dev/azure-functions/how-it-works/index.md). The shared formula and margin tables: [the sizing model](https://memorylimit.dev/sizing-model/index.md).
 
+Related calculators:
+
+- [AWS Lambda](https://memorylimit.dev/lambda/index.md)
+- [Google Cloud Run](https://memorylimit.dev/cloud-run/index.md)
+
 ## What you get
 
 - Azure CLI command
