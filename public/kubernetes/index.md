@@ -52,6 +52,22 @@ Values the result relies on that are our own defaults, or vendor defaults your s
 - **VPA margin** (%)
 - **VPA minimum** (MiB)
 
+## Requests, limits and OOMKilled in short
+
+The **request** is what the scheduler uses to choose a node; a container may use more than it when the node has spare memory. The **limit** is enforced by the kernel: a container that goes over it may be OOM-killed. [Kubernetes docs](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
+
+So the request should cover normal running and the limit the worst moment. The calculator sizes the request from the **average** and the limit from the **peak**, then adds margins that are MemoryLimit's own defaults, not vendor figures; you can change them under *Advanced*.
+
+**Burstable or Guaranteed.** With Burstable the request is below the limit. A Pod is Guaranteed only if every container's memory and CPU requests equal their limits; the calculator writes memory only, so set CPU the same way. When a node runs short of memory, Pods above their requests are the eviction candidates, BestEffort first, then Burstable, then Guaranteed. [Kubernetes docs](https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/)
+
+**Common input mistakes**
+
+- Pasting an instant query: it gives one value per Pod. Use a range query over a representative period, for one container.
+- Pasting memory summed across replicas: every value comes out too large by the replica count.
+- A window that misses the busiest times: the limit comes out too low.
+
+Full derivation, warnings and the comparison with the Vertical Pod Autoscaler: [how the Kubernetes calculator works](https://memorylimit.dev/kubernetes/how-it-works/index.md). The shared formula and margin tables: [the sizing model](https://memorylimit.dev/sizing-model/index.md).
+
 ## What you get
 
 - Kubernetes manifest
