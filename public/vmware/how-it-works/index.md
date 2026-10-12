@@ -83,6 +83,8 @@ node_memory_MemTotal_bytes{instance="vm1:9100"}
 - Measured inside the guest with node_exporter: total memory minus `MemAvailable`, the kernel's estimate of memory available for new applications without swapping. [Kernel docs](https://docs.kernel.org/filesystems/proc.html)
 - The calculator asks for guest-side numbers rather than vSphere's own "active" or "consumed" memory, which describe the host's view of the VM rather than what the guest needs. [Assumption](https://memorylimit.dev/vmware/how-it-works/index.md#all-assumptions-in-one-place)
 
+The [Proxmox VE guide](https://memorylimit.dev/proxmox/how-it-works/index.md) sizes a memory value and a minimum memory from the same guest-side measurement.
+
 ## All assumptions in one place
 
 Besides the margins of the [shared sizing model](https://memorylimit.dev/sizing-model/index.md#all-assumptions-in-one-place):

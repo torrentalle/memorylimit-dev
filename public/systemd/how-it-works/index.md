@@ -82,6 +82,8 @@ container_memory_working_set_bytes{id="/system.slice/myapp.service"}
 - With cAdvisor on the host, its `id` label is the cgroup path, so a service is `/system.slice/<name>.service`. [cAdvisor source](https://github.com/google/cadvisor/blob/master/lib/metrics/prometheus.go)
 - Without Prometheus, sample `systemctl show -P MemoryCurrent myapp.service` every minute and paste the bytes. `MemoryCurrent` reports the unit's `memory.current`, the cgroup's total usage, which counts page cache too; so it reads a little higher than the working set. [Kernel docs](https://docs.kernel.org/admin-guide/cgroup-v2.html) systemd's documentation lists the property without describing it. [Assumption](https://memorylimit.dev/systemd/how-it-works/index.md#all-assumptions-in-one-place)
 
+The [Docker Compose guide](https://memorylimit.dev/docker-compose/how-it-works/index.md) reads the same cAdvisor working-set metric, filtered by container name instead of cgroup path.
+
 ## All assumptions in one place
 
 Besides the margins of the [shared sizing model](https://memorylimit.dev/sizing-model/index.md#all-assumptions-in-one-place):

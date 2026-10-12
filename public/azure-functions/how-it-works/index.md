@@ -52,6 +52,8 @@ A small function peaking at 50 MiB would fit 512 MB, but gets Microsoft's 2,048 
 | --- | --- | --- |
 | CPU | for that size | 1 core |
 
+Lambda and Cloud Run also size from the peak alone: see the [Lambda guide](https://memorylimit.dev/lambda/how-it-works/index.md) and the [Cloud Run guide](https://memorylimit.dev/cloud-run/how-it-works/index.md).
+
 ## Microsoft's guidance: 2,048 MB and concurrency
 
 Microsoft suggests 2,048 MB as the default for most apps, and 512 MB or 4,096 MB when concurrency or processing power call for it. Larger instances handle more concurrent executions, and CPU and network bandwidth grow with the size. [Azure docs](https://learn.microsoft.com/en-us/azure/azure-functions/flex-consumption-plan)

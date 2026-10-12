@@ -79,6 +79,8 @@ node_memory_MemTotal_bytes{instance="vm1:9100"}
 - Measured inside the guest with node_exporter: total memory minus `MemAvailable`, the kernel's estimate of memory available for new applications without swapping. [Kernel docs](https://docs.kernel.org/filesystems/proc.html)
 - With ballooning active, the host's view shows what Proxmox lent the VM rather than what it needed, so the calculator asks for the guest's own numbers. [Assumption](https://memorylimit.dev/proxmox/how-it-works/index.md#all-assumptions-in-one-place)
 
+The [vSphere guide](https://memorylimit.dev/vmware/how-it-works/index.md) sizes a memory value and a reservation from the same guest-side measurement.
+
 ## All assumptions in one place
 
 Besides the margins of the [shared sizing model](https://memorylimit.dev/sizing-model/index.md#all-assumptions-in-one-place):
