@@ -4,7 +4,7 @@ Canonical: [Proxmox VE Memory Calculator](https://memorylimit.dev/proxmox/)
 
 Locale: en
 
-Purpose: Set a Proxmox VE VM's memory and ballooning minimum from real usage data. Outputs the qm command and web UI steps — useful when migrating VMs from VMware.
+Purpose: Set a Proxmox VE VM's memory and ballooning minimum from real usage data. Outputs the qm command and web UI steps.
 
 Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-dev)
 
