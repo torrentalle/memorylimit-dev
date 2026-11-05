@@ -25,6 +25,7 @@ so entries are grouped under `Unreleased` until a release is tagged.
 
 ### Changed
 
+- The Proxmox VE page description no longer mentions migrating from VMware; it describes only what the calculator does.
 - ADR 0015 records the EthicalAds removal and supersedes ADRs 0008 and 0009 (#47).
 - Browser tests: page errors fail the test they happen in, the dormant-analytics test checks its own control, the theme test checks there is no flash, and the donation link and `/k8s/` under the CSP are covered. CI runs with a read-only token that it doesn't leave on disk (#48).
 - The Couchbase page shares the result panels and the paste/manual toggle with the other calculators (`result-view.js`), its tooltips moved into its formatter and are tested, and its advanced settings are read from `data-setting` attributes. A test ties every advanced field's default on a page to the formatter's, and the margin fields' range to `MARGIN_OVERRIDE_RANGE` (#49).
