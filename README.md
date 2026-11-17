@@ -235,6 +235,10 @@ PW_CHANNEL=msedge npm run test:e2e         # or reuse an installed Edge/Chrome i
 
 The site is the contents of `public/`, served as-is with no build step.
 
+- **Markdown for agents:** `src/worker.js` runs before the static assets for page URLs only (`run_worker_first`
+  in `wrangler.jsonc`). A request that prefers `text/markdown` gets the page's Markdown mirror at the same URL;
+  everything else, browsers included, gets the HTML. Both carry `Vary: Accept`. The Worker stores and computes
+  nothing; it only picks which file to serve.
 - **Redirects:** `public/_redirects` issues a 301 from `/k8s/` to `/kubernetes/`. `public/k8s/index.html` is a
   meta-refresh fallback for hosts that ignore `_redirects`. Add future aliases the same way.
 - **Caching:** `public/_headers` gives the favicon and share image a one-day cache. JS and CSS keep the
