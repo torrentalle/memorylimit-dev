@@ -1,6 +1,13 @@
 {
   "name": "memorylimit-dev",
   "compatibility_date": "2026-10-04",
-  "assets": { "directory": "./public" },
+  // src/worker.js serves the Markdown mirror to clients that ask for
+  // text/markdown. It runs only for page URLs (ending in "/"); assets skip it.
+  "main": "src/worker.js",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/", "/*/"]
+  },
   "previews": {}
 }
