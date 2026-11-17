@@ -60,12 +60,29 @@ test('keeps short cache lifetimes for unhashed assets', () => {
   assert.equal(rules['/css/*'], undefined);
 });
 
-test('the home page links to its Markdown version and llms.txt, and both exist', () => {
+test('the home page links to its Markdown version, llms.txt and the API catalog, and all exist', () => {
   const links = rules['/']?.Link?.split(/,\s*(?=<)/) ?? [];
   assert.ok(links.includes('</index.md>; rel="alternate"; type="text/markdown"'));
   assert.ok(links.includes('</llms.txt>; rel="describedby"; type="text/plain"'));
+  assert.ok(links.includes('</.well-known/api-catalog>; rel="api-catalog"'));
   for (const link of links) {
     const target = link.match(/^<\/([^>]*)>/)[1];
     assert.ok(existsSync(join(PUBLIC_DIR, target)), `${target} exists`);
+  }
+});
+
+test('the API catalog is a linkset served as application/linkset+json', () => {
+  assert.equal(rules['/.well-known/api-catalog']?.['Content-Type'], 'application/linkset+json');
+  const { linkset } = JSON.parse(readFileSync(join(PUBLIC_DIR, '.well-known', 'api-catalog'), 'utf8'));
+  assert.ok(Array.isArray(linkset) && linkset.length > 0);
+  for (const entry of linkset) {
+    assert.match(entry.anchor, /^https:\/\/memorylimit\.dev\//);
+    for (const [rel, targets] of Object.entries(entry)) {
+      if (rel === 'anchor') continue;
+      for (const { href } of targets) {
+        const path = new URL(href).pathname;
+        assert.ok(existsSync(join(PUBLIC_DIR, path.endsWith('/') ? `${path}index.html` : path)), `${rel} ${href} exists`);
+      }
+    }
   }
 });

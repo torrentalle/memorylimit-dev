@@ -1,0 +1,14 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://memorylimit.dev/",
+      "service-doc": [
+        { "href": "https://memorylimit.dev/llms.txt", "type": "text/plain" },
+        { "href": "https://memorylimit.dev/sizing-model/", "type": "text/html" }
+      ],
+      "describedby": [
+        { "href": "https://memorylimit.dev/sitemap.md", "type": "text/markdown" }
+      ]
+    }
+  ]
+}
