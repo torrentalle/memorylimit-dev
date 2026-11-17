@@ -23,6 +23,7 @@ so entries are grouped under `Unreleased` until a release is tagged.
 - Links between related guides where they say something true about each other: the same guest-side measurement (vSphere and Proxmox VE), the same working-set metric (Docker Compose, systemd and Kubernetes), and the same peak-only sizing (Lambda, Cloud Run and Azure Functions); Nomad points to Kubernetes for the equivalent request and limit.
 - Redis: the provisioning factor (2 × maxmemory by default, about 1.25× without persistence) can be changed under Advanced.
 - Markdown content negotiation: a page URL requested with `Accept: text/markdown` returns its Markdown mirror instead of the HTML, with `Vary: Accept`; browsers still get HTML. A small Worker (`src/worker.js`) runs only for page URLs.
+- `robots.txt` declares Content Signals (`search=yes, ai-input=yes, ai-train=yes`) for all user agents.
 
 ### Changed
 
