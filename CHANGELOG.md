@@ -29,6 +29,7 @@ so entries are grouped under `Unreleased` until a release is tagged.
 
 ### Changed
 
+- The Proxmox VE card on the home page no longer mentions migrating from VMware, matching the page description (#61).
 - The Proxmox VE page description no longer mentions migrating from VMware; it describes only what the calculator does.
 - ADR 0015 records the EthicalAds removal and supersedes ADRs 0008 and 0009 (#47).
 - Browser tests: page errors fail the test they happen in, the dormant-analytics test checks its own control, the theme test checks there is no flash, and the donation link and `/k8s/` under the CSP are covered. CI runs with a read-only token that it doesn't leave on disk (#48).

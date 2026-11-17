@@ -28,7 +28,7 @@ MemoryLimit turns observed container or function memory usage — pasted straigh
 
 - [Systemd / Bare Metal / VM](https://memorylimit.dev/systemd/index.md): Set MemoryHigh and MemoryMax for services running directly on a Linux host.
 - [VMware vSphere](https://memorylimit.dev/vmware/index.md): Size a VM’s memory and reservation, with no limit, as VMware advises.
-- [Proxmox VE](https://memorylimit.dev/proxmox/index.md): Set a VM’s memory and ballooning minimum — handy when migrating from VMware.
+- [Proxmox VE](https://memorylimit.dev/proxmox/index.md): Set a VM’s memory and ballooning minimum from the guest’s real usage.
 
 ## Data stores
 
