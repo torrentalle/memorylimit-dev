@@ -25,6 +25,7 @@ so entries are grouped under `Unreleased` until a release is tagged.
 - Markdown content negotiation: a page URL requested with `Accept: text/markdown` returns its Markdown mirror instead of the HTML, with `Vary: Accept`; browsers still get HTML. A small Worker (`src/worker.js`) runs only for page URLs.
 - `robots.txt` declares Content Signals (`search=yes, ai-input=yes, ai-train=yes`) for all user agents.
 - The home page sends `Link` headers to its Markdown version (`rel="alternate"`) and to `llms.txt` (`rel="describedby"`).
+- Lambda guide: a "Memory and CPU at common sizes" table (128 MB to 10,240 MB), worked out from AWS's 1,769 MB per vCPU proportion and checked against the calculator's own figure by `tests/formatters/lambda.test.js`.
 
 ### Changed
 

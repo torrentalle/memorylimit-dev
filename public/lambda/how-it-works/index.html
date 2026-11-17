@@ -185,6 +185,29 @@ MemorySize = memory × 1,048,576 ÷ 1,000,000                   in MB, rounded u
         trying the open-source Lambda Power Tuning tool, or accepting Compute Optimizer's recommendations.
         <a class="guide-tag guide-tag--doc" href="https://docs.aws.amazon.com/lambda/latest/dg/configuration-memory.html" target="_blank" rel="noopener">AWS docs</a>
       </p>
+
+      <h3 class="guide-subheading" id="memory-cpu-table">Memory and CPU at common sizes</h3>
+      <p>
+        AWS gives one point, 1,769 MB for one vCPU, and says CPU grows in proportion to memory.
+        <a class="guide-tag guide-tag--doc" href="https://docs.aws.amazon.com/lambda/latest/dg/configuration-memory.html" target="_blank" rel="noopener">AWS docs</a>
+        AWS publishes no table, so the rows below are that proportion worked out, MemorySize ÷ 1,769, the same figure
+        the calculator shows. They are a share of CPU, not a count of cores.
+      </p>
+      <div class="guide-table-wrap">
+        <table class="guide-table guide-table--numbers" data-vcpu-table>
+          <thead><tr><th scope="col">MemorySize</th><th scope="col">vCPU equivalent</th></tr></thead>
+          <tbody>
+            <tr><td data-mb="128">128 MB</td><td data-vcpu="0.07">0.07</td></tr>
+            <tr><td data-mb="512">512 MB</td><td data-vcpu="0.29">0.29</td></tr>
+            <tr><td data-mb="1024">1,024 MB</td><td data-vcpu="0.58">0.58</td></tr>
+            <tr><td data-mb="1769">1,769 MB</td><td data-vcpu="1.00">1.00</td></tr>
+            <tr><td data-mb="2048">2,048 MB</td><td data-vcpu="1.16">1.16</td></tr>
+            <tr><td data-mb="3008">3,008 MB</td><td data-vcpu="1.70">1.70</td></tr>
+            <tr><td data-mb="4096">4,096 MB</td><td data-vcpu="2.32">2.32</td></tr>
+            <tr><td data-mb="10240">10,240 MB</td><td data-vcpu="5.79">5.79</td></tr>
+          </tbody>
+        </table>
+      </div>
       <p>
         This calculator only answers the memory question: how much the function needs so it doesn't run out. It doesn't
         measure duration, so it can't tell whether more memory would make a function faster or cheaper; run Power Tuning
