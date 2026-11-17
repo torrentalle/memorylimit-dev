@@ -24,6 +24,7 @@ so entries are grouped under `Unreleased` until a release is tagged.
 - Redis: the provisioning factor (2 × maxmemory by default, about 1.25× without persistence) can be changed under Advanced.
 - Markdown content negotiation: a page URL requested with `Accept: text/markdown` returns its Markdown mirror instead of the HTML, with `Vary: Accept`; browsers still get HTML. A small Worker (`src/worker.js`) runs only for page URLs.
 - `robots.txt` declares Content Signals (`search=yes, ai-input=yes, ai-train=yes`) for all user agents.
+- The home page sends `Link` headers to its Markdown version (`rel="alternate"`) and to `llms.txt` (`rel="describedby"`).
 
 ### Changed
 
