@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseHeaders, parseCsp } from './helpers/headers.js';
 
@@ -58,4 +58,14 @@ test('keeps short cache lifetimes for unhashed assets', () => {
   }
   assert.equal(rules['/js/*'], undefined);
   assert.equal(rules['/css/*'], undefined);
+});
+
+test('the home page links to its Markdown version and llms.txt, and both exist', () => {
+  const links = rules['/']?.Link?.split(/,\s*(?=<)/) ?? [];
+  assert.ok(links.includes('</index.md>; rel="alternate"; type="text/markdown"'));
+  assert.ok(links.includes('</llms.txt>; rel="describedby"; type="text/plain"'));
+  for (const link of links) {
+    const target = link.match(/^<\/([^>]*)>/)[1];
+    assert.ok(existsSync(join(PUBLIC_DIR, target)), `${target} exists`);
+  }
 });

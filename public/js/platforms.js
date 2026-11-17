@@ -101,7 +101,7 @@ export const PLATFORM_DEFINITIONS = [
     label: 'Proxmox VE',
     path: '/proxmox/',
     guide: '/proxmox/how-it-works/',
-    tagline: 'Set a VM’s memory and ballooning minimum — handy when migrating from VMware.'
+    tagline: 'Set a VM’s memory and ballooning minimum from the guest’s real usage.'
   },
   {
     id: 'redis',
