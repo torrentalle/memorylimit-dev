@@ -88,3 +88,17 @@ test('the guide cites the AWS documentation', () => {
   ]) assert.ok(guide.includes(url), url);
   assert.ok(guide.includes('href="/sizing-model/"'));
 });
+
+test('the guide’s memory to CPU table is MemorySize ÷ 1,769, rounded as the calculator rounds it', () => {
+  const table = guide.match(/<table[^>]*data-vcpu-table[^>]*>([\s\S]*?)<\/table>/);
+  assert.ok(table, 'the guide has the table');
+  const rows = [...table[1].matchAll(/data-mb="(\d+)">([^<]+)<\/td><td data-vcpu="([\d.]+)">([^<]+)</g)];
+  assert.ok(rows.length >= 5);
+  for (const [, mb, mbText, vcpu, vcpuText] of rows) {
+    assert.equal(mbText, `${Number(mb).toLocaleString('en-US')} MB`);
+    assert.equal(vcpuText, vcpu);
+    assert.ok(Number(mb) >= lambda.MIN_MEMORY_MB && Number(mb) <= lambda.MAX_MEMORY_MB, `${mb} MB is in range`);
+    assert.equal(vcpu, (Number(mb) / lambda.MB_PER_VCPU).toFixed(2), `${mb} MB`);
+  }
+  assert.ok(rows.some(([, mb, , vcpu]) => mb === String(lambda.MB_PER_VCPU) && vcpu === '1.00'), 'includes the 1,769 MB point');
+});

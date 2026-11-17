@@ -54,6 +54,21 @@ A small function, peaking at 60 MiB, lands below Lambda's minimum and is raised 
 
 Because CPU comes with memory, AWS calls memory the principal lever for a function's performance: a CPU-, network- or memory-bound function can run much faster with more. AWS suggests watching memory and duration in CloudWatch, trying the open-source Lambda Power Tuning tool, or accepting Compute Optimizer's recommendations. [AWS docs](https://docs.aws.amazon.com/lambda/latest/dg/configuration-memory.html)
 
+### Memory and CPU at common sizes
+
+AWS gives one point, 1,769 MB for one vCPU, and says CPU grows in proportion to memory. [AWS docs](https://docs.aws.amazon.com/lambda/latest/dg/configuration-memory.html) AWS publishes no table, so the rows below are that proportion worked out, MemorySize ÷ 1,769, the same figure the calculator shows. They are a share of CPU, not a count of cores.
+
+| MemorySize | vCPU equivalent |
+| --- | --- |
+| 128 MB | 0.07 |
+| 512 MB | 0.29 |
+| 1,024 MB | 0.58 |
+| 1,769 MB | 1.00 |
+| 2,048 MB | 1.16 |
+| 3,008 MB | 1.70 |
+| 4,096 MB | 2.32 |
+| 10,240 MB | 5.79 |
+
 This calculator only answers the memory question: how much the function needs so it doesn't run out. It doesn't measure duration, so it can't tell whether more memory would make a function faster or cheaper; run Power Tuning for that. [Assumption](https://memorylimit.dev/lambda/how-it-works/index.md#all-assumptions-in-one-place)
 
 ## What the calculator writes
