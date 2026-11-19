@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Proxmox VE Memory & Ballooning Calculator | MemoryLimit</title>
+<title>Memory & Ballooning Calculator for Proxmox VE | MemoryLimit</title>
 <meta name="description" content="Set a Proxmox VE VM's memory and ballooning minimum from real usage data. Outputs the qm command and web UI steps." />
 <link rel="canonical" href="https://memorylimit.dev/proxmox/" />
 <link rel="icon" href="/favicon.ico" sizes="32x32" />
@@ -11,21 +11,21 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="MemoryLimit" />
-<meta property="og:title" content="Proxmox VE Memory &amp; Ballooning Calculator" />
+<meta property="og:title" content="Memory &amp; Ballooning Calculator for Proxmox VE" />
 <meta property="og:description" content="Set a Proxmox VE VM's memory and ballooning minimum from real usage data. Outputs the qm command and web UI steps." />
 <meta property="og:url" content="https://memorylimit.dev/proxmox/" />
 <meta property="og:image" content="https://memorylimit.dev/og-image.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Proxmox VE Memory &amp; Ballooning Calculator" />
+<meta name="twitter:title" content="Memory &amp; Ballooning Calculator for Proxmox VE" />
 <meta name="twitter:description" content="Set a Proxmox VE VM's memory and ballooning minimum from real usage data. Outputs the qm command and web UI steps." />
 <meta name="twitter:image" content="https://memorylimit.dev/og-image.png" />
 <link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="/css/styles.css" />
 <link rel="modulepreload" href="/js/formatters/proxmox.js" />
 <script src="/js/theme-init.js"></script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Proxmox VE Memory & Ballooning Calculator","url":"https://memorylimit.dev/proxmox/","description":"Set a Proxmox VE VM's memory and ballooning minimum from real usage data. Outputs the qm command and web UI steps.","applicationCategory":"DeveloperApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Memory & Ballooning Calculator for Proxmox VE","url":"https://memorylimit.dev/proxmox/","description":"Set a Proxmox VE VM's memory and ballooning minimum from real usage data. Outputs the qm command and web UI steps.","applicationCategory":"DeveloperApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
 </head>
 <body data-platform="proxmox">
 
@@ -87,7 +87,7 @@
 <main>
 
   <div class="wrap intro-section">
-    <h1 class="intro-title">Proxmox VE Memory Calculator</h1>
+    <h1 class="intro-title">Memory Calculator for Proxmox VE</h1>
     <p class="intro-text">
       Proxmox VE sizes a VM with two numbers: the <strong>memory</strong> it can grow to, and a <strong>minimum</strong>
       the balloon driver never takes away. Between the two, the host lends the VM memory while it has RAM to spare and
@@ -268,7 +268,7 @@
         <li>A window that misses the busiest times: memory comes out too low.</li>
       </ul>
       <p>
-        Full derivation, warnings and every assumption: <a href="/proxmox/how-it-works/">how the Proxmox VE calculator works</a>. The shared formula and margin tables: <a href="/sizing-model/">the sizing model</a>.
+        Full derivation, warnings and every assumption: <a href="/proxmox/how-it-works/">how the calculator for Proxmox VE works</a>. The shared formula and margin tables: <a href="/sizing-model/">the sizing model</a>.
       </p>
       <!-- related-calculators:start -->
       <p>Related calculators:</p>
@@ -287,6 +287,7 @@
     <div class="footer-row">
       <!-- footer-links:start -->
       <p class="footer-tagline">Your pasted metrics and results never leave the browser.</p>
+      <p class="footer-tagline">Unofficial tool, not affiliated with or endorsed by Proxmox Server Solutions GmbH. Proxmox® is a registered trademark of Proxmox Server Solutions GmbH.</p>
       <nav class="footer-links" aria-label="Project">
         <a href="/privacy/" class="footer-link">Privacy</a>
         <a href="/support/" class="footer-link">Support</a>

@@ -246,3 +246,24 @@ test('each calculator page lists the other calculators of its category, and only
     for (const other of expected) assert.ok(html.includes(`href="${other.path}" data-platform-link="${other.id}"`), `${def.id} misses ${other.id}`);
   }
 });
+
+// Proxmox's brand guideline allows its name to say what a tool is for ("… for Proxmox VE"), not to name the tool,
+// and asks third parties not to imply an endorsement.
+for (const dir of ['proxmox', 'proxmox/how-it-works']) {
+  test(`/${dir}/ names the calculator as "… for Proxmox VE" and says it is unofficial`, () => {
+    const html = read(dir);
+    const title = decode(attr(html, /<title>([^<]+)<\/title>/));
+    const h1 = decode(attr(html, /<h1[^>]*>([^<]+)<\/h1>/));
+    assert.doesNotMatch(title, /^(how the )?proxmox/i);
+    assert.doesNotMatch(h1, /^(how the )?proxmox/i);
+    assert.match(title, /for Proxmox VE/);
+    assert.match(h1, /for Proxmox VE/);
+    assert.match(html, /Unofficial tool, not affiliated with or endorsed by Proxmox Server Solutions GmbH\./);
+    assert.match(html, /Proxmox® is a registered trademark of Proxmox Server Solutions GmbH\./);
+  });
+}
+
+test('pages about other platforms do not carry the Proxmox notice', () => {
+  assert.doesNotMatch(read('vmware'), /Proxmox Server Solutions/);
+  assert.doesNotMatch(read(''), /Proxmox Server Solutions/);
+});

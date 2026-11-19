@@ -1,6 +1,6 @@
-# Proxmox VE Memory Calculator
+# Memory Calculator for Proxmox VE
 
-Canonical: [Proxmox VE Memory Calculator](https://memorylimit.dev/proxmox/)
+Canonical: [Memory Calculator for Proxmox VE](https://memorylimit.dev/proxmox/)
 
 Locale: en
 
@@ -59,7 +59,7 @@ When the host needs memory back, the guest's balloon driver gives it up, which c
 - Keeping a lower minimum with ballooning off: the minimum only means something with the balloon driver.
 - A window that misses the busiest times: memory comes out too low.
 
-Full derivation, warnings and every assumption: [how the Proxmox VE calculator works](https://memorylimit.dev/proxmox/how-it-works/index.md). The shared formula and margin tables: [the sizing model](https://memorylimit.dev/sizing-model/index.md).
+Full derivation, warnings and every assumption: [how the calculator for Proxmox VE works](https://memorylimit.dev/proxmox/how-it-works/index.md). The shared formula and margin tables: [the sizing model](https://memorylimit.dev/sizing-model/index.md).
 
 Related calculators:
 
