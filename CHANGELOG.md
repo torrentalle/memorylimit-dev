@@ -29,6 +29,7 @@ so entries are grouped under `Unreleased` until a release is tagged.
 
 ### Changed
 
+- Proxmox VE pages are named "… for Proxmox VE" (page titles, headings and share tags) instead of leading with the trademark, as Proxmox's brand guideline asks, and their footer says the tool is unofficial and carries the trademark notice (`TRADEMARK_NOTICES` in `scripts/sync-pages.js`, checked by `tests/pages.test.js`).
 - The Proxmox VE card on the home page no longer mentions migrating from VMware, matching the page description (#61).
 - The Proxmox VE page description no longer mentions migrating from VMware; it describes only what the calculator does.
 - ADR 0015 records the EthicalAds removal and supersedes ADRs 0008 and 0009 (#47).

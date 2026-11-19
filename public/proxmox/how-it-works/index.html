@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>How the Proxmox VE Memory Calculator Works | MemoryLimit</title>
+<title>How the Memory Calculator for Proxmox VE Works | MemoryLimit</title>
 <meta name="description" content="How the Proxmox VE calculator sets a VM's memory and ballooning minimum: rounding, the balloon rule, auto-ballooning, qm and the web UI, with docs links." />
 <link rel="canonical" href="https://memorylimit.dev/proxmox/how-it-works/" />
 <link rel="icon" href="/favicon.ico" sizes="32x32" />
@@ -11,20 +11,20 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="MemoryLimit" />
-<meta property="og:title" content="How the Proxmox VE Memory Calculator Works" />
+<meta property="og:title" content="How the Memory Calculator for Proxmox VE Works" />
 <meta property="og:description" content="How the Proxmox VE calculator sets a VM's memory and ballooning minimum: rounding, the balloon rule, auto-ballooning, qm and the web UI, with docs links." />
 <meta property="og:url" content="https://memorylimit.dev/proxmox/how-it-works/" />
 <meta property="og:image" content="https://memorylimit.dev/og-image.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="How the Proxmox VE Memory Calculator Works" />
+<meta name="twitter:title" content="How the Memory Calculator for Proxmox VE Works" />
 <meta name="twitter:description" content="How the Proxmox VE calculator sets a VM's memory and ballooning minimum: rounding, the balloon rule, auto-ballooning, qm and the web UI, with docs links." />
 <meta name="twitter:image" content="https://memorylimit.dev/og-image.png" />
 <link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="/css/styles.css" />
 <script src="/js/theme-init.js"></script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"How the Proxmox VE calculator works","description":"How the Proxmox VE calculator sets a VM's memory and ballooning minimum: rounding, the balloon rule, auto-ballooning, qm and the web UI, with docs links.","url":"https://memorylimit.dev/proxmox/how-it-works/","inLanguage":"en","isPartOf":{"@type":"WebSite","name":"MemoryLimit","url":"https://memorylimit.dev/"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"How the calculator for Proxmox VE works","description":"How the Proxmox VE calculator sets a VM's memory and ballooning minimum: rounding, the balloon rule, auto-ballooning, qm and the web UI, with docs links.","url":"https://memorylimit.dev/proxmox/how-it-works/","inLanguage":"en","isPartOf":{"@type":"WebSite","name":"MemoryLimit","url":"https://memorylimit.dev/"}}</script>
 </head>
 <body>
 
@@ -87,9 +87,9 @@
 
   <div class="wrap intro-section">
     <p class="guide-back"><a href="/proxmox/">← Proxmox VE memory calculator</a></p>
-    <h1 class="intro-title">How the Proxmox VE calculator works</h1>
+    <h1 class="intro-title">How the calculator for Proxmox VE works</h1>
     <p class="intro-text">
-      This page walks through how the <a href="/proxmox/">Proxmox VE calculator</a> turns your usage data into a VM's
+      This page walks through how the <a href="/proxmox/">calculator for Proxmox VE</a> turns your usage data into a VM's
       memory and ballooning minimum. Both start from the <a href="/sizing-model/">shared sizing model</a>; this page covers
       what happens after that. Statements backed by the Proxmox documentation or source end with a
       <span class="guide-tag guide-tag--doc">Proxmox docs</span> link to it. Choices the documentation doesn't make for us
@@ -291,7 +291,7 @@ memory         = max(peak × (1 + limit margin), minimum memory, 16)   rounded u
         <li><a href="https://github.com/proxmox/pve-manager/blob/master/www/manager6/qemu/MemoryEdit.js" target="_blank" rel="noopener">pve-manager: MemoryEdit.js</a> — the web UI fields.</li>
         <li><a href="https://docs.kernel.org/filesystems/proc.html" target="_blank" rel="noopener">The /proc filesystem</a> (kernel) — <code>MemAvailable</code>.</li>
       </ul>
-      <p class="guide-back"><a href="/proxmox/">← Back to the Proxmox VE calculator</a></p>
+      <p class="guide-back"><a href="/proxmox/">← Back to the calculator for Proxmox VE</a></p>
     </section>
 
   </div>
@@ -303,6 +303,7 @@ memory         = max(peak × (1 + limit margin), minimum memory, 16)   rounded u
     <div class="footer-row">
       <!-- footer-links:start -->
       <p class="footer-tagline">Your pasted metrics and results never leave the browser.</p>
+      <p class="footer-tagline">Unofficial tool, not affiliated with or endorsed by Proxmox Server Solutions GmbH. Proxmox® is a registered trademark of Proxmox Server Solutions GmbH.</p>
       <nav class="footer-links" aria-label="Project">
         <a href="/privacy/" class="footer-link">Privacy</a>
         <a href="/support/" class="footer-link">Support</a>

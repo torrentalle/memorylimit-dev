@@ -1,6 +1,6 @@
-# How the Proxmox VE calculator works
+# How the calculator for Proxmox VE works
 
-Canonical: [How the Proxmox VE calculator works](https://memorylimit.dev/proxmox/how-it-works/)
+Canonical: [How the calculator for Proxmox VE works](https://memorylimit.dev/proxmox/how-it-works/)
 
 Locale: en
 
@@ -12,7 +12,7 @@ Maintenance owner: MemoryLimit maintainers (github.com/torrentalle/memorylimit-d
 
 [← Proxmox VE memory calculator](https://memorylimit.dev/proxmox/index.md)
 
-This page walks through how the [Proxmox VE calculator](https://memorylimit.dev/proxmox/index.md) turns your usage data into a VM's memory and ballooning minimum. Both start from the [shared sizing model](https://memorylimit.dev/sizing-model/index.md); this page covers what happens after that. Statements backed by the Proxmox documentation or source end with a Proxmox docs link to it. Choices the documentation doesn't make for us are explained and marked Assumption, which links to its row in the table of all of them.
+This page walks through how the [calculator for Proxmox VE](https://memorylimit.dev/proxmox/index.md) turns your usage data into a VM's memory and ballooning minimum. Both start from the [shared sizing model](https://memorylimit.dev/sizing-model/index.md); this page covers what happens after that. Statements backed by the Proxmox documentation or source end with a Proxmox docs link to it. Choices the documentation doesn't make for us are explained and marked Assumption, which links to its row in the table of all of them.
 
 ## Memory and minimum memory
 
@@ -110,4 +110,4 @@ The calculator’s **Advanced: margins and defaults** section, closed by default
 - [pve-manager: MemoryEdit.js](https://github.com/proxmox/pve-manager/blob/master/www/manager6/qemu/MemoryEdit.js) — the web UI fields.
 - [The /proc filesystem](https://docs.kernel.org/filesystems/proc.html) (kernel) — `MemAvailable`.
 
-[← Back to the Proxmox VE calculator](https://memorylimit.dev/proxmox/index.md)
+[← Back to the calculator for Proxmox VE](https://memorylimit.dev/proxmox/index.md)

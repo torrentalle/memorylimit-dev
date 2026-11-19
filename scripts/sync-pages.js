@@ -94,8 +94,20 @@ export function renderCards(indent = '      ') {
     .join('\n');
 }
 
+/**
+ * Trademark notices for pages about another company's product, keyed by the first directory of the page
+ * (so a platform's guide gets it too). The names are used to say what the calculator is for, never as
+ * its own name; the notice says nobody there endorses it.
+ */
+const TRADEMARK_NOTICES = {
+  proxmox:
+    'Unofficial tool, not affiliated with or endorsed by Proxmox Server Solutions GmbH. ' +
+    'Proxmox® is a registered trademark of Proxmox Server Solutions GmbH.'
+};
+
 export function renderFooterLinks(dir, currentId, indent = '      ') {
   const current = PLATFORM_DEFINITIONS.find((def) => def.id === currentId);
+  const notice = TRADEMARK_NOTICES[dir.split('/')[0]];
   const internal = (path, text) => {
     const currentAttr = dir === path.slice(1, -1) ? ' aria-current="page"' : '';
     return `  <a href="${path}" class="footer-link"${currentAttr}>${text}</a>`;
@@ -104,6 +116,7 @@ export function renderFooterLinks(dir, currentId, indent = '      ') {
     `  <a href="${escapeHtml(href)}" class="footer-link" target="_blank" rel="noopener">${text}</a>`;
   return [
     '<p class="footer-tagline">Your pasted metrics and results never leave the browser.</p>',
+    ...(notice ? [`<p class="footer-tagline">${escapeHtml(notice)}</p>`] : []),
     '<nav class="footer-links" aria-label="Project">',
     internal('/privacy/', 'Privacy'),
     internal('/support/', 'Support'),
